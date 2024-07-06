@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ORIZU MICHAEL</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<style>
+    /* styles.css */
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f0f0f0; /* Professional background color */
+}
+
+.top-bar {
+    background-color: #2c3e50; /* Tech color for the top bar */
+    color: #fff;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+.menu-button {
+    cursor: pointer;
+    font-size: 24px;
+    color: #fff;
+    background: none;
+    border: none;
+}
+
+.menu-items {
+    list-style-type: none;
+    display: none; /* Hidden by default */
+    position: absolute;
+    top: 50px; /* Adjust to position below top bar */
+    right: 20px;
+    background-color: #2c3e50; /* Match top bar color */
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.menu-items.active {
+    display: block; /* Show menu items when active */
+}
+
+.menu-item {
+    margin-bottom: 10px;
+}
+
+.menu-item a {
+    color: #fff;
+    text-decoration: none;
+    padding: 10px;
+    transition: all 0.3s ease;
+    display: block; /* Ensure each menu item is on a new line */
+}
+
+.menu-item a:hover {
+    background-color: #34495e; /* Darker shade for hover effect */
+}
+
+@media (min-width: 769px) {
+    .menu-button {
+        display: none; /* Hide menu button on larger screens */
+    }
+
+    .menu-items {
+        display: none;
+        position: absolute;
+        top: 40px; /* Adjust position to align with top bar */
+        right: 20px;
+        background-color: #2c3e50; /* Match top bar color */
+        padding: 10px;
+        border-radius: 5px;
+        box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+    }
+
+    .menu-items.active {
+        display: block; /* Show menu items when active */
+    }
+
+    .menu-item {
+        margin: 0 10px;
+    }
+}
+</style>
+
+<body>
+    <div class="top-bar">
+        <h1>MICHAEL ORIZU</h1>
+        <button class="menu-button" id="toggleMenu" onclick="toggleMenu()">&#9776;</button>
+        <ul class="menu-items" id="menuitems">
+            <li class="menu-item"><a href="#" onclick="refreshPage()">Home</a></li>
+            <li class="menu-item"><a href="about.html">About</a></li>
+            <li class="menu-item"><a href="projects.html">Projects</a></li>
+            <li class="menu-item"><a href="contact.html">Contact</a></li>
+            <li class="menu-item"><a href="reviews.html">Reviews</a></li>
+        </ul>
+    </div>
+
+    <main>
+        <!-- Sections content here -->
+        <!-- Example section -->
+        <section id="about" class="section">
+            <div class="content">
+                <h2>About Me</h2>
+                <p>Add your about content here.</p>
+            </div>
+        </section>
+
+        <!-- Other sections -->
+        <!-- Adjust IDs and content as per your actual sections -->
+    </main>
+
+    <!-- Include Vue.js -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
+    <!-- Include your Vue app JavaScript -->
+    <script src="main.js"></script>
+
+    <script>
+        function toggleMenu() {
+            var menuItems = document.getElementById("menuitems");
+            menuItems.classList.toggle("active");
+        }
+
+        function refreshPage() {
+            location.reload();
+        }
+    </script>
+</body>
+
+</html>
