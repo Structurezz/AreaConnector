@@ -3,58 +3,50 @@ import { config } from 'dotenv';
 import router from '../routes/index.js';
 import loggerMiddleware from '../app/middleware/logger.js';
 import errorHandler from '../app/middleware/errorHandler.js';
-import authenticate from '../app/middleware/authenticate.js';
-import validateRequest from '../app/middleware/validateRequest.js';
 import corsMiddleware from '../app/middleware/cors.js';
 import rateLimiter from '../app/middleware/rateLimit.js';
-import sequelize from '../lib/config/database.js';
-import { User, Transaction } from '../app/models/index.js'; // Import models
-import connectDB  from '../lib/config/database.js';
-import { sendEmail } from '../app/services/emailService.js';
-import authRoutes from '../routes/authRoutes.js '
+
+import connectDB from '../lib/config/database.js'; 
+import authRoutes from '../routes/authRoutes.js'; 
 
 // Load environment variables
 config();
 
+// Initialize express app
 const app = express();
 
 // Apply middleware
 app.use(loggerMiddleware);
 app.use(corsMiddleware);
 app.use(rateLimiter);
-app.use(express.json()); // Parse JSON bodies
-app.use('/api', router); // Use API routes
-app.use('/api/auth', authRoutes);
+app.use(express.json()); 
 
+// Use routes
+app.use('/api', router); 
+app.use('/api/auth', authRoutes); 
 
-
-// Apply authentication middleware where needed
-// Example: app.use('/secure-endpoint', authenticate, secureRoutes);
-
-// Apply validation middleware where needed
-// Example: app.post('/data', validateRequest, (req, res) => { /* handler */ });
-
-// Error handling middleware should be last
+// Error handling middleware should be applied last
 app.use(errorHandler);
 
-// Function to synchronize database models
-const syncDatabase = async () => {
-    try {
-        await sequelize.sync(); // Use { force: true } if you want to reset the database
-        console.log('Database synchronized');
-    } catch (error) {
-        console.error('Error synchronizing database:', error);
-        throw error; // Rethrow the error to handle it in main.js
-    }
+// Connect to the database and start the server
+let server; 
+const startServer = async () => {
+  try {
+    await connectDB(); 
+    console.log('INCOPERATED AND ACTIVE TO RECEIVE DATA🏛️⛔...');
+
+    const PORT = process.env.PORT || 9;
+    server = app.listen(PORT, () => {
+      console.log(`⚙️🛠️ running on port${PORT} 🌐✅`);
+    });
+  } catch (error) {
+    console.error('Error starting server:', error.message);
+    process.exit(1); // Exit with failure
+  }
 };
 
-const server = sequelize.sync({ alter: true }).then(() => {
-    const PORT = process.env.PORT || 3000;
-    return app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
-  });
-  
+// Start the server
+startServer();
 
-// Export app and syncDatabase function
-export { app, syncDatabase };
+// Export app and server
+export { app, server };

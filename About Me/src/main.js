@@ -1,10 +1,13 @@
-import Vue from 'vue';
+
+// Import Vue and router from the correct file paths
+
+import { createApp } from 'vue';  // Updated import statement
 import App from './App.vue';
-import {router} from '/../routes.js';
+import routes from '@/router/routes.js'; 
+import { createRouter, createWebHistory } from 'vue-router'; // Ensure the correct file name and extension are used
 
-Vue.config.productionTip = false;
+const app = createApp(App);
 
-new Vue({
-  router,
-  render: h => h(App),
-}).$mount('#app');
+app.use(router);
+
+app.mount('#app');

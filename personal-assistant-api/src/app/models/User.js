@@ -1,49 +1,45 @@
-import { DataTypes } from 'sequelize';
-import sequelize from '../../lib/config/database.js';
+import mongoose from 'mongoose';
 
-export const User = sequelize.define('User', {
-  id: {
-    type: DataTypes.UUID,
-    defaultValue: DataTypes.UUIDV4,
-    primaryKey: true,
-  },
-  name: {
-    type: DataTypes.STRING,
-    allowNull: true,
-  },
-  email: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    unique: true,
-    validate: {
-      isEmail: true,
+const userSchema = new mongoose.Schema(
+  {
+    id: {
+      type: String,
+      default: () => new mongoose.Types.ObjectId().toString(), // Use MongoDB ObjectId as a string for UUID-like behavior
+      unique: true,
+    },
+    name: {
+      type: String,
+      required: false,
+    },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      validate: {
+        validator: (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
+        message: (props) => `${props.value} is not a valid email!`,
+      },
+    },
+    password: {
+      type: String,
+      required: true,
+    },
+    phone: {
+      type: String,
+      required: false,
+    },
+    smsCode: {
+      type: String,
+      required: false,
     },
   },
-  password: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
-  phone: {
-    type: DataTypes.STRING,
-    allowNull: true,
-  },
-  smsCode: {
-    type: DataTypes.STRING,
-    allowNull: true,
-  },
-  createdAt: {
-    type: DataTypes.DATE,
-    allowNull: false,
-    defaultValue: DataTypes.NOW,
-  },
-  updatedAt: {
-    type: DataTypes.DATE,
-    allowNull: false,
-    defaultValue: DataTypes.NOW,
-  },
-}, {
-  timestamps: true,
-  tableName: 'users',
-});
+  {
+    timestamps: true, // Automatically add `createdAt` and `updatedAt`
+    collection: 'users', // Equivalent to `tableName` in Sequelize
+  }
+);
+
+// Create the Mongoose model
+const User = mongoose.model('User', userSchema);
 
 export default User;

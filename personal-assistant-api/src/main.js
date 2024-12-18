@@ -1,4 +1,4 @@
-import {app, syncDatabase}   from './bootstrap/server.js';
+import {app, server}   from './bootstrap/server.js';
 
 
 function  startServer() {

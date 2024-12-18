@@ -1,0 +1,56 @@
+{
+	"motd": {
+		"cloudBuildErrorAfter": 1594252800000,
+		"cloudBuildWarnAfter": 1590019200000,
+		"defaultNode10After": 1594252800000,
+		"minVersion": "3.0.5",
+		"node8DeploysDisabledAfter": 1613390400000,
+		"node8RuntimeDisabledAfter": 1615809600000,
+		"node8WarnAfter": 1600128000000,
+		"fetched": 1730745673514
+	},
+	"additionalAccounts": [],
+	"activeAccounts": {},
+	"activeProjects": {
+		"/Users/mac/barter": "barter-8eb64",
+		"/Users/mac/LAG-Traffic-api": "lagos-traffic-api",
+		"/Users/mac/pending-withdrawals-dashboard": "link-7d26d",
+		"/Users/mac/codemania-frontend-assessment": "gamer2-2a9ab",
+		"/Users/mac/house-updates-app": "smartstay-2780d",
+		"/Users/mac/fast-food-api": "fastfood-9896c"
+	},
+	"emulator-analytics-clientId": "a42e9480-4479-46ea-847f-daf37bb2631d",
+	"webconfig": {
+		"barter-8eb64": {
+			"projectId": "barter-8eb64",
+			"appId": "1:986547656832:web:771e23461c2b6479d4ee65",
+			"storageBucket": "barter-8eb64.appspot.com",
+			"apiKey": "AIzaSyCY8H2W6UpJxfQ5rng-WIa98OS9N2vCOQU",
+			"authDomain": "barter-8eb64.firebaseapp.com",
+			"messagingSenderId": "986547656832",
+			"measurementId": "G-0P8KM9E9S6"
+		}
+	},
+	"usage": true,
+	"analytics-uuid": "a062c6e5-3039-4727-b31c-23df60352582",
+	"user": {
+		"iss": "accounts.google.com",
+		"azp": "563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleusercontent.com",
+		"aud": "563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleusercontent.com",
+		"sub": "114356304653800951926",
+		"email": "orizu1996@gmail.com",
+		"email_verified": true,
+		"at_hash": "oGxalJz_nf2AC-BLVM7rrQ",
+		"iat": 1730745738,
+		"exp": 1730749338
+	},
+	"tokens": {
+		"expires_at": 1730749337501,
+		"access_token": "ya29.a0AeDClZAcM9rfJ2jVciRZtwnnb_GpU9B7h90LarI8NCQNwd5zsJxgvFGdlDgOS9CtYbnw3pO-z0WhvM1khW83iPPQ_QD5T4254Fq4gf2hPX0iV7tOjWpa32SvtWg7v-9fUtkGqhCjGxfcJi0LhxGkgL6Not2ZuR0DcYftMW7AIkhz4AaCgYKAQoSARISFQHGX2MiHs_bBOzMvSujFrYAfBv8vg0181",
+		"expires_in": 3599,
+		"refresh_token": "1//094tnt1UZI4o0CgYIARAAGAkSNwF-L9IrIHVAxCTVWRpEjJQAWSvpioBkJq8i8MnvVA6Hgoiwn6vfgcW-s0VsTCUUP1IM1FUJpM4",
+		"scope": "https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/cloudplatformprojects.readonly https://www.googleapis.com/auth/firebase https://www.googleapis.com/auth/userinfo.email openid",
+		"token_type": "Bearer",
+		"id_token": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImU4NjNmZTI5MmZhMmEyOTY3Y2Q3NTUxYzQyYTEyMTFiY2FjNTUwNzEiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJhY2NvdW50cy5nb29nbGUuY29tIiwiYXpwIjoiNTYzNTg0MzM1ODY5LWZncmhnbWQ0N2JxbmVraWo1aThiNXByMDNobzg0OWU2LmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29tIiwiYXVkIjoiNTYzNTg0MzM1ODY5LWZncmhnbWQ0N2JxbmVraWo1aThiNXByMDNobzg0OWU2LmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29tIiwic3ViIjoiMTE0MzU2MzA0NjUzODAwOTUxOTI2IiwiZW1haWwiOiJvcml6dTE5OTZAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImF0X2hhc2giOiJvR3hhbEp6X25mMkFDLUJMVk03cnJRIiwiaWF0IjoxNzMwNzQ1NzM4LCJleHAiOjE3MzA3NDkzMzh9.qev4uNAgEMVkIc9hEdh6NRKXGaio58r6ikYpFtCwgmgkZkdT9mC1Bq0JY3RgAuJg6q-hUV4bttm37mwM_4sPJk20jlirHFKjVd1jBclRHQRH-9s1UxMnTpQZO3NsG6BF91UbghHoCk9pCQ1uAscec-_7Cg9mEIK6qrzSmEWOLMAwgOlqwHtcZ6llCEufDFXzyvs8L_srG865UCixvnJ8RobdaKS-nshq0aqYMzsMdBNIUNz8dF8l3mCYpmq99wjRXVLtpVloLz0L4zydyeP5UON7bxcaalo2AAY-qKG2q1r-mR6g35rJAJiQ19jEK1lmuQzOZclctrjQnbLKnfQeMg"
+	}
+}

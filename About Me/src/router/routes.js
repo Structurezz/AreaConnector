@@ -1,24 +1,16 @@
-import Vue from 'vue';
-import VueRouter from 'vue-router';
-import Home from './views/Home.vue';
-import About from './views/About.vue';
-import Projects from './views/Projects.vue';
-import Contact from './views/Contact.vue';
-import Reviews from './views/Reviews.vue';
+import About from '@/views/AboutView.vue';
+import Contact from '@/views/ContactView.vue';
+import Home from '@/views/HomeView.vue';
+import Projects from '@/views/ProjectsView.vue';
+import Reviews from '@/views/ReviewsView.vue';
 
-Vue.use(VueRouter);
-
+// Example route configuration
 const routes = [
-  { path: '/', component: Home },
   { path: '/about', component: About },
-  { path: '/projects', component: Projects },
   { path: '/contact', component: Contact },
+  { path: '/home', component: Home },
+  { path: '/projects', component: Projects },
   { path: '/reviews', component: Reviews },
 ];
 
-const router = new VueRouter({
-  mode: 'history',
-  routes
-});
-
-export  {router} ;
+export default routes;

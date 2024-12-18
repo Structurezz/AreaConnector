@@ -19,8 +19,8 @@ export async function createCall() {
       url: "http://demo.twilio.com/docs/voice.xml", // Twilio XML URL
     });
 
-    console.log("Call SID:", call.sid);
+    //console.log("Call SID:", call.sid);
   } catch (error) {
-    console.error("Error creating call:", error);
+    //console.error("Error creating call:", error);
   }
 }
