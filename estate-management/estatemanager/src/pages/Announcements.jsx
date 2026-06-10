@@ -75,8 +75,8 @@ export default function ManagerAnnouncements() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-3xl font-display font-bold text-white mb-1">Announcements</h1>
-          <p className="text-white/50 text-sm">Post notices and updates for residents</p>
+          <h1 className="text-3xl font-display font-bold text-slate-900 mb-1">Announcements</h1>
+          <p className="text-slate-500 text-sm">Post notices and updates for residents</p>
         </div>
         <button onClick={() => setShowCreate(true)} className="btn-primary gap-2">
           <Plus size={16} /> New Announcement
@@ -94,23 +94,23 @@ export default function ManagerAnnouncements() {
               <div className="flex items-start justify-between gap-4 mb-3">
                 <div className="flex items-center gap-2 flex-wrap">
                   {a.isPinned && <Pin size={14} className="text-gold flex-shrink-0" />}
-                  <h3 className="font-display font-semibold text-white">{a.title}</h3>
+                  <h3 className="font-display font-semibold text-slate-900">{a.title}</h3>
                   <Badge variant={CATEGORY_COLORS[a.category]}>{a.category}</Badge>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <button onClick={() => togglePin(a)}
-                    className={`p-1.5 rounded-lg transition-all ${a.isPinned ? 'text-gold hover:bg-gold/10' : 'text-white/30 hover:text-gold hover:bg-gold/10'}`}
+                    className={`p-1.5 rounded-lg transition-all ${a.isPinned ? 'text-gold hover:bg-gold/10' : 'text-slate-400 hover:text-gold hover:bg-gold/10'}`}
                     title={a.isPinned ? 'Unpin' : 'Pin'}>
                     <Pin size={15} />
                   </button>
                   <button onClick={() => handleDelete(a._id)}
-                    className="p-1.5 rounded-lg text-white/30 hover:text-red-400 hover:bg-red-400/10 transition-all">
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-400/10 transition-all">
                     <Trash2 size={15} />
                   </button>
                 </div>
               </div>
-              <p className="text-white/60 text-sm leading-relaxed mb-3 whitespace-pre-wrap">{a.body}</p>
-              <div className="flex items-center gap-2 text-xs text-white/30">
+              <p className="text-slate-500 text-sm leading-relaxed mb-3 whitespace-pre-wrap">{a.body}</p>
+              <div className="flex items-center gap-2 text-xs text-slate-400">
                 <span>{a.authorId?.name}</span>
                 <span>·</span>
                 <span>{format(new Date(a.createdAt), 'MMM d, yyyy HH:mm')}</span>
@@ -125,18 +125,18 @@ export default function ManagerAnnouncements() {
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New Announcement" size="lg">
         <form onSubmit={handleCreate} className="space-y-4">
           <div>
-            <label className="text-sm text-white/60 mb-1.5 block">Title</label>
+            <label className="text-sm text-slate-500 mb-1.5 block">Title</label>
             <input className="input-field" value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })} required />
           </div>
           <div>
-            <label className="text-sm text-white/60 mb-1.5 block">Message</label>
+            <label className="text-sm text-slate-500 mb-1.5 block">Message</label>
             <textarea className="input-field resize-none" rows={5} value={form.body}
               onChange={(e) => setForm({ ...form, body: e.target.value })} required />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm text-white/60 mb-1.5 block">Category</label>
+              <label className="text-sm text-slate-500 mb-1.5 block">Category</label>
               <select className="input-field" value={form.category}
                 onChange={(e) => setForm({ ...form, category: e.target.value })}>
                 <option value="general">General</option>
@@ -150,7 +150,7 @@ export default function ManagerAnnouncements() {
                 <input type="checkbox" checked={form.isPinned}
                   onChange={(e) => setForm({ ...form, isPinned: e.target.checked })}
                   className="w-4 h-4 accent-gold" />
-                <span className="text-sm text-white/70">Pin to top</span>
+                <span className="text-sm text-slate-600">Pin to top</span>
               </label>
             </div>
           </div>

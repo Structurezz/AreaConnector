@@ -10,6 +10,7 @@ import Register from './pages/Register';
 import Onboarding from './pages/Onboarding';
 import Dashboard from './pages/Dashboard';
 import Visitors from './pages/Visitors';
+import VisitorDetail from './pages/VisitorDetail';
 import Residents from './pages/Residents';
 import Units from './pages/Units';
 import Announcements from './pages/Announcements';
@@ -55,6 +56,7 @@ function AppRoutes() {
       } />
       <Route path="/dashboard" element={<RequireManager><Dashboard /></RequireManager>} />
       <Route path="/visitors" element={<RequireManager><Visitors /></RequireManager>} />
+      <Route path="/visitors/:id" element={<RequireManager><VisitorDetail /></RequireManager>} />
       <Route path="/residents" element={<RequireManager><Residents /></RequireManager>} />
       <Route path="/units" element={<RequireManager><Units /></RequireManager>} />
       <Route path="/announcements" element={<RequireManager><Announcements /></RequireManager>} />

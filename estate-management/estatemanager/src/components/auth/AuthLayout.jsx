@@ -172,7 +172,7 @@ export default function AuthLayout({ children, caption, sub, pills }) {
 
       <div style={{
         minHeight: '100vh', display: 'flex', overflow: 'hidden',
-        background: '#040912',
+        background: '#FFFFFF',
       }}>
 
         {/* ══════════════════════════════════════════════
@@ -310,7 +310,7 @@ export default function AuthLayout({ children, caption, sub, pills }) {
         <div style={{
           width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
           position: 'relative', flexShrink: 0, overflowY: 'auto', minHeight: '100vh',
-          background: 'linear-gradient(160deg, #060E1E 0%, #040912 50%, #07101F 100%)',
+          background: '#FFFFFF',
         }}
           className="lg:w-[460px]">
 
@@ -318,14 +318,14 @@ export default function AuthLayout({ children, caption, sub, pills }) {
           <div style={{
             position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
             width: 280, height: 140, pointerEvents: 'none',
-            background: 'radial-gradient(ellipse, rgba(16,185,129,0.07) 0%, transparent 70%)',
+            background: 'radial-gradient(ellipse, rgba(16,185,129,0.06) 0%, transparent 70%)',
           }}/>
 
           {/* Subtle bottom glow */}
           <div style={{
             position: 'absolute', bottom: 0, right: 0,
             width: 220, height: 200, pointerEvents: 'none',
-            background: 'radial-gradient(ellipse at right bottom, rgba(129,140,248,0.04) 0%, transparent 70%)',
+            background: 'radial-gradient(ellipse at right bottom, rgba(99,102,241,0.04) 0%, transparent 70%)',
           }}/>
 
           <div style={{

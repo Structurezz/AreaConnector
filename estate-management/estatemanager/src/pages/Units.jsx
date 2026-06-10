@@ -56,8 +56,8 @@ export default function Units() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-3xl font-display font-bold text-white mb-1">Estate Units</h1>
-          <p className="text-white/50 text-sm">{units.length} units · {units.filter((u) => u.status === 'occupied').length} occupied</p>
+          <h1 className="text-3xl font-display font-bold text-slate-900 mb-1">Estate Units</h1>
+          <p className="text-slate-500 text-sm">{units.length} units · {units.filter((u) => u.status === 'occupied').length} occupied</p>
         </div>
         <button onClick={() => setShowCreate(true)} className="btn-primary gap-2">
           <Plus size={16} /> Add Unit
@@ -71,14 +71,14 @@ export default function Units() {
       ) : (
         Object.entries(grouped).map(([block, blockUnits]) => (
           <div key={block}>
-            <h2 className="text-sm font-medium text-white/50 uppercase tracking-wider mb-3">Block {block}</h2>
+            <h2 className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-3">Block {block}</h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {blockUnits.map((u) => (
                 <div key={u._id} className={`glass-card p-4 hover:border-gold/20 transition-all ${u.status === 'occupied' ? 'border-emerald-500/20' : ''}`}>
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <div className="font-bold text-white text-lg">Unit {u.unitNumber}</div>
-                      <div className="text-white/40 text-xs capitalize">{u.type}</div>
+                      <div className="font-bold text-slate-900 text-lg">Unit {u.unitNumber}</div>
+                      <div className="text-slate-400 text-xs capitalize">{u.type}</div>
                     </div>
                     <div className={`badge ${u.status === 'occupied' ? 'badge-green' : 'badge-gray'}`}>
                       {u.status}
@@ -88,8 +88,8 @@ export default function Units() {
                   {/* Occupancy bar */}
                   <div className="mb-3">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-white/40 text-xs flex items-center gap-1"><Users size={10} /> Occupants</span>
-                      <span className="text-white/60 text-xs font-medium">
+                      <span className="text-slate-400 text-xs flex items-center gap-1"><Users size={10} /> Occupants</span>
+                      <span className="text-slate-500 text-xs font-medium">
                         {(u.residentIds || []).length} / {u.maxOccupants || 7}
                       </span>
                     </div>
@@ -118,7 +118,7 @@ export default function Units() {
                         </div>
                       ))}
                       {u.residentIds.length > 5 && (
-                        <span className="text-white/30 text-xs">+{u.residentIds.length - 5} more</span>
+                        <span className="text-slate-400 text-xs">+{u.residentIds.length - 5} more</span>
                       )}
                     </div>
                   )}
@@ -129,7 +129,7 @@ export default function Units() {
                       {u.amountOwed > 0 && ` · ₦${u.amountOwed.toLocaleString()}`}
                     </span>
                     <button onClick={() => handleDelete(u._id)}
-                      className="p-1.5 rounded-lg text-white/30 hover:text-red-400 hover:bg-red-400/10 transition-all">
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-400/10 transition-all">
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -144,18 +144,18 @@ export default function Units() {
         <form onSubmit={handleCreate} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm text-white/60 mb-1.5 block">Unit Number *</label>
+              <label className="text-sm text-slate-500 mb-1.5 block">Unit Number *</label>
               <input className="input-field" value={form.unitNumber} placeholder="e.g. A101"
                 onChange={(e) => setForm({ ...form, unitNumber: e.target.value })} required />
             </div>
             <div>
-              <label className="text-sm text-white/60 mb-1.5 block">Block</label>
+              <label className="text-sm text-slate-500 mb-1.5 block">Block</label>
               <input className="input-field" value={form.block} placeholder="e.g. A"
                 onChange={(e) => setForm({ ...form, block: e.target.value })} />
             </div>
           </div>
           <div>
-            <label className="text-sm text-white/60 mb-1.5 block">Type</label>
+            <label className="text-sm text-slate-500 mb-1.5 block">Type</label>
             <select className="input-field" value={form.type}
               onChange={(e) => setForm({ ...form, type: e.target.value })}>
               <option value="apartment">Apartment</option>

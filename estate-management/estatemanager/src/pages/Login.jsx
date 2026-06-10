@@ -44,38 +44,38 @@ export default function Login() {
           <div style={{
             width: 54, height: 54, borderRadius: 15,
             background: 'linear-gradient(135deg,#10B981,#059669)',
-            boxShadow: '0 0 30px rgba(16,185,129,0.35), 0 4px 12px rgba(0,0,0,0.4)',
+            boxShadow: '0 0 24px rgba(16,185,129,0.25), 0 4px 12px rgba(0,0,0,0.12)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           }}>
             <Shield size={26} color="white"/>
           </div>
           <div>
-            <div className="text-xl font-bold text-white leading-tight tracking-tight">
+            <div className="text-xl font-bold leading-tight tracking-tight" style={{ color: '#0F172A' }}>
               Area<span style={{ color: '#10B981' }}>Connect</span>
             </div>
             <div className="text-xs font-semibold uppercase tracking-widest mt-0.5"
-              style={{ color: 'rgba(255,255,255,0.3)' }}>
+              style={{ color: '#94A3B8' }}>
               Admin Portal
             </div>
           </div>
         </div>
-        <h1 className="text-2xl font-bold text-white mb-1.5 tracking-tight">Welcome back</h1>
-        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>Sign in to manage your estate</p>
+        <h1 className="text-2xl font-bold mb-1.5 tracking-tight" style={{ color: '#0F172A' }}>Welcome back</h1>
+        <p className="text-sm" style={{ color: '#475569' }}>Sign in to manage your estate</p>
       </div>
 
       {/* Demo quick-fill */}
       <div className="mb-6 rounded-xl p-3.5"
-        style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)' }}>
+        style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
         <p className="text-xs font-semibold uppercase tracking-widest mb-2.5"
-          style={{ color: 'rgba(255,255,255,0.28)' }}>Demo Account</p>
+          style={{ color: '#94A3B8' }}>Demo Account</p>
         <button
           onClick={() => { setForm({ email: DEMO.email, password: DEMO.password }); setError(''); }}
           className="w-full text-left px-3 py-2.5 rounded-lg transition-all"
-          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
-          onMouseOver={e => e.currentTarget.style.borderColor = 'rgba(16,185,129,0.3)'}
-          onMouseOut={e  => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'}>
-          <div className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.65)' }}>{DEMO.label}</div>
-          <div className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>{DEMO.email}</div>
+          style={{ background: '#FFFFFF', border: '1px solid #E2E8F0' }}
+          onMouseOver={e => e.currentTarget.style.borderColor = 'rgba(16,185,129,0.4)'}
+          onMouseOut={e  => e.currentTarget.style.borderColor = '#E2E8F0'}>
+          <div className="text-xs font-semibold" style={{ color: '#0F172A' }}>{DEMO.label}</div>
+          <div className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>{DEMO.email}</div>
         </button>
       </div>
 
@@ -83,20 +83,20 @@ export default function Login() {
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
           <div className="flex items-center gap-2 rounded-xl p-3 text-sm"
-            style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#F87171' }}>
+            style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626' }}>
             <AlertCircle size={15} className="shrink-0"/> {error}
           </div>
         )}
         <div>
           <label className="block text-xs font-semibold uppercase tracking-widest mb-1.5"
-            style={{ color: 'rgba(255,255,255,0.38)' }}>Email Address</label>
+            style={{ color: '#64748B' }}>Email Address</label>
           <input type="email" className="input-field" placeholder="you@example.com"
             value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
             required autoComplete="email"/>
         </div>
         <div>
           <label className="block text-xs font-semibold uppercase tracking-widest mb-1.5"
-            style={{ color: 'rgba(255,255,255,0.38)' }}>Password</label>
+            style={{ color: '#64748B' }}>Password</label>
           <div className="relative">
             <input type={showPw ? 'text' : 'password'} className="input-field pr-11"
               placeholder="••••••••" value={form.password}
@@ -104,9 +104,9 @@ export default function Login() {
               required autoComplete="current-password"/>
             <button type="button" onClick={() => setShowPw(!showPw)}
               className="absolute right-3.5 top-1/2 -translate-y-1/2 transition-colors"
-              style={{ color: 'rgba(255,255,255,0.3)' }}
-              onMouseOver={e => e.currentTarget.style.color = 'rgba(255,255,255,0.65)'}
-              onMouseOut={e  => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}>
+              style={{ color: '#94A3B8' }}
+              onMouseOver={e => e.currentTarget.style.color = '#475569'}
+              onMouseOut={e  => e.currentTarget.style.color = '#94A3B8'}>
               {showPw ? <EyeOff size={15}/> : <Eye size={15}/>}
             </button>
           </div>
@@ -116,7 +116,7 @@ export default function Login() {
           style={{
             background: loading ? 'rgba(16,185,129,0.5)' : 'linear-gradient(135deg,#10B981,#059669)',
             color: 'white',
-            boxShadow: loading ? 'none' : '0 0 24px rgba(16,185,129,0.3), 0 4px 12px rgba(0,0,0,0.3)',
+            boxShadow: loading ? 'none' : '0 4px 14px rgba(16,185,129,0.25)',
           }}>
           {loading ? (
             <>
@@ -128,17 +128,17 @@ export default function Login() {
             </>
           ) : 'Sign In'}
         </button>
-        <p className="text-center text-sm pt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>
+        <p className="text-center text-sm pt-1" style={{ color: '#94A3B8' }}>
           Don't have an account?{' '}
           <Link to="/register" className="font-medium transition-colors" style={{ color: '#10B981' }}
-            onMouseOver={e => e.currentTarget.style.color = '#34D399'}
+            onMouseOver={e => e.currentTarget.style.color = '#059669'}
             onMouseOut={e  => e.currentTarget.style.color = '#10B981'}>
             Create one
           </Link>
         </p>
       </form>
 
-      <p className="text-center text-xs mt-10" style={{ color: 'rgba(255,255,255,0.15)' }}>
+      <p className="text-center text-xs mt-10" style={{ color: '#CBD5E1' }}>
         © 2025 AreaConnect · Secure Estate Management
       </p>
     </AuthLayout>

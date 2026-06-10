@@ -10,13 +10,13 @@ const STEPS = ['welcome', 'units', 'residents', 'done'];
 function WelcomeStep({ estate, onNext }) {
   return (
     <div className="text-center space-y-6">
-      <div className="w-20 h-20 rounded-2xl bg-gold/10 border border-gold/20 flex items-center justify-center mx-auto">
-        <Building2 size={36} className="text-gold" />
+      <div className="w-20 h-20 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto">
+        <Building2 size={36} className="text-emerald-600" />
       </div>
       <div>
-        <h2 className="text-3xl font-display font-bold text-white mb-2">Welcome!</h2>
-        <p className="text-white/60">
-          You're managing <span className="text-gold font-semibold">{estate?.name || 'your estate'}</span>.
+        <h2 className="text-3xl font-display font-bold text-slate-900 mb-2">Welcome!</h2>
+        <p className="text-slate-500">
+          You're managing <span className="text-emerald-600 font-semibold">{estate?.name || 'your estate'}</span>.
           Let's get it set up in just a few steps.
         </p>
       </div>
@@ -26,8 +26,8 @@ function WelcomeStep({ estate, onNext }) {
           { icon: Users, label: 'Register residents' },
         ].map(({ icon: Icon, label }) => (
           <div key={label} className="glass-card p-4 flex flex-col items-center gap-2 text-center">
-            <Icon size={20} className="text-gold" />
-            <span className="text-white/70 text-sm">{label}</span>
+            <Icon size={20} className="text-emerald-600" />
+            <span className="text-slate-600 text-sm">{label}</span>
           </div>
         ))}
       </div>
@@ -64,8 +64,8 @@ function UnitsStep({ onNext, onBack, onSkip }) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-display font-bold text-white mb-1">Add Units</h2>
-        <p className="text-white/50 text-sm">Add apartments or houses in your estate. You can add more later.</p>
+        <h2 className="text-2xl font-display font-bold text-slate-900 mb-1">Add Units</h2>
+        <p className="text-slate-500 text-sm">Add apartments or houses in your estate. You can add more later.</p>
       </div>
 
       <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
@@ -97,7 +97,7 @@ function UnitsStep({ onNext, onBack, onSkip }) {
               type="button"
               onClick={() => removeRow(i)}
               disabled={units.length === 1}
-              className="col-span-1 p-2 text-white/30 hover:text-red-400 disabled:opacity-30 transition-colors"
+              className="col-span-1 p-2 text-slate-300 hover:text-red-500 disabled:opacity-30 transition-colors"
             >
               <Trash2 size={14} />
             </button>
@@ -147,8 +147,8 @@ function ResidentsStep({ onNext, onBack, onSkip }) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-display font-bold text-white mb-1">Add Residents</h2>
-        <p className="text-white/50 text-sm">Register your first residents. Name and email are required.</p>
+        <h2 className="text-2xl font-display font-bold text-slate-900 mb-1">Add Residents</h2>
+        <p className="text-slate-500 text-sm">Register your first residents. Name and email are required.</p>
       </div>
 
       <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
@@ -177,7 +177,7 @@ function ResidentsStep({ onNext, onBack, onSkip }) {
               type="button"
               onClick={() => removeRow(i)}
               disabled={residents.length === 1}
-              className="col-span-1 p-2 text-white/30 hover:text-red-400 disabled:opacity-30 transition-colors"
+              className="col-span-1 p-2 text-slate-300 hover:text-red-500 disabled:opacity-30 transition-colors"
             >
               <Trash2 size={14} />
             </button>
@@ -203,25 +203,25 @@ function ResidentsStep({ onNext, onBack, onSkip }) {
 function DoneStep({ counts, onFinish }) {
   return (
     <div className="text-center space-y-6">
-      <div className="w-20 h-20 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto">
-        <CheckCircle size={36} className="text-emerald-400" />
+      <div className="w-20 h-20 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto">
+        <CheckCircle size={36} className="text-emerald-600" />
       </div>
       <div>
-        <h2 className="text-3xl font-display font-bold text-white mb-2">You're all set!</h2>
-        <p className="text-white/60">Your estate is ready to go.</p>
+        <h2 className="text-3xl font-display font-bold text-slate-900 mb-2">You're all set!</h2>
+        <p className="text-slate-500">Your estate is ready to go.</p>
       </div>
       {(counts.units > 0 || counts.residents > 0) && (
         <div className="flex justify-center gap-6">
           {counts.units > 0 && (
             <div className="glass-card px-6 py-4 text-center">
-              <div className="text-2xl font-bold text-gold">{counts.units}</div>
-              <div className="text-white/50 text-sm">Units added</div>
+              <div className="text-2xl font-bold text-emerald-600">{counts.units}</div>
+              <div className="text-slate-500 text-sm">Units added</div>
             </div>
           )}
           {counts.residents > 0 && (
             <div className="glass-card px-6 py-4 text-center">
-              <div className="text-2xl font-bold text-gold">{counts.residents}</div>
-              <div className="text-white/50 text-sm">Residents added</div>
+              <div className="text-2xl font-bold text-emerald-600">{counts.residents}</div>
+              <div className="text-slate-500 text-sm">Residents added</div>
             </div>
           )}
         </div>
@@ -247,26 +247,26 @@ export default function Onboarding() {
   const stepLabels = ['Welcome', 'Units', 'Residents', 'Done'];
 
   return (
-    <div className="min-h-screen bg-navy flex items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
         {/* Progress */}
         <div className="flex items-center justify-center gap-2 mb-8">
           {stepLabels.map((label, i) => (
             <div key={i} className="flex items-center gap-2">
               <div className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
-                i === step ? 'text-gold' : i < step ? 'text-emerald-400' : 'text-white/25'
+                i === step ? 'text-emerald-600' : i < step ? 'text-emerald-600' : 'text-slate-300'
               }`}>
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border transition-all ${
-                  i === step ? 'border-gold bg-gold/10 text-gold' :
-                  i < step ? 'border-emerald-400 bg-emerald-400/10 text-emerald-400' :
-                  'border-white/20 text-white/25'
+                  i === step ? 'border-emerald-500 bg-emerald-50 text-emerald-600' :
+                  i < step ? 'border-emerald-500 bg-emerald-50 text-emerald-600' :
+                  'border-slate-200 text-slate-400'
                 }`}>
                   {i < step ? '✓' : i + 1}
                 </div>
                 <span className="hidden sm:block">{label}</span>
               </div>
               {i < stepLabels.length - 1 && (
-                <div className={`w-8 h-px transition-colors ${i < step ? 'bg-emerald-400/40' : 'bg-white/10'}`} />
+                <div className={`w-8 h-px transition-colors ${i < step ? 'bg-emerald-300' : 'bg-slate-200'}`} />
               )}
             </div>
           ))}
@@ -295,7 +295,7 @@ export default function Onboarding() {
           )}
         </div>
 
-        <p className="text-center text-white/25 text-xs mt-4">
+        <p className="text-center text-slate-400 text-xs mt-4">
           You can always add more units and residents from the dashboard later.
         </p>
       </div>

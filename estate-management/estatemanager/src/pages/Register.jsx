@@ -33,19 +33,19 @@ function StepIndicator({ current }) {
       {STEPS.map((label, i) => (
         <div key={i} className="flex items-center gap-2">
           <div className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
-            i === current ? 'text-emerald-400' : i < current ? 'text-emerald-400' : 'text-white/25'
+            i === current ? 'text-emerald-600' : i < current ? 'text-emerald-600' : 'text-slate-300'
           }`}>
             <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border transition-all ${
-              i === current ? 'border-emerald-400 bg-emerald-400/15 text-emerald-400' :
-              i < current  ? 'border-emerald-400 bg-emerald-400/10 text-emerald-400' :
-              'border-white/20 text-white/25'
+              i === current ? 'border-emerald-500 bg-emerald-50 text-emerald-600' :
+              i < current  ? 'border-emerald-500 bg-emerald-50 text-emerald-600' :
+              'border-slate-200 text-slate-400'
             }`}>
               {i < current ? '✓' : i + 1}
             </div>
             <span className="hidden sm:block">{label}</span>
           </div>
           {i < STEPS.length - 1 && (
-            <div className={`w-8 h-px transition-colors ${i < current ? 'bg-emerald-400/40' : 'bg-white/10'}`}/>
+            <div className={`w-8 h-px transition-colors ${i < current ? 'bg-emerald-300' : 'bg-slate-200'}`}/>
           )}
         </div>
       ))}
@@ -63,64 +63,58 @@ function AccountStep({ form, onChange, onNext, error }) {
   return (
     <div className="space-y-4">
       <div className="mb-5">
-        <h2 className="text-2xl font-bold text-white mb-1 tracking-tight">Create your account</h2>
-        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
+        <h2 className="text-2xl font-bold text-slate-900 mb-1 tracking-tight">Create your account</h2>
+        <p className="text-sm text-slate-500">
           You'll use these credentials to log in to the manager portal.
         </p>
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 rounded-xl p-3 text-sm"
-          style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#F87171' }}>
+        <div className="flex items-center gap-2 rounded-xl p-3 text-sm bg-red-50 border border-red-200 text-red-600">
           <AlertCircle size={15} className="shrink-0"/> {error}
         </div>
       )}
 
       <div>
-        <label className="block text-xs font-semibold uppercase tracking-widest mb-1.5"
-          style={{ color: 'rgba(255,255,255,0.38)' }}>Full Name</label>
+        <label className="block text-xs font-semibold uppercase tracking-widest mb-1.5 text-slate-400">Full Name</label>
         <input className="input-field" placeholder="John Doe" value={form.name}
           onChange={e => onChange('name', e.target.value)}/>
       </div>
       <div>
-        <label className="block text-xs font-semibold uppercase tracking-widest mb-1.5"
-          style={{ color: 'rgba(255,255,255,0.38)' }}>Email Address</label>
+        <label className="block text-xs font-semibold uppercase tracking-widest mb-1.5 text-slate-400">Email Address</label>
         <input type="email" className="input-field" placeholder="you@example.com" value={form.email}
           onChange={e => onChange('email', e.target.value)}/>
       </div>
       <div>
-        <label className="block text-xs font-semibold uppercase tracking-widest mb-1.5"
-          style={{ color: 'rgba(255,255,255,0.38)' }}>Phone (optional)</label>
+        <label className="block text-xs font-semibold uppercase tracking-widest mb-1.5 text-slate-400">Phone (optional)</label>
         <input className="input-field" placeholder="+234…" value={form.phone}
           onChange={e => onChange('phone', e.target.value)}/>
       </div>
       <div>
-        <label className="block text-xs font-semibold uppercase tracking-widest mb-1.5"
-          style={{ color: 'rgba(255,255,255,0.38)' }}>Password</label>
+        <label className="block text-xs font-semibold uppercase tracking-widest mb-1.5 text-slate-400">Password</label>
         <div className="relative">
           <input type={showPw ? 'text' : 'password'} className="input-field pr-11"
             placeholder="Min. 6 characters" value={form.password}
             onChange={e => onChange('password', e.target.value)}/>
           <button type="button" onClick={() => setShowPw(!showPw)}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/65 transition-colors">
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
             {showPw ? <EyeOff size={15}/> : <Eye size={15}/>}
           </button>
         </div>
       </div>
       <div>
-        <label className="block text-xs font-semibold uppercase tracking-widest mb-1.5"
-          style={{ color: 'rgba(255,255,255,0.38)' }}>Confirm Password</label>
+        <label className="block text-xs font-semibold uppercase tracking-widest mb-1.5 text-slate-400">Confirm Password</label>
         <div className="relative">
           <input type={showConfirm ? 'text' : 'password'} className="input-field pr-11"
             placeholder="Repeat password" value={form.confirm}
             onChange={e => onChange('confirm', e.target.value)}/>
           <button type="button" onClick={() => setShowConfirm(!showConfirm)}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/65 transition-colors">
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
             {showConfirm ? <EyeOff size={15}/> : <Eye size={15}/>}
           </button>
         </div>
         {form.confirm && form.password !== form.confirm && (
-          <p className="text-red-400 text-xs mt-1.5">Passwords do not match</p>
+          <p className="text-red-500 text-xs mt-1.5">Passwords do not match</p>
         )}
       </div>
 
@@ -131,9 +125,9 @@ function AccountStep({ form, onChange, onNext, error }) {
         Continue <ArrowRight size={15}/>
       </button>
 
-      <p className="text-center text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>
+      <p className="text-center text-sm text-slate-400">
         Already have an account?{' '}
-        <Link to="/login" className="font-medium" style={{ color: '#10B981' }}>Sign in</Link>
+        <Link to="/login" className="font-medium text-emerald-600">Sign in</Link>
       </p>
     </div>
   );
@@ -146,42 +140,38 @@ function EstateStep({ form, onChange, onNext, onBack }) {
   return (
     <div className="space-y-4">
       <div className="mb-5">
-        <h2 className="text-2xl font-bold text-white mb-1 tracking-tight">Set up your estate</h2>
-        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
+        <h2 className="text-2xl font-bold text-slate-900 mb-1 tracking-tight">Set up your estate</h2>
+        <p className="text-sm text-slate-500">
           We'll create a unique estate code residents use to join.
         </p>
       </div>
 
       <div>
-        <label className="block text-xs font-semibold uppercase tracking-widest mb-1.5"
-          style={{ color: 'rgba(255,255,255,0.38)' }}>Estate Name</label>
+        <label className="block text-xs font-semibold uppercase tracking-widest mb-1.5 text-slate-400">Estate Name</label>
         <div className="relative">
-          <Building2 size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30"/>
+          <Building2 size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"/>
           <input className="input-field pl-9" placeholder="e.g. Greenfield Estate"
             value={form.estateName} onChange={e => onChange('estateName', e.target.value)}/>
         </div>
       </div>
       <div>
-        <label className="block text-xs font-semibold uppercase tracking-widest mb-1.5"
-          style={{ color: 'rgba(255,255,255,0.38)' }}>Estate Address</label>
+        <label className="block text-xs font-semibold uppercase tracking-widest mb-1.5 text-slate-400">Estate Address</label>
         <div className="relative">
-          <MapPin size={15} className="absolute left-3.5 top-3.5 text-white/30"/>
+          <MapPin size={15} className="absolute left-3.5 top-3.5 text-slate-400"/>
           <textarea className="input-field pl-9 resize-none" rows={3}
             placeholder="Full street address, city, state"
             value={form.estateAddress} onChange={e => onChange('estateAddress', e.target.value)}/>
         </div>
       </div>
 
-      <div className="rounded-xl p-3.5 text-xs flex gap-2.5 items-start"
-        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.45)' }}>
-        <span style={{ color: '#D4AF70' }} className="mt-0.5 flex-shrink-0">#</span>
+      <div className="rounded-xl p-3.5 text-xs flex gap-2.5 items-start bg-slate-50 border border-slate-200 text-slate-500">
+        <span className="text-emerald-600 mt-0.5 flex-shrink-0">#</span>
         A unique 6-character estate code will be auto-generated. Share it with residents so they can register.
       </div>
 
       <div className="flex gap-3 pt-1">
         <button onClick={onBack}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
-          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }}>
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all bg-slate-100 border border-slate-200 text-slate-600 hover:bg-slate-200">
           <ArrowLeft size={14}/> Back
         </button>
         <button onClick={onNext} disabled={!canNext}
@@ -200,9 +190,9 @@ function PlanStep({ selected, onSelect, onNext, onBack, loading }) {
   return (
     <div className="space-y-4">
       <div className="mb-5">
-        <h2 className="text-2xl font-bold text-white mb-1 tracking-tight">Choose your billing</h2>
-        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
-          Start with a <span style={{ color: '#D4AF70', fontWeight: 600 }}>14-day free trial</span> — no payment now.
+        <h2 className="text-2xl font-bold text-slate-900 mb-1 tracking-tight">Choose your billing</h2>
+        <p className="text-sm text-slate-500">
+          Start with a <span className="text-emerald-600 font-semibold">14-day free trial</span> — no payment now.
         </p>
       </div>
 
@@ -212,53 +202,50 @@ function PlanStep({ selected, onSelect, onNext, onBack, loading }) {
             className="w-full text-left rounded-xl border p-4 transition-all"
             style={{
               border: selected?.id === opt.id
-                ? '1px solid rgba(212,175,112,0.5)'
-                : '1px solid rgba(255,255,255,0.08)',
+                ? '1px solid #10B981'
+                : '1px solid #E2E8F0',
               background: selected?.id === opt.id
-                ? 'rgba(212,175,112,0.06)'
-                : 'rgba(255,255,255,0.02)',
+                ? 'rgba(16,185,129,0.05)'
+                : '#FFFFFF',
             }}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all`}
+                <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all"
                   style={{
-                    borderColor: selected?.id === opt.id ? '#D4AF70' : 'rgba(255,255,255,0.2)',
-                    background:  selected?.id === opt.id ? '#D4AF70' : 'transparent',
+                    borderColor: selected?.id === opt.id ? '#10B981' : '#CBD5E1',
+                    background:  selected?.id === opt.id ? '#10B981' : 'transparent',
                   }}>
-                  {selected?.id === opt.id && <Check size={11} color="#040912" strokeWidth={3}/>}
+                  {selected?.id === opt.id && <Check size={11} color="#ffffff" strokeWidth={3}/>}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-white font-semibold text-sm">{opt.label}</span>
+                    <span className="text-slate-900 font-semibold text-sm">{opt.label}</span>
                     {opt.badge && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                        style={{ background: 'rgba(212,175,112,0.15)', color: '#D4AF70', border: '1px solid rgba(212,175,112,0.3)' }}>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200">
                         {opt.badge}
                       </span>
                     )}
                   </div>
-                  <div className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.38)' }}>{opt.sub}</div>
+                  <div className="text-xs mt-0.5 text-slate-400">{opt.sub}</div>
                 </div>
               </div>
               <div className="text-right flex-shrink-0">
-                <span className="text-white font-bold">{opt.price}</span>
-                <span className="text-xs" style={{ color: 'rgba(255,255,255,0.38)' }}> {opt.period}</span>
+                <span className="text-slate-900 font-bold">{opt.price}</span>
+                <span className="text-xs text-slate-400"> {opt.period}</span>
               </div>
             </div>
           </button>
         ))}
       </div>
 
-      <div className="rounded-xl p-3.5 text-xs flex gap-2.5 items-start"
-        style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.18)', color: 'rgba(110,231,183,0.85)' }}>
-        <CheckCircle size={14} className="flex-shrink-0 mt-0.5" style={{ color: '#10B981' }}/>
+      <div className="rounded-xl p-3.5 text-xs flex gap-2.5 items-start bg-emerald-50 border border-emerald-200 text-emerald-700">
+        <CheckCircle size={14} className="flex-shrink-0 mt-0.5 text-emerald-600"/>
         All plans include: visitor management, QR passes, community chat, announcements, payments, guard app, and analytics.
       </div>
 
       <div className="flex gap-3 pt-1">
         <button onClick={onBack}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium"
-          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }}>
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-slate-100 border border-slate-200 text-slate-600 hover:bg-slate-200 transition-all">
           <ArrowLeft size={14}/> Back
         </button>
         <button onClick={onNext} disabled={!selected || loading}
@@ -282,37 +269,35 @@ function DoneStep({ estateName, estateCode, billingLabel }) {
   const navigate = useNavigate();
   return (
     <div className="text-center space-y-6">
-      <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto"
-        style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)' }}>
-        <CheckCircle size={36} style={{ color: '#10B981' }}/>
+      <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto bg-emerald-50 border border-emerald-200">
+        <CheckCircle size={36} className="text-emerald-600"/>
       </div>
       <div>
-        <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">You're in!</h2>
-        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.45)' }}>
+        <h2 className="text-2xl font-bold text-slate-900 mb-2 tracking-tight">You're in!</h2>
+        <p className="text-sm text-slate-500">
           Your estate is live. Your 14-day trial has started.
         </p>
       </div>
 
-      <div className="rounded-xl p-5 text-left space-y-3"
-        style={{ background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.2)' }}>
+      <div className="rounded-xl p-5 text-left space-y-3 bg-emerald-50 border border-emerald-200">
         {[
           ['Estate', estateName],
           ['Billing', billingLabel],
         ].map(([k, v]) => (
           <div key={k} className="flex items-center justify-between">
-            <span className="text-sm" style={{ color: 'rgba(255,255,255,0.45)' }}>{k}</span>
-            <span className="text-white font-semibold text-sm">{v}</span>
+            <span className="text-sm text-slate-500">{k}</span>
+            <span className="text-slate-900 font-semibold text-sm">{v}</span>
           </div>
         ))}
         <div className="flex items-center justify-between">
-          <span className="text-sm" style={{ color: 'rgba(255,255,255,0.45)' }}>Estate Code</span>
+          <span className="text-sm text-slate-500">Estate Code</span>
           <button onClick={() => { navigator.clipboard.writeText(estateCode); toast.success('Copied!'); }}
-            className="font-mono font-black tracking-widest text-lg hover:opacity-75 transition-opacity"
-            style={{ color: '#D4AF70' }} title="Click to copy">
+            className="font-mono font-black tracking-widest text-lg text-emerald-600 hover:text-emerald-500 transition-colors"
+            title="Click to copy">
             {estateCode}
           </button>
         </div>
-        <div className="pt-2 border-t text-xs" style={{ borderColor: 'rgba(255,255,255,0.08)', color: 'rgba(212,175,112,0.65)' }}>
+        <div className="pt-2 border-t border-emerald-200 text-xs text-slate-500">
           Share the estate code with residents so they can register on the resident app.
         </div>
       </div>
@@ -325,8 +310,7 @@ function DoneStep({ estateName, estateCode, billingLabel }) {
           Set Up Estate <ArrowRight size={15}/>
         </button>
         <button onClick={() => navigate('/dashboard')}
-          className="w-full py-2.5 rounded-xl text-sm font-medium transition-all"
-          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', color: 'rgba(255,255,255,0.55)' }}>
+          className="w-full py-2.5 rounded-xl text-sm font-medium transition-all bg-slate-100 border border-slate-200 text-slate-500 hover:bg-slate-200">
           Skip — Go to Dashboard
         </button>
       </div>
@@ -402,11 +386,10 @@ export default function Register() {
           <Shield size={20} color="white"/>
         </div>
         <div>
-          <div className="text-lg font-bold text-white leading-tight">
+          <div className="text-lg font-bold text-slate-900 leading-tight">
             Area<span style={{ color: '#10B981' }}>Connect</span>
           </div>
-          <div className="text-xs font-semibold uppercase tracking-widest"
-            style={{ color: 'rgba(255,255,255,0.3)' }}>Admin Portal</div>
+          <div className="text-xs font-semibold uppercase tracking-widest text-slate-400">Admin Portal</div>
         </div>
       </div>
 
@@ -429,7 +412,7 @@ export default function Register() {
       )}
 
       {step === 0 && (
-        <p className="text-center text-xs mt-6" style={{ color: 'rgba(255,255,255,0.18)' }}>
+        <p className="text-center text-xs mt-6 text-slate-300">
           By registering you agree to our Terms of Service and Privacy Policy.
         </p>
       )}

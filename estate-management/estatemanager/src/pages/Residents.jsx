@@ -138,7 +138,7 @@ export default function ManagerResidents() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-white" style={{ letterSpacing: '-0.03em' }}>Residents</h1>
+          <h1 className="text-2xl font-bold text-slate-900" style={{ letterSpacing: '-0.03em' }}>Residents</h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-sub)' }}>{residents.length} registered residents</p>
         </div>
         <div className="flex gap-2">
@@ -172,15 +172,15 @@ export default function ManagerResidents() {
             {filtered.map((r, i) => (
               <div key={r._id}
                 className="flex items-center gap-4 px-5 py-4 transition-colors"
-                style={{ borderTop: i > 0 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                style={{ borderTop: i > 0 ? '1px solid rgba(0,0,0,0.06)' : 'none' }}
+                onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                 <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
                   style={{ background: 'rgba(16,185,129,0.12)', color: '#34D399', border: '1px solid rgba(16,185,129,0.2)' }}>
                   {r.name[0]?.toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-white text-sm flex items-center gap-2">
+                  <div className="font-medium text-slate-900 text-sm flex items-center gap-2">
                     {r.name}
                     {!r.isActive && <span className="badge badge-red">Suspended</span>}
                   </div>
@@ -194,12 +194,12 @@ export default function ManagerResidents() {
                 <button onClick={() => handleToggle(r)}
                   className="p-2 rounded-lg transition-all flex-shrink-0"
                   title={r.isActive ? 'Suspend' : 'Activate'}
-                  style={{ color: 'rgba(255,255,255,0.3)' }}
+                  style={{ color: '#94A3B8' }}
                   onMouseEnter={e => {
                     e.currentTarget.style.color = r.isActive ? '#F87171' : '#34D399';
                     e.currentTarget.style.background = r.isActive ? 'rgba(239,68,68,0.1)' : 'rgba(52,211,153,0.1)';
                   }}
-                  onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.3)'; e.currentTarget.style.background = 'transparent'; }}>
+                  onMouseLeave={e => { e.currentTarget.style.color = '#94A3B8'; e.currentTarget.style.background = 'transparent'; }}>
                   {r.isActive ? <UserX size={15} /> : <UserCheck size={15} />}
                 </button>
               </div>
@@ -280,27 +280,27 @@ export default function ManagerResidents() {
 
             {/* Preview */}
             {parsedPreview.length > 0 && (
-              <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
+              <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(0,0,0,0.06)' }}>
                 <div className="px-4 py-2.5 text-xs font-semibold"
-                  style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--text-dim)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                  style={{ background: '#F8FAFC', color: 'var(--text-dim)', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
                   Preview · first 5 rows
                 </div>
                 {parsedPreview.slice(0, 5).map((r, i) => (
                   <div key={i} className="flex items-center gap-3 px-4 py-2.5"
-                    style={{ borderTop: i > 0 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
+                    style={{ borderTop: i > 0 ? '1px solid rgba(0,0,0,0.06)' : 'none' }}>
                     <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
                       style={{ background: 'rgba(16,185,129,0.12)', color: '#34D399' }}>
                       {r.name[0]?.toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium text-white">{r.name}</span>
+                      <span className="text-sm font-medium text-slate-900">{r.name}</span>
                       <span className="text-xs ml-2" style={{ color: 'var(--text-dim)' }}>{r.email}</span>
                     </div>
                     {r.phone && <span className="text-xs" style={{ color: 'var(--text-dim)' }}>{r.phone}</span>}
                   </div>
                 ))}
                 {parsedPreview.length > 5 && (
-                  <div className="px-4 py-2 text-xs text-center" style={{ color: 'var(--text-dim)', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div className="px-4 py-2 text-xs text-center" style={{ color: 'var(--text-dim)', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
                     +{parsedPreview.length - 5} more
                   </div>
                 )}
@@ -326,7 +326,7 @@ export default function ManagerResidents() {
                 <div key={label} className="rounded-xl p-4 text-center"
                   style={{ background: bg, border: `1px solid ${color}25` }}>
                   <Icon size={20} style={{ color, margin: '0 auto 8px' }} />
-                  <div className="text-2xl font-bold text-white">{count}</div>
+                  <div className="text-2xl font-bold text-slate-900">{count}</div>
                   <div className="text-xs font-medium mt-0.5" style={{ color }}>{label}</div>
                 </div>
               ))}
@@ -341,8 +341,8 @@ export default function ManagerResidents() {
                 <div className="max-h-32 overflow-y-auto">
                   {bulkResult.skipped.map((r, i) => (
                     <div key={i} className="flex items-center justify-between px-4 py-2 text-xs"
-                      style={{ borderTop: i > 0 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
-                      <span className="text-white/70">{r.email}</span>
+                      style={{ borderTop: i > 0 ? '1px solid rgba(0,0,0,0.06)' : 'none' }}>
+                      <span className="text-slate-600">{r.email}</span>
                       <span style={{ color: '#FBBF24' }}>{r.reason}</span>
                     </div>
                   ))}

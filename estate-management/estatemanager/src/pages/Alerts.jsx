@@ -76,8 +76,8 @@ export default function ManagerAlerts() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-3xl font-display font-bold text-white mb-1">Security Alerts</h1>
-          <p className="text-white/50 text-sm">Monitor and respond to estate alerts</p>
+          <h1 className="text-3xl font-display font-bold text-slate-900 mb-1">Security Alerts</h1>
+          <p className="text-slate-500 text-sm">Monitor and respond to estate alerts</p>
         </div>
         <div className="flex gap-2">
           <select className="input-field w-44"
@@ -101,8 +101,8 @@ export default function ManagerAlerts() {
         <div className="space-y-3">
           {alerts.map((a) => (
             <div key={a._id} className={`glass-card p-5 transition-all ${
-              a.status === 'open' ? 'border-red-500/30 bg-red-500/5' :
-              a.status === 'acknowledged' ? 'border-amber-500/20' : ''}`}>
+              a.status === 'open' ? 'border-red-300 bg-red-50' :
+              a.status === 'acknowledged' ? 'border-amber-200' : ''}`}>
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1.5 flex-wrap">
@@ -111,30 +111,30 @@ export default function ManagerAlerts() {
                     {a.isEmergencyBroadcast && <Badge variant="red">📢 Broadcast</Badge>}
                     {a.severity && a.isEmergencyBroadcast && (
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
-                        a.severity === 'critical' ? 'bg-red-500/20 text-red-300' :
-                        a.severity === 'high' ? 'bg-orange-500/20 text-orange-300' :
-                        a.severity === 'medium' ? 'bg-yellow-500/20 text-yellow-300' :
-                        'bg-green-500/20 text-green-300'
+                        a.severity === 'critical' ? 'bg-red-100 text-red-700' :
+                        a.severity === 'high' ? 'bg-orange-100 text-orange-700' :
+                        a.severity === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-green-100 text-green-700'
                       }`}>{a.severity.toUpperCase()}</span>
                     )}
                   </div>
-                  {a.title && <div className="text-white font-semibold text-sm mb-0.5">{a.title}</div>}
-                  <div className="text-white/50 text-xs mb-1">
+                  {a.title && <div className="text-slate-900 font-semibold text-sm mb-0.5">{a.title}</div>}
+                  <div className="text-slate-500 text-xs mb-1">
                     {a.residentId?.name}{a.unitId?.unitNumber ? ` · Unit ${a.unitId.unitNumber}` : ''}
                     {a.location && <><span className="mx-1.5">·</span><MapPin size={10} className="inline mr-0.5" />{a.location}</>}
                   </div>
-                  {a.note && <p className="text-white/60 text-sm mb-1.5">{a.note}</p>}
+                  {a.note && <p className="text-slate-600 text-sm mb-1.5">{a.note}</p>}
                   {a.actionRequired && (
-                    <div className="flex items-center gap-1.5 text-xs text-amber-400 mb-1.5">
+                    <div className="flex items-center gap-1.5 text-xs text-amber-600 mb-1.5">
                       <AlertTriangle size={11} /> <span className="font-medium">Action:</span> {a.actionRequired}
                     </div>
                   )}
                   {a.contactNumber && (
-                    <div className="flex items-center gap-1.5 text-xs text-white/40 mb-1.5">
+                    <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-1.5">
                       <Phone size={11} /> {a.contactNumber}
                     </div>
                   )}
-                  <div className="text-xs text-white/30">
+                  <div className="text-xs text-slate-400">
                     {format(new Date(a.createdAt), 'MMM d, yyyy · HH:mm')}
                     {a.resolvedBy && ` · Resolved by ${a.resolvedBy.name}`}
                   </div>
@@ -161,14 +161,14 @@ export default function ManagerAlerts() {
         <form onSubmit={handleBroadcast} className="space-y-5">
 
           {/* Warning banner */}
-          <div className="flex items-start gap-3 p-3.5 rounded-lg bg-red-500/10 border border-red-500/25 text-red-400 text-sm">
+          <div className="flex items-start gap-3 p-3.5 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
             <ShieldAlert size={18} className="flex-shrink-0 mt-0.5" />
             <span>This broadcast will immediately notify <strong>all residents</strong> in the estate. Use only for real emergencies.</span>
           </div>
 
           {/* Title */}
           <div>
-            <label className="text-sm text-white/60 mb-1.5 block">Broadcast Title <span className="text-red-400">*</span></label>
+            <label className="text-sm text-slate-500 mb-1.5 block">Broadcast Title <span className="text-red-500">*</span></label>
             <input className="input-field" placeholder="e.g. Armed Robbery Reported Near Main Gate"
               value={broadcastForm.title}
               onChange={(e) => setBroadcastForm({ ...broadcastForm, title: e.target.value })}
@@ -178,7 +178,7 @@ export default function ManagerAlerts() {
           {/* Type + Severity */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm text-white/60 mb-1.5 block">Emergency Type <span className="text-red-400">*</span></label>
+              <label className="text-sm text-slate-500 mb-1.5 block">Emergency Type <span className="text-red-500">*</span></label>
               <select className="input-field" value={broadcastForm.type}
                 onChange={(e) => setBroadcastForm({ ...broadcastForm, type: e.target.value })}>
                 <option value="security">🔒 Security</option>
@@ -189,7 +189,7 @@ export default function ManagerAlerts() {
               </select>
             </div>
             <div>
-              <label className="text-sm text-white/60 mb-1.5 block">Severity Level <span className="text-red-400">*</span></label>
+              <label className="text-sm text-slate-500 mb-1.5 block">Severity Level <span className="text-red-500">*</span></label>
               <select className="input-field" value={broadcastForm.severity}
                 onChange={(e) => setBroadcastForm({ ...broadcastForm, severity: e.target.value })}>
                 <option value="low">🟢 Low</option>
@@ -202,7 +202,7 @@ export default function ManagerAlerts() {
 
           {/* Location */}
           <div>
-            <label className="text-sm text-white/60 mb-1.5 block flex items-center gap-1.5">
+            <label className="text-sm text-slate-500 mb-1.5 block flex items-center gap-1.5">
               <MapPin size={13} /> Location in Estate
             </label>
             <input className="input-field" placeholder="e.g. Block A, Main Gate, Swimming Pool area"
@@ -212,7 +212,7 @@ export default function ManagerAlerts() {
 
           {/* Message */}
           <div>
-            <label className="text-sm text-white/60 mb-1.5 block">Full Message / Details <span className="text-red-400">*</span></label>
+            <label className="text-sm text-slate-500 mb-1.5 block">Full Message / Details <span className="text-red-500">*</span></label>
             <textarea className="input-field" rows={3}
               placeholder="Describe exactly what happened or is happening..."
               value={broadcastForm.note}
@@ -222,7 +222,7 @@ export default function ManagerAlerts() {
 
           {/* Action Required */}
           <div>
-            <label className="text-sm text-white/60 mb-2 block flex items-center gap-1.5">
+            <label className="text-sm text-slate-500 mb-2 block flex items-center gap-1.5">
               <AlertTriangle size={13} /> Action Required for Residents
             </label>
             <div className="flex flex-wrap gap-2 mb-2">
@@ -231,8 +231,8 @@ export default function ManagerAlerts() {
                   onClick={() => setBroadcastForm({ ...broadcastForm, actionRequired: preset })}
                   className={`text-xs px-3 py-1.5 rounded-lg border transition-all ${
                     broadcastForm.actionRequired === preset
-                      ? 'bg-red-500/20 border-red-500/40 text-red-300'
-                      : 'border-white/15 text-white/40 hover:border-white/30 hover:text-white/70'
+                      ? 'bg-red-50 border-red-300 text-red-600'
+                      : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
                   }`}>
                   {preset}
                 </button>
@@ -245,7 +245,7 @@ export default function ManagerAlerts() {
 
           {/* Contact Number */}
           <div>
-            <label className="text-sm text-white/60 mb-1.5 block flex items-center gap-1.5">
+            <label className="text-sm text-slate-500 mb-1.5 block flex items-center gap-1.5">
               <Phone size={13} /> Emergency Contact Number
             </label>
             <input className="input-field" placeholder="e.g. +234 800 000 0000 (security desk)"

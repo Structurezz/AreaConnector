@@ -43,52 +43,56 @@ export default function ManagerSettings() {
   return (
     <div className="max-w-2xl space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-3xl font-display font-bold text-white mb-1">Estate Settings</h1>
-        <p className="text-white/50 text-sm">{estate?.name} · Code: <span className="font-mono text-gold">{estate?.estateCode}</span></p>
+        <h1 className="text-3xl font-display font-bold mb-1" style={{ color: '#0F172A' }}>Estate Settings</h1>
+        <p className="text-sm" style={{ color: '#64748B' }}>
+          {estate?.name} · Code:{' '}
+          <span className="font-mono font-semibold" style={{ color: '#10B981' }}>{estate?.estateCode}</span>
+        </p>
       </div>
 
-      <div className="glass-card-gold p-6 space-y-6">
-        <h2 className="text-lg font-display font-semibold text-white flex items-center gap-2">
-          <Settings2 size={20} className="text-gold" /> General Settings
+      <div className="glass-card p-6 space-y-1">
+        <h2 className="text-base font-semibold mb-4 flex items-center gap-2" style={{ color: '#0F172A' }}>
+          <Settings2 size={18} style={{ color: '#10B981' }} /> General Settings
         </h2>
         {toggles.map(({ key, label, desc }) => (
-          <div key={key} className="flex items-start gap-4 py-4 border-b border-white/10 last:border-0">
+          <div key={key} className="flex items-start gap-4 py-4" style={{ borderBottom: '1px solid #F1F5F9' }}>
             <div className="flex-1">
-              <div className="font-medium text-white mb-0.5">{label}</div>
-              <div className="text-sm text-white/50">{desc}</div>
+              <div className="font-medium mb-0.5" style={{ color: '#0F172A' }}>{label}</div>
+              <div className="text-sm" style={{ color: '#64748B' }}>{desc}</div>
             </div>
             <button
               onClick={() => setSettings({ ...settings, [key]: !settings[key] })}
-              className={`relative w-12 h-6 rounded-full transition-all flex-shrink-0 mt-0.5 ${
-                settings[key] ? 'bg-gold' : 'bg-white/20'
-              }`}
+              className="relative w-11 h-6 rounded-full transition-all flex-shrink-0 mt-0.5"
+              style={{ background: settings[key] ? '#10B981' : '#E2E8F0' }}
             >
-              <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                settings[key] ? 'translate-x-6' : 'translate-x-0'
-              }`} />
+              <span
+                className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform"
+                style={{ transform: settings[key] ? 'translateX(1.25rem)' : 'translateX(0)' }}
+              />
             </button>
           </div>
         ))}
-
-        <button onClick={handleSave} disabled={saving} className="btn-primary gap-2">
-          <Save size={16} />
-          {saving ? 'Saving...' : 'Save Settings'}
-        </button>
+        <div className="pt-4">
+          <button onClick={handleSave} disabled={saving} className="btn-primary gap-2">
+            <Save size={16} />
+            {saving ? 'Saving...' : 'Save Settings'}
+          </button>
+        </div>
       </div>
 
       {/* Estate info */}
-      <div className="glass-card p-6 space-y-4">
-        <h2 className="text-lg font-display font-semibold text-white">Estate Information</h2>
-        <div className="grid gap-3">
+      <div className="glass-card p-6 space-y-1">
+        <h2 className="text-base font-semibold mb-4" style={{ color: '#0F172A' }}>Estate Information</h2>
+        <div className="divide-y" style={{ '--tw-divide-opacity': 1 }}>
           {[
             ['Estate Name', estate?.name],
             ['Address', estate?.address],
             ['Invite Code', estate?.estateCode],
             ['Manager', user?.name],
           ].map(([label, value]) => (
-            <div key={label} className="flex justify-between items-center py-2 border-b border-white/5">
-              <span className="text-white/50 text-sm">{label}</span>
-              <span className="text-white font-medium font-mono">{value}</span>
+            <div key={label} className="flex justify-between items-center py-3">
+              <span className="text-sm" style={{ color: '#64748B' }}>{label}</span>
+              <span className="text-sm font-semibold font-mono" style={{ color: '#0F172A' }}>{value}</span>
             </div>
           ))}
         </div>

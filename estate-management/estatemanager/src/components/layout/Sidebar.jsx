@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, UserCheck, Users, Home, Megaphone,
@@ -56,26 +56,26 @@ export default function Sidebar({ mobile = false, onClose }) {
       className="flex flex-col h-full overflow-hidden"
       style={{
         width: mobile ? '17rem' : '15.5rem',
-        background: 'linear-gradient(180deg, #0C1018 0%, #080B12 100%)',
-        borderRight: '1px solid rgba(255,255,255,0.06)',
+        background: '#FFFFFF',
+        borderRight: '1px solid #E2E8F0',
       }}>
 
       {/* Logo / Estate header */}
-      <div className="px-4 pt-5 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+      <Link to="/dashboard" className="block px-4 pt-5 pb-4 transition-opacity hover:opacity-80" style={{ borderBottom: '1px solid #E2E8F0', textDecoration: 'none' }}>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', boxShadow: '0 4px 12px rgba(16,185,129,0.35)' }}>
+            style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', boxShadow: '0 4px 12px rgba(16,185,129,0.25)' }}>
             <svg width="20" height="20" viewBox="0 0 40 40" fill="none">
-              <path d="M20 4L6 12v16l14 8 14-8V12L20 4z" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" fill="none"/>
-              <path d="M20 9L9 15.5v13L20 35l11-6.5v-13L20 9z" fill="rgba(255,255,255,0.15)"/>
+              <path d="M20 4L6 12v16l14 8 14-8V12L20 4z" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" fill="none"/>
+              <path d="M20 9L9 15.5v13L20 35l11-6.5v-13L20 9z" fill="rgba(255,255,255,0.2)"/>
               <text x="20" y="25" textAnchor="middle" fill="white" fontSize="12" fontWeight="800" fontFamily="system-ui,sans-serif">AC</text>
             </svg>
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold text-white truncate leading-tight" style={{ letterSpacing: '-0.03em' }}>
+            <div className="text-sm font-semibold truncate leading-tight" style={{ color: '#0F172A', letterSpacing: '-0.03em' }}>
               Area<span style={{ color: '#10B981' }}>Connect</span>
             </div>
-            <div className="text-xs font-medium mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.4)' }}>{estateName}</div>
+            <div className="text-xs font-medium mt-0.5 truncate" style={{ color: '#94A3B8' }}>{estateName}</div>
           </div>
         </div>
 
@@ -86,19 +86,19 @@ export default function Sidebar({ mobile = false, onClose }) {
             {planName}
           </span>
           {status === 'trial' && (
-            <span className="text-xs flex items-center gap-0.5 font-medium" style={{ color: '#FBBF24' }}>
+            <span className="text-xs flex items-center gap-0.5 font-medium" style={{ color: '#D97706' }}>
               <Zap size={10} />Trial
             </span>
           )}
         </div>
-      </div>
+      </Link>
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-5">
         {NAV.map(({ section, links }) => (
           <div key={section}>
             <p className="text-xs font-semibold uppercase tracking-widest px-2 pb-2"
-              style={{ color: 'rgba(255,255,255,0.2)', letterSpacing: '0.08em' }}>
+              style={{ color: '#94A3B8', letterSpacing: '0.08em' }}>
               {section}
             </p>
             <div className="space-y-0.5">
@@ -126,8 +126,8 @@ export default function Sidebar({ mobile = false, onClose }) {
           className={({ isActive }) =>
             `flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
               isActive
-                ? 'text-amber-300 bg-amber-500/15 border border-amber-500/25'
-                : 'text-amber-400/60 hover:text-amber-400 hover:bg-amber-500/10 border border-transparent'
+                ? 'text-amber-700 bg-amber-50 border border-amber-200'
+                : 'text-amber-600 hover:text-amber-700 hover:bg-amber-50 border border-transparent'
             }`
           }>
           <Crown size={14} />
@@ -136,23 +136,23 @@ export default function Sidebar({ mobile = false, onClose }) {
       </div>
 
       {/* User footer */}
-      <div className="px-3 pb-4 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="px-3 pb-4 pt-2" style={{ borderTop: '1px solid #E2E8F0' }}>
         <div className="flex items-center gap-2.5 px-2 py-2 rounded-xl mb-1">
           <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 text-white"
             style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', fontSize: '0.75rem' }}>
             {initials}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold text-white truncate leading-tight">{user?.name}</div>
-            <div className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.35)' }}>{user?.email}</div>
+            <div className="text-sm font-semibold truncate leading-tight" style={{ color: '#0F172A' }}>{user?.name}</div>
+            <div className="text-xs truncate" style={{ color: '#94A3B8' }}>{user?.email}</div>
           </div>
         </div>
         <button
           onClick={async () => { await logout(); navigate('/login'); }}
           className="flex items-center gap-2 w-full px-3 py-2 rounded-xl text-sm font-medium transition-all"
-          style={{ color: 'rgba(255,255,255,0.35)' }}
-          onMouseEnter={e => { e.currentTarget.style.color = '#F87171'; e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; }}
-          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.35)'; e.currentTarget.style.background = 'transparent'; }}>
+          style={{ color: '#94A3B8' }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#EF4444'; e.currentTarget.style.background = '#FEF2F2'; }}
+          onMouseLeave={e => { e.currentTarget.style.color = '#94A3B8'; e.currentTarget.style.background = 'transparent'; }}>
           <LogOut size={14} /> Sign out
         </button>
       </div>
