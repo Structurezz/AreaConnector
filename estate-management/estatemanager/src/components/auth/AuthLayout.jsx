@@ -101,12 +101,10 @@ function AdSidebar() {
   const s = AD_SLIDES[idx];
 
   return (
-    <div className="hidden xl:flex" style={{
-      width: 320, flexShrink: 0,
+    <div className="hidden lg:flex" style={{
+      flex: 1,
       background: 'linear-gradient(180deg,#060E1A 0%,#0B1626 100%)',
-      borderLeft: '1px solid rgba(255,255,255,0.05)',
-      borderRight: '1px solid rgba(255,255,255,0.04)',
-      flexDirection: 'column', padding: '40px 32px',
+      flexDirection: 'column', padding: '48px 52px',
       position: 'relative', overflow: 'hidden',
     }}>
       {/* top ambient glow */}
@@ -390,9 +388,9 @@ export default function AuthLayout({ children, caption, sub, pills }) {
 
 
         {/* ══════════════════════════════════════════════
-            LEFT — Estate photo panel (hidden on mobile)
+            LEFT — Estate photo panel (hidden — replaced by ad sidebar)
         ══════════════════════════════════════════════ */}
-        <div className="hidden lg:block"
+        <div className="hidden"
           style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
 
           {/* Estate photo with Ken Burns */}
@@ -527,11 +525,10 @@ export default function AuthLayout({ children, caption, sub, pills }) {
             RIGHT — Form panel
         ══════════════════════════════════════════════ */}
         <div style={{
-          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          position: 'relative', flexShrink: 0, overflowY: 'auto', minHeight: '100vh',
+          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          position: 'relative', overflowY: 'auto', minHeight: '100vh',
           background: '#FFFFFF',
-        }}
-          className="lg:w-[460px]">
+        }}>
 
           {/* Subtle top-center emerald glow */}
           <div style={{
@@ -552,7 +549,6 @@ export default function AuthLayout({ children, caption, sub, pills }) {
             padding: '40px 32px',
             animation: 'fadeInForm 0.6s cubic-bezier(0.22,1,0.36,1) both',
           }}>
-            <MobileAdBanner />
             {children}
           </div>
         </div>

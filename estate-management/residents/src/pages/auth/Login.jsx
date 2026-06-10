@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+/* ── Ad sidebar slides (desktop only) ── */
 const AD_SLIDES = [
   {
     tag: 'What is AreaMates?',
@@ -46,9 +47,9 @@ function AdSidebar() {
 
   return (
     <div className="hidden lg:flex" style={{
-      width: 320, flexShrink: 0,
+      flex: 1,
       background: 'linear-gradient(180deg,#060E1A 0%,#0B1626 100%)',
-      flexDirection: 'column', padding: '40px 32px',
+      flexDirection: 'column', padding: '48px 52px',
       position: 'relative', overflow: 'hidden',
     }}>
       <div style={{
@@ -64,68 +65,68 @@ function AdSidebar() {
         transition: 'background 0.5s',
       }}/>
 
-      {/* Brand top */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, position: 'relative', zIndex: 1 }}>
+      {/* Brand */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, position: 'relative', zIndex: 1 }}>
         <div style={{
-          width: 30, height: 30, borderRadius: 9,
+          width: 36, height: 36, borderRadius: 11,
           background: 'linear-gradient(135deg,#6366F1,#4F46E5)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
         }}>
-          <svg width="16" height="16" viewBox="0 0 40 40" fill="none">
+          <svg width="18" height="18" viewBox="0 0 40 40" fill="none">
             <path d="M20 10L11 15.5v11L20 32l9-5.5v-11L20 10z" fill="rgba(255,255,255,0.2)"/>
             <text x="20" y="25" textAnchor="middle" fill="white" fontSize="12" fontWeight="800" fontFamily="system-ui">AM</text>
           </svg>
         </div>
-        <span style={{ fontSize: 14, fontWeight: 800, color: 'rgba(255,255,255,0.7)', letterSpacing: '-0.02em' }}>
+        <span style={{ fontSize: 15, fontWeight: 800, color: 'rgba(255,255,255,0.7)', letterSpacing: '-0.02em' }}>
           Area<span style={{ color: '#6366F1' }}>Mates</span>
         </span>
       </div>
 
-      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: 'rgba(255,255,255,0.15)', marginBottom: 0, position: 'relative', zIndex: 1 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: 'rgba(255,255,255,0.15)', position: 'relative', zIndex: 1 }}>
         {s.num} <span style={{ color: 'rgba(255,255,255,0.08)' }}>/ 03</span>
       </div>
 
       <div style={{
         flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center',
-        paddingTop: 16, paddingBottom: 16, position: 'relative', zIndex: 1,
+        paddingTop: 20, paddingBottom: 20, position: 'relative', zIndex: 1,
         opacity: out ? 0 : 1, transform: out ? 'translateY(10px)' : 'translateY(0)',
         transition: 'opacity 0.28s, transform 0.28s',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 16 }}>
-          <span style={{ width: 20, height: 2, borderRadius: 99, background: s.accent }}/>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
+          <span style={{ width: 22, height: 2, borderRadius: 99, background: s.accent }}/>
           <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: s.accent, textTransform: 'uppercase' }}>{s.tag}</span>
         </div>
 
-        <h3 style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.22, letterSpacing: '-0.03em', color: '#fff', marginBottom: 10 }}>
+        <h3 style={{ fontSize: 24, fontWeight: 800, lineHeight: 1.2, letterSpacing: '-0.03em', color: '#fff', marginBottom: 12 }}>
           {s.headline}
         </h3>
 
-        <div style={{ width: 28, height: 3, borderRadius: 99, background: `linear-gradient(90deg,${s.accent},transparent)`, marginBottom: 14 }}/>
+        <div style={{ width: 30, height: 3, borderRadius: 99, background: `linear-gradient(90deg,${s.accent},transparent)`, marginBottom: 16 }}/>
 
-        <p style={{ fontSize: 12, lineHeight: 1.7, color: 'rgba(255,255,255,0.42)', marginBottom: 20 }}>{s.body}</p>
+        <p style={{ fontSize: 13, lineHeight: 1.7, color: 'rgba(255,255,255,0.42)', marginBottom: 24 }}>{s.body}</p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {s.points.map(pt => (
-            <div key={pt} style={{ display: 'flex', alignItems: 'flex-start', gap: 9 }}>
-              <CheckCircle size={12} color={s.accent} style={{ flexShrink: 0, marginTop: 2 }}/>
-              <span style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.6)', lineHeight: 1.4 }}>{pt}</span>
+            <div key={pt} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+              <CheckCircle size={13} color={s.accent} style={{ flexShrink: 0, marginTop: 2 }}/>
+              <span style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.6)', lineHeight: 1.4 }}>{pt}</span>
             </div>
           ))}
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 6, paddingBottom: 16, position: 'relative', zIndex: 1 }}>
+      <div style={{ display: 'flex', gap: 6, paddingBottom: 18, position: 'relative', zIndex: 1 }}>
         {AD_SLIDES.map((_, i) => (
           <button key={i} onClick={() => go(i)} style={{
-            width: i === idx ? 22 : 6, height: 6, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 0,
+            width: i === idx ? 24 : 6, height: 6, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 0,
             background: i === idx ? s.accent : 'rgba(255,255,255,0.15)',
             transition: 'all 0.35s',
           }}/>
         ))}
       </div>
 
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 14, position: 'relative', zIndex: 1 }}>
-        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '-0.02em', color: 'rgba(255,255,255,0.55)' }}>
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 16, position: 'relative', zIndex: 1 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: '-0.02em', color: 'rgba(255,255,255,0.55)' }}>
           Area<span style={{ color: '#10B981' }}>Connect</span>
         </div>
         <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', marginTop: 3 }}>Smart Estate Technology</div>
@@ -134,82 +135,232 @@ function AdSidebar() {
   );
 }
 
-function MobileBanner() {
-  const [idx, setIdx] = useState(0);
-  const [out, setOut] = useState(false);
+/* ── Mobile CSS ── */
+const MOBILE_CSS = `
+  @keyframes amOrb1 {
+    0%,100% { transform: translate(0,0) scale(1); }
+    35% { transform: translate(28px,-40px) scale(1.08); }
+    68% { transform: translate(-22px,26px) scale(0.93); }
+  }
+  @keyframes amOrb2 {
+    0%,100% { transform: translate(0,0) scale(1); }
+    40% { transform: translate(-32px,24px) scale(1.06); }
+    72% { transform: translate(20px,-28px) scale(0.95); }
+  }
+  @keyframes amPulse {
+    0% { transform: scale(1); opacity: 0.55; }
+    100% { transform: scale(2.6); opacity: 0; }
+  }
+  @keyframes amCardIn {
+    0% { opacity: 0; transform: translateY(36px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes amHeroIn {
+    0% { opacity: 0; transform: scale(0.92) translateY(-10px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  @keyframes amScan {
+    0% { top: -2px; opacity: 0.07; }
+    100% { top: 101%; opacity: 0.01; }
+  }
+  @keyframes amGlow {
+    0%,100% { opacity: 0.65; }
+    50% { opacity: 1; }
+  }
+  .am-input {
+    width: 100%; padding: 13px 16px; border-radius: 12px;
+    background: rgba(255,255,255,0.07); border: 1.5px solid rgba(255,255,255,0.11);
+    color: #fff; font-size: 14px; outline: none; box-sizing: border-box;
+    transition: border-color 0.2s;
+  }
+  .am-input:focus { border-color: rgba(99,102,241,0.55); }
+  .am-input::placeholder { color: rgba(255,255,255,0.3); }
+`;
 
-  const go = (i) => { setOut(true); setTimeout(() => { setIdx(i); setOut(false); }, 260); };
-
-  useEffect(() => {
-    const t = setInterval(() => go((idx + 1) % AD_SLIDES.length), 4500);
-    return () => clearInterval(t);
-  }, [idx]);
-
-  const s = AD_SLIDES[idx];
-
+function MobileLogin({ form, setForm, showPw, setShowPw, loading, error, handleSubmit }) {
   return (
-    <div className="lg:hidden" style={{ marginBottom: 20 }}>
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(160deg,#05091A 0%,#08103A 100%)', position: 'relative', overflow: 'hidden' }}>
+      <style>{MOBILE_CSS}</style>
+
+      {/* Orb 1 — top right */}
       <div style={{
-        borderRadius: 16, position: 'relative', overflow: 'hidden',
-        background: 'linear-gradient(135deg,#060E1A 0%,#0D1B2E 100%)',
-        border: `1px solid ${s.accent}28`,
-        boxShadow: `0 4px 24px rgba(0,0,0,0.18), 0 0 0 1px ${s.accent}10`,
-        padding: '16px 18px',
-        transition: 'border-color 0.5s, box-shadow 0.5s',
+        position: 'fixed', top: -100, right: -80, width: 360, height: 360,
+        borderRadius: '50%', pointerEvents: 'none',
+        background: 'radial-gradient(circle, rgba(99,102,241,0.24) 0%, transparent 65%)',
+        animation: 'amOrb1 11s ease-in-out infinite',
+      }}/>
+      {/* Orb 2 — bottom left */}
+      <div style={{
+        position: 'fixed', bottom: -110, left: -90, width: 320, height: 320,
+        borderRadius: '50%', pointerEvents: 'none',
+        background: 'radial-gradient(circle, rgba(79,70,229,0.17) 0%, transparent 65%)',
+        animation: 'amOrb2 14s 3s ease-in-out infinite',
+      }}/>
+      {/* Scan line */}
+      <div style={{
+        position: 'fixed', left: 0, right: 0, height: 1, pointerEvents: 'none',
+        background: 'linear-gradient(to right, transparent, rgba(99,102,241,0.35), transparent)',
+        animation: 'amScan 9s linear infinite',
+      }}/>
+
+      {/* ── Hero ── */}
+      <div style={{
+        textAlign: 'center', padding: '64px 24px 36px',
+        position: 'relative', zIndex: 1,
+        animation: 'amHeroIn 0.8s cubic-bezier(0.22,1,0.36,1) both',
       }}>
-        <div style={{
-          position: 'absolute', top: -30, right: -30, width: 130, height: 130, borderRadius: '50%', pointerEvents: 'none',
-          background: `radial-gradient(circle, ${s.accent}22 0%, transparent 70%)`,
-          transition: 'background 0.5s',
-        }}/>
-        <div style={{
-          opacity: out ? 0 : 1, transform: out ? 'translateX(8px)' : 'translateX(0)',
-          transition: 'opacity 0.26s, transform 0.26s', position: 'relative', zIndex: 1,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ width: 14, height: 2, borderRadius: 99, background: s.accent }}/>
-              <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', color: s.accent, textTransform: 'uppercase' }}>{s.tag}</span>
-            </div>
-            <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.2)', fontWeight: 600 }}>{s.num}/03</span>
-          </div>
-          <div style={{ fontSize: 14, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', marginBottom: 4 }}>{s.headline}</div>
-          <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.38)', lineHeight: 1.55, marginBottom: 10 }}>{s.body.slice(0, 110)}…</p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-            {s.points.slice(0, 3).map(pt => (
-              <span key={pt} style={{
-                fontSize: 10, fontWeight: 600, padding: '3px 9px', borderRadius: 99,
-                background: `${s.accent}15`, color: s.accent, border: `1px solid ${s.accent}25`,
-              }}>{pt}</span>
-            ))}
+        {/* Icon + pulse rings */}
+        <div style={{ position: 'relative', display: 'inline-flex', marginBottom: 22 }}>
+          <div style={{
+            position: 'absolute', inset: -18, borderRadius: '50%',
+            border: '1.5px solid rgba(99,102,241,0.5)',
+            animation: 'amPulse 2.8s ease-out infinite',
+          }}/>
+          <div style={{
+            position: 'absolute', inset: -9, borderRadius: '50%',
+            border: '1.5px solid rgba(99,102,241,0.35)',
+            animation: 'amPulse 2.8s 0.7s ease-out infinite',
+          }}/>
+          <div style={{
+            width: 76, height: 76, borderRadius: 22,
+            background: 'linear-gradient(135deg,#6366F1,#4F46E5)',
+            boxShadow: '0 0 56px rgba(99,102,241,0.55), 0 12px 40px rgba(0,0,0,0.5)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            animation: 'amGlow 3s ease-in-out infinite',
+          }}>
+            <svg width="38" height="38" viewBox="0 0 40 40" fill="none">
+              <path d="M20 6L8 13v14l12 7 12-7V13L20 6z" stroke="rgba(255,255,255,0.25)" strokeWidth="1" fill="none"/>
+              <path d="M20 10L11 15.5v11L20 32l9-5.5v-11L20 10z" fill="rgba(255,255,255,0.15)"/>
+              <text x="20" y="25" textAnchor="middle" fill="white" fontSize="13" fontWeight="800" fontFamily="system-ui,sans-serif">AM</text>
+            </svg>
           </div>
         </div>
-        <div style={{ marginTop: 12, position: 'relative', zIndex: 1, display: 'flex', gap: 4 }}>
-          {AD_SLIDES.map((_, i) => (
-            <button key={i} onClick={() => go(i)} style={{
-              flex: i === idx ? 2 : 1, height: 3, borderRadius: 99, border: 'none', cursor: 'pointer', padding: 0,
-              background: i === idx ? s.accent : 'rgba(255,255,255,0.12)',
-              transition: 'all 0.35s',
-            }}/>
+
+        <div style={{ fontSize: 32, fontWeight: 900, letterSpacing: '-0.045em', color: '#fff', marginBottom: 4 }}>
+          Area<span style={{ color: '#818CF8' }}>Mates</span>
+        </div>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: 24 }}>
+          Resident Portal
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 7 }}>
+          {['Visitor Passes', 'Pay Levies', 'Community Chat', 'Alerts'].map(f => (
+            <span key={f} style={{
+              fontSize: 11, fontWeight: 600, padding: '5px 13px', borderRadius: 99,
+              background: 'rgba(99,102,241,0.12)', color: '#A5B4FC',
+              border: '1px solid rgba(99,102,241,0.25)',
+            }}>{f}</span>
           ))}
         </div>
+      </div>
+
+      {/* Separator */}
+      <div style={{ margin: '0 20px', height: 1, background: 'linear-gradient(to right, transparent, rgba(99,102,241,0.2), transparent)' }}/>
+
+      {/* ── Form card ── */}
+      <div style={{
+        margin: '0 12px', padding: '28px 24px 40px',
+        borderRadius: '28px 28px 0 0',
+        background: 'rgba(255,255,255,0.05)',
+        backdropFilter: 'blur(28px)',
+        WebkitBackdropFilter: 'blur(28px)',
+        border: '1px solid rgba(255,255,255,0.09)',
+        borderBottom: 'none',
+        animation: 'amCardIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both',
+        position: 'relative', zIndex: 1,
+      }}>
+        <h2 style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.03em', marginBottom: 2 }}>Welcome back</h2>
+        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 22 }}>Sign in to your estate account</p>
+
+        {/* Demo chip */}
+        <button
+          onClick={() => setForm({ email: 'resident1@estate-demo.com', password: 'Resident@123' })}
+          style={{
+            width: '100%', textAlign: 'left', padding: '11px 14px', borderRadius: 12,
+            background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.22)',
+            cursor: 'pointer', marginBottom: 22,
+          }}>
+          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', color: '#818CF8', textTransform: 'uppercase', marginBottom: 3 }}>
+            Try Demo Account
+          </div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>resident1@estate-demo.com</div>
+        </button>
+
+        {error && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, marginBottom: 16,
+            background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#FCA5A5', fontSize: 13,
+          }}>
+            <AlertCircle size={14}/> {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', marginBottom: 8 }}>
+              Email Address
+            </label>
+            <input type="email" className="am-input" placeholder="you@example.com"
+              value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
+              required autoComplete="email"/>
+          </div>
+
+          <div style={{ marginBottom: 22 }}>
+            <label style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', marginBottom: 8 }}>
+              Password
+            </label>
+            <div style={{ position: 'relative' }}>
+              <input type={showPw ? 'text' : 'password'} className="am-input" placeholder="••••••••"
+                value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
+                required autoComplete="current-password" style={{ paddingRight: 44 }}/>
+              <button type="button" onClick={() => setShowPw(!showPw)}
+                style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', padding: 0 }}>
+                {showPw ? <EyeOff size={16}/> : <Eye size={16}/>}
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" disabled={loading} style={{
+            width: '100%', padding: '15px', borderRadius: 14, border: 'none',
+            background: loading ? 'rgba(99,102,241,0.4)' : 'linear-gradient(135deg,#6366F1,#4F46E5)',
+            color: '#fff', fontWeight: 700, fontSize: 15,
+            boxShadow: loading ? 'none' : '0 6px 24px rgba(99,102,241,0.4)',
+            cursor: loading ? 'not-allowed' : 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          }}>
+            {loading ? (
+              <>
+                <svg style={{ animation: 'spin 1s linear infinite' }} width={16} height={16} viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" strokeOpacity=".3"/>
+                  <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round"/>
+                </svg>
+                Signing in…
+              </>
+            ) : 'Sign In'}
+          </button>
+
+          <p style={{ textAlign: 'center', marginTop: 18, fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>
+            New resident?{' '}
+            <Link to="/register" style={{ color: '#818CF8', fontWeight: 600 }}>Join with estate code</Link>
+          </p>
+        </form>
       </div>
     </div>
   );
 }
 
-const DEMO = { label: 'Resident (Demo)', email: 'resident1@estate-demo.com', password: 'Resident@123' };
+const DESKTOP_DEMO = { label: 'Resident (Demo)', email: 'resident1@estate-demo.com', password: 'Resident@123' };
 
 export default function Login() {
-  const [form, setForm] = useState({ email: '', password: '' });
-  const [showPw, setShowPw] = useState(false);
+  const [form, setForm]       = useState({ email: '', password: '' });
+  const [showPw, setShowPw]   = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const { login } = useAuth();
-  const navigate = useNavigate();
+  const [error, setError]     = useState('');
+  const { login }  = useAuth();
+  const navigate   = useNavigate();
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     setLoading(true);
     setError('');
     try {
@@ -223,131 +374,99 @@ export default function Login() {
     }
   };
 
+  const shared = { form, setForm, showPw, setShowPw, loading, error, handleSubmit };
+
   return (
-    <div className="min-h-screen flex" style={{ background: '#F8FAFC' }}>
-      <AdSidebar />
-      <div className="flex-1 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="w-full max-w-md animate-fade-in">
-      <MobileBanner />
-        {/* Brand mark */}
-        <div className="text-center mb-8">
-          <div
-            style={{
-              width: 64, height: 64, borderRadius: 18,
-              background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
-              boxShadow: '0 4px 24px rgba(16,185,129,0.28)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto 16px',
-            }}
-          >
-            <svg width="36" height="36" viewBox="0 0 40 40" fill="none">
-              <path d="M20 6L8 13v14l12 7 12-7V13L20 6z" stroke="rgba(255,255,255,0.3)" strokeWidth="1" fill="none"/>
-              <path d="M20 10L11 15.5v11L20 32l9-5.5v-11L20 10z" fill="rgba(255,255,255,0.15)"/>
-              <text x="20" y="25" textAnchor="middle" fill="white" fontSize="13" fontWeight="800" fontFamily="system-ui,sans-serif">AM</text>
-            </svg>
-          </div>
-          <h1
-            className="text-3xl font-display font-bold mb-1"
-            style={{ letterSpacing: '-0.03em', color: '#0F172A' }}
-          >
-            Area<span style={{ color: '#6366F1' }}>Mates</span>
-          </h1>
-          <p className="text-sm" style={{ color: '#64748B' }}>Sign in to your estate account</p>
-        </div>
+    <>
+      {/* ── Mobile ── */}
+      <div className="lg:hidden">
+        <MobileLogin {...shared}/>
+      </div>
 
-        {/* Demo account chip */}
-        <div className="glass-card p-4 mb-4">
-          <p
-            className="text-xs font-semibold mb-3 uppercase tracking-wider"
-            style={{ color: '#94A3B8' }}
-          >
-            Demo Account
-          </p>
-          <button
-            onClick={() => { setForm({ email: DEMO.email, password: DEMO.password }); setError(''); }}
-            className="w-full text-xs text-left p-2.5 rounded-lg transition-all"
-            style={{
-              background: '#F8FAFC',
-              border: '1px solid #E2E8F0',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.borderColor = 'rgba(16,185,129,0.30)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#F8FAFC'; e.currentTarget.style.borderColor = '#E2E8F0'; }}
-          >
-            <div className="font-semibold" style={{ color: '#0F172A' }}>{DEMO.label}</div>
-            <div style={{ color: '#94A3B8' }}>{DEMO.email}</div>
-          </button>
-        </div>
+      {/* ── Desktop: sidebar + form ── */}
+      <div className="hidden lg:flex min-h-screen" style={{ background: '#060E1A' }}>
+        <AdSidebar />
 
-        {/* Login form */}
-        <form
-          onSubmit={handleSubmit}
-          className="glass-card p-6 space-y-4"
-          style={{ border: '1px solid rgba(16,185,129,0.20)', background: 'linear-gradient(135deg, rgba(16,185,129,0.04) 0%, #FFFFFF 100%)' }}
-        >
-          {error && (
-            <div
-              className="flex items-center gap-2 rounded-xl p-3 text-sm"
-              style={{ color: '#DC2626', background: '#FEF2F2', border: '1px solid rgba(239,68,68,0.25)' }}
-            >
-              <AlertCircle size={16} /> {error}
+        {/* Form panel */}
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflowY: 'auto', minHeight: '100vh', background: '#F8FAFC', padding: '40px 24px' }}>
+          <div className="w-full max-w-md">
+            {/* Brand mark */}
+            <div className="text-center mb-8">
+              <div style={{
+                width: 64, height: 64, borderRadius: 18,
+                background: 'linear-gradient(135deg,#6366F1,#4F46E5)',
+                boxShadow: '0 4px 24px rgba(99,102,241,0.3)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px',
+              }}>
+                <svg width="36" height="36" viewBox="0 0 40 40" fill="none">
+                  <path d="M20 6L8 13v14l12 7 12-7V13L20 6z" stroke="rgba(255,255,255,0.3)" strokeWidth="1" fill="none"/>
+                  <path d="M20 10L11 15.5v11L20 32l9-5.5v-11L20 10z" fill="rgba(255,255,255,0.15)"/>
+                  <text x="20" y="25" textAnchor="middle" fill="white" fontSize="13" fontWeight="800" fontFamily="system-ui,sans-serif">AM</text>
+                </svg>
+              </div>
+              <h1 className="text-3xl font-bold mb-1" style={{ letterSpacing: '-0.03em', color: '#0F172A' }}>
+                Area<span style={{ color: '#6366F1' }}>Mates</span>
+              </h1>
+              <p className="text-sm" style={{ color: '#64748B' }}>Sign in to your estate account</p>
             </div>
-          )}
 
-          <div>
-            <label className="text-sm mb-1.5 block font-medium" style={{ color: '#475569' }}>
-              Email Address
-            </label>
-            <input
-              type="email"
-              className="input-field"
-              placeholder="you@example.com"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              required
-              autoComplete="email"
-            />
-          </div>
-
-          <div>
-            <label className="text-sm mb-1.5 block font-medium" style={{ color: '#475569' }}>
-              Password
-            </label>
-            <div className="relative">
-              <input
-                type={showPw ? 'text' : 'password'}
-                className="input-field pr-10"
-                placeholder="••••••••"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                required
-                autoComplete="current-password"
-              />
+            {/* Demo chip */}
+            <div className="glass-card p-4 mb-4">
+              <p className="text-xs font-semibold mb-3 uppercase tracking-wider" style={{ color: '#94A3B8' }}>Demo Account</p>
               <button
-                type="button"
-                onClick={() => setShowPw(!showPw)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
-                style={{ color: '#94A3B8' }}
-                onMouseEnter={e => e.currentTarget.style.color = '#475569'}
-                onMouseLeave={e => e.currentTarget.style.color = '#94A3B8'}
-              >
-                {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                onClick={() => { setForm({ email: DESKTOP_DEMO.email, password: DESKTOP_DEMO.password }); setError(''); }}
+                className="w-full text-xs text-left p-2.5 rounded-lg transition-all"
+                style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.borderColor = 'rgba(99,102,241,0.3)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#F8FAFC'; e.currentTarget.style.borderColor = '#E2E8F0'; }}>
+                <div className="font-semibold" style={{ color: '#0F172A' }}>{DESKTOP_DEMO.label}</div>
+                <div style={{ color: '#94A3B8' }}>{DESKTOP_DEMO.email}</div>
               </button>
             </div>
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="glass-card p-6 space-y-4"
+              style={{ border: '1px solid rgba(99,102,241,0.18)', background: 'linear-gradient(135deg,rgba(99,102,241,0.04) 0%,#FFFFFF 100%)' }}>
+              {error && (
+                <div className="flex items-center gap-2 rounded-xl p-3 text-sm"
+                  style={{ color: '#DC2626', background: '#FEF2F2', border: '1px solid rgba(239,68,68,0.25)' }}>
+                  <AlertCircle size={16}/> {error}
+                </div>
+              )}
+              <div>
+                <label className="text-sm mb-1.5 block font-medium" style={{ color: '#475569' }}>Email Address</label>
+                <input type="email" className="input-field" placeholder="you@example.com"
+                  value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
+                  required autoComplete="email"/>
+              </div>
+              <div>
+                <label className="text-sm mb-1.5 block font-medium" style={{ color: '#475569' }}>Password</label>
+                <div className="relative">
+                  <input type={showPw ? 'text' : 'password'} className="input-field pr-10"
+                    placeholder="••••••••" value={form.password}
+                    onChange={e => setForm({ ...form, password: e.target.value })}
+                    required autoComplete="current-password"/>
+                  <button type="button" onClick={() => setShowPw(!showPw)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                    style={{ color: '#94A3B8' }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#475569'}
+                    onMouseLeave={e => e.currentTarget.style.color = '#94A3B8'}>
+                    {showPw ? <EyeOff size={16}/> : <Eye size={16}/>}
+                  </button>
+                </div>
+              </div>
+              <button type="submit" disabled={loading} className="btn-primary w-full mt-2"
+                style={{ background: loading ? 'rgba(99,102,241,0.5)' : 'linear-gradient(135deg,#6366F1,#4F46E5)' }}>
+                {loading ? 'Signing in...' : 'Sign In'}
+              </button>
+              <p className="text-center text-sm" style={{ color: '#94A3B8' }}>
+                New resident?{' '}
+                <Link to="/register" className="font-medium" style={{ color: '#6366F1' }}>Join with estate code</Link>
+              </p>
+            </form>
           </div>
-
-          <button type="submit" disabled={loading} className="btn-primary w-full mt-2">
-            {loading ? 'Signing in...' : 'Sign In'}
-          </button>
-
-          <p className="text-center text-sm" style={{ color: '#94A3B8' }}>
-            New resident?{' '}
-            <Link to="/register" className="font-medium hover:underline transition-colors" style={{ color: '#6366F1' }}>
-              Join with estate code
-            </Link>
-          </p>
-        </form>
+        </div>
       </div>
-      </div>
-    </div>
+    </>
   );
 }
