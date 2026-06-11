@@ -416,6 +416,9 @@ export default function Register() {
           By registering you agree to our Terms of Service and Privacy Policy.
         </p>
       )}
+      <p className="text-[11px] text-slate-400 text-center mt-4 tracking-wide">
+        Powered by <span className="font-semibold text-slate-500">AREA CONNECTOR TECHNOLOGIES</span> · RC&nbsp;9607864
+      </p>
     </AuthLayout>
   );
 }

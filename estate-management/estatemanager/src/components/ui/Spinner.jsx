@@ -64,6 +64,10 @@ export function LoadingScreen() {
       />
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
+      <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', textAlign: 'center', marginTop: 24, letterSpacing: '0.04em' }}>
+        Powered by <span style={{ fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>AREA CONNECTOR TECHNOLOGIES</span> · RC&nbsp;9607864
+      </p>
     </div>
   );
 }

@@ -23,6 +23,9 @@ export function LoadingScreen() {
         Area<span style={{ color: '#10B981' }}>Connect</span>
       </div>
       <Spinner size={36} />
+      <p className="text-[11px] text-slate-400 text-center mt-6 tracking-wide">
+        Powered by <span className="font-semibold text-slate-500">AREA CONNECTOR TECHNOLOGIES</span> · RC&nbsp;9607864
+      </p>
     </div>
   );
 }

@@ -344,6 +344,9 @@ function MobileLogin({ form, setForm, showPw, setShowPw, loading, error, handleS
             <Link to="/register" style={{ color: '#818CF8', fontWeight: 600 }}>Join with estate code</Link>
           </p>
         </form>
+        <p style={{ textAlign: 'center', marginTop: 20, fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.04em' }}>
+          Powered by <span style={{ fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>AREA CONNECTOR TECHNOLOGIES</span> · RC&nbsp;9607864
+        </p>
       </div>
     </div>
   );
@@ -464,6 +467,9 @@ export default function Login() {
                 <Link to="/register" className="font-medium" style={{ color: '#6366F1' }}>Join with estate code</Link>
               </p>
             </form>
+            <p className="text-[11px] text-slate-400 text-center mt-6 tracking-wide">
+              Powered by <span className="font-semibold text-slate-500">AREA CONNECTOR TECHNOLOGIES</span> · RC&nbsp;9607864
+            </p>
           </div>
         </div>
       </div>
