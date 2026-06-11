@@ -16,23 +16,32 @@ export const SocketProvider = ({ children }) => {
       import.meta.env.VITE_SOCKET_URL ||
       (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '') ||
       'http://localhost:5001';
+
+    let active = true;
+
     const socket = io(socketUrl, {
       withCredentials: true,
       transports: ['polling', 'websocket'],
       upgrade: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
     });
 
     socketRef.current = socket;
 
     socket.on('connect', () => {
+      if (!active) return;
       setConnected(true);
       const estateId = user.estateId?._id || user.estateId;
       socket.emit('join', { userId: user._id, estateId });
     });
 
-    socket.on('disconnect', () => setConnected(false));
+    socket.on('disconnect', () => {
+      if (active) setConnected(false);
+    });
 
     return () => {
+      active = false;
       socket.disconnect();
       socketRef.current = null;
       setConnected(false);
