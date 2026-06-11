@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, UserCheck, Users, Home, Megaphone,
   MessageSquare, Bell, Settings, LogOut, CreditCard,
-  Zap, Crown, Music, Lock,
+  Zap, Crown, Music, Lock, Shield,
 } from 'lucide-react';
 import { usePlan } from '../../hooks/usePlan';
 
@@ -17,6 +17,7 @@ const NAV = [
       { to: '/units',         icon: Home,            label: 'Units',           feature: 'unitManagement' },
       { to: '/announcements', icon: Megaphone,       label: 'Announcements',   feature: 'announcements' },
       { to: '/payments',      icon: CreditCard,      label: 'Payments',        feature: 'paymentSystem' },
+      { to: '/guards',        icon: Shield,          label: 'Guards' },
     ],
   },
   {

@@ -137,3 +137,12 @@ export const paymentAPI = {
   saveBankAccount: (data) => api.post('/payments/wallet/bank', data),
   withdraw: (data) => api.post('/payments/wallet/withdraw', data),
 };
+
+// Guards (security staff)
+export const guardAPI = {
+  getAll: (params) => api.get('/guards', { params }),
+  invite: (data) => api.post('/guards/invite', data),
+  suspend: (id) => api.patch(`/guards/${id}/suspend`),
+  activate: (id) => api.patch(`/guards/${id}/activate`),
+  remove: (id) => api.delete(`/guards/${id}`),
+};
