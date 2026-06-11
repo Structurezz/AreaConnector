@@ -22,6 +22,7 @@ import Settings from './pages/Settings';
 import Upgrade from './pages/Upgrade';
 import LoungeManager from './pages/LoungeManager';
 import Guards from './pages/Guards';
+import GuardDetail from './pages/GuardDetail';
 
 function RequireManager({ children }) {
   const { user, loading } = useAuth();
@@ -69,6 +70,7 @@ function AppRoutes() {
       <Route path="/upgrade" element={<RequireManager><Upgrade /></RequireManager>} />
       <Route path="/lounge" element={<RequireManager><PlanGate feature="residentLounge" featureName="Lounge & Events"><LoungeManager /></PlanGate></RequireManager>} />
       <Route path="/guards" element={<RequireManager><Guards /></RequireManager>} />
+      <Route path="/guards/:id" element={<RequireManager><GuardDetail /></RequireManager>} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { guardAPI } from '../api';
 import Spinner from '../components/ui/Spinner';
 import EmptyState from '../components/ui/EmptyState';
@@ -147,6 +148,7 @@ export default function Guards() {
   const [form, setForm]           = useState({ name: '', email: '', phone: '' });
   const [saving, setSaving]       = useState(false);
   const [selected, setSelected]   = useState(null);
+  const navigate = useNavigate();
 
   const load = async (p = page, q = search) => {
     setLoading(true);
@@ -259,7 +261,10 @@ export default function Guards() {
               <div key={g._id}
                 className="flex items-center gap-4 px-5 py-4 transition-colors cursor-pointer"
                 style={{ borderTop: i > 0 ? '1px solid rgba(0,0,0,0.06)' : 'none' }}
-                onClick={() => setSelected(g)}
+                onClick={() => {
+                  if (window.innerWidth < 640) navigate(`/guards/${g._id}`, { state: { guard: g } });
+                  else setSelected(g);
+                }}
                 onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
 
