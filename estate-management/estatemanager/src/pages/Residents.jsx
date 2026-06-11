@@ -8,6 +8,7 @@ import {
   MailPlus, Upload, CheckCircle, AlertCircle, X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import Pagination from '../components/ui/Pagination';
 
 // ── Bulk CSV parser: "Name, email, phone?, unitNumber?" lines ─────────────────
 function parseBulkText(raw) {
@@ -35,11 +36,15 @@ function unitLabel(u) {
   return `${base} — ${count}/${max}${full ? ' (full)' : ''}`;
 }
 
+const PAGE_SIZE = 15;
+
 export default function ManagerResidents() {
   const [residents, setResidents]   = useState([]);
   const [units, setUnits]           = useState([]);
   const [loading, setLoading]       = useState(true);
   const [search, setSearch]         = useState('');
+  const [page, setPage]             = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, pages: 1 });
 
   // modals
   const [showAdd, setShowAdd]             = useState(false);
@@ -54,11 +59,15 @@ export default function ManagerResidents() {
 
   const [saving, setSaving] = useState(false);
 
-  const load = async () => {
+  const load = async (p = page, q = search) => {
     setLoading(true);
     try {
-      const [r, u] = await Promise.all([residentAPI.getAll(), unitAPI.getAll()]);
+      const [r, u] = await Promise.all([
+        residentAPI.getAll({ page: p, limit: PAGE_SIZE, search: q || undefined }),
+        unitAPI.getAll(),
+      ]);
       setResidents(r.data.data);
+      setPagination(r.data.pagination || { total: r.data.data.length, pages: 1 });
       setUnits(u.data.data);
     } catch {
       toast.error('Failed to load residents');
@@ -67,7 +76,10 @@ export default function ManagerResidents() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  const handlePage   = (p) => { setPage(p); load(p, search); };
+  const handleSearch = (q) => { setSearch(q); setPage(1); load(1, q); };
+
+  useEffect(() => { load(1, ''); }, []);
 
   // ── Single invite ────────────────────────────────────────────────
   const handleInvite = async (e) => {
@@ -138,11 +150,6 @@ export default function ManagerResidents() {
     }
   };
 
-  const filtered = residents.filter(r =>
-    r.name.toLowerCase().includes(search.toLowerCase()) ||
-    r.email.toLowerCase().includes(search.toLowerCase())
-  );
-
   const parsedPreview = parseBulkText(bulkText);
 
   return (
@@ -152,7 +159,7 @@ export default function ManagerResidents() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900" style={{ letterSpacing: '-0.03em' }}>Residents</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-sub)' }}>{residents.length} registered residents</p>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-sub)' }}>{pagination.total} registered residents</p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => setShowBulk(true)} className="btn-outline gap-2">
@@ -171,18 +178,18 @@ export default function ManagerResidents() {
       <div className="relative">
         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-dim)' }} />
         <input className="input-field pl-9" placeholder="Search by name or email…"
-          value={search} onChange={e => setSearch(e.target.value)} />
+          value={search} onChange={e => handleSearch(e.target.value)} />
       </div>
 
       {/* Table */}
       <div className="glass-card overflow-hidden">
         {loading ? (
           <div className="flex justify-center p-12"><Spinner /></div>
-        ) : filtered.length === 0 ? (
+        ) : residents.length === 0 ? (
           <EmptyState icon={Users} title="No residents found" />
         ) : (
           <div>
-            {filtered.map((r, i) => (
+            {residents.map((r, i) => (
               <div key={r._id}
                 className="flex items-center gap-4 px-5 py-4 transition-colors"
                 style={{ borderTop: i > 0 ? '1px solid rgba(0,0,0,0.06)' : 'none' }}
@@ -222,6 +229,8 @@ export default function ManagerResidents() {
           </div>
         )}
       </div>
+
+      <Pagination page={page} pages={pagination.pages} total={pagination.total} limit={PAGE_SIZE} onPage={handlePage} />
 
       {/* ── Single Invite Modal ─────────────────────────────────── */}
       <Modal open={showInvite} onClose={() => setShowInvite(false)} title="Send Invitation">

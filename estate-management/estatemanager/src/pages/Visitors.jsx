@@ -4,6 +4,7 @@ import QRCode from 'qrcode';
 import { visitorAPI } from '../api';
 import Badge, { visitorStatusBadge } from '../components/ui/Badge';
 import Spinner from '../components/ui/Spinner';
+import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
 import EmptyState from '../components/ui/EmptyState';
 import {
@@ -806,12 +807,16 @@ function VisitorDetailDrawer({ visitor, onClose, onCheckIn, onCheckOut, onBlackl
 /* ─────────────────────────────────────────────────────── */
 /*  Page                                                   */
 /* ─────────────────────────────────────────────────────── */
+const PAGE_SIZE = 20;
+
 export default function ManagerVisitors() {
   const navigate = useNavigate();
   const [visitors,      setVisitors]      = useState([]);
   const [loading,       setLoading]       = useState(true);
   const [search,        setSearch]        = useState('');
   const [statusFilter,  setStatusFilter]  = useState('');
+  const [page,          setPage]          = useState(1);
+  const [pagination,    setPagination]    = useState({ total: 0, pages: 1 });
   const [showCreate,    setShowCreate]    = useState(false);
   const [passResult,    setPassResult]    = useState(null);
   const [selectedVisitor, setSelectedVisitor] = useState(null);
@@ -821,17 +826,27 @@ export default function ManagerVisitors() {
     else setSelectedVisitor(v);
   };
 
-  const load = async () => {
+  const load = async (p = page, q = search, status = statusFilter) => {
     setLoading(true);
     try {
-      const { data } = await visitorAPI.getAll({ status: statusFilter || undefined });
+      const { data } = await visitorAPI.getAll({
+        status: status || undefined,
+        search: q || undefined,
+        page: p,
+        limit: PAGE_SIZE,
+      });
       setVisitors(data.data);
+      setPagination(data.pagination || { total: data.data.length, pages: 1 });
     } catch {
       toast.error('Failed to load visitors');
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, [statusFilter]);
+  const handlePage         = (p) => { setPage(p); load(p, search, statusFilter); };
+  const handleSearch       = (q) => { setSearch(q); setPage(1); load(1, q, statusFilter); };
+  const handleStatusChange = (s) => { setStatusFilter(s); setPage(1); load(1, search, s); };
+
+  useEffect(() => { load(1, '', ''); }, []);
 
   const handleCheckIn = async (id) => {
     try { await visitorAPI.checkIn(id);   toast.success('Visitor checked in');  load(); }
@@ -846,12 +861,6 @@ export default function ManagerVisitors() {
     try { await visitorAPI.blacklist(id); toast.success('Visitor blacklisted');  load(); }
     catch { toast.error('Failed'); }
   };
-
-  const filtered = visitors.filter((v) =>
-    v.visitorName.toLowerCase().includes(search.toLowerCase()) ||
-    v.purpose.toLowerCase().includes(search.toLowerCase()) ||
-    v.visitorCode?.includes(search.toUpperCase())
-  );
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -872,10 +881,10 @@ export default function ManagerVisitors() {
         <div className="relative flex-1">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#94A3B8' }} />
           <input className="input-field pl-9" placeholder="Search name, purpose, code…"
-            value={search} onChange={(e) => setSearch(e.target.value)} />
+            value={search} onChange={(e) => handleSearch(e.target.value)} />
         </div>
         <select className="input-field sm:w-44" value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}>
+          onChange={(e) => handleStatusChange(e.target.value)}>
           {STATUSES.map((s) => (
             <option key={s} value={s}>
               {s ? s.charAt(0).toUpperCase() + s.slice(1).replace('-', ' ') : 'All statuses'}
@@ -888,7 +897,7 @@ export default function ManagerVisitors() {
       <div className="glass-card overflow-hidden">
         {loading ? (
           <div className="flex justify-center p-12"><Spinner /></div>
-        ) : filtered.length === 0 ? (
+        ) : visitors.length === 0 ? (
           <div className="flex flex-col items-center py-16 gap-3">
             <UserCheck size={40} style={{ color: '#CBD5E1' }} />
             <p className="font-medium" style={{ color: '#94A3B8' }}>No visitors found</p>
@@ -908,7 +917,7 @@ export default function ManagerVisitors() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((v) => (
+                {visitors.map((v) => (
                   <tr key={v._id}
                     onClick={() => openVisitor(v)}
                     style={{ borderTop: '1px solid rgba(0,0,0,0.04)', transition: 'background 0.15s', cursor: 'pointer' }}
@@ -967,6 +976,8 @@ export default function ManagerVisitors() {
           </div>
         )}
       </div>
+
+      <Pagination page={page} pages={pagination.pages} total={pagination.total} limit={PAGE_SIZE} onPage={handlePage} />
 
       {/* Create Guest Pass Modal */}
       <CreatePassDrawer
