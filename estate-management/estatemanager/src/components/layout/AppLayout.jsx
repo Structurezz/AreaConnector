@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import {
   Menu, X,
   LayoutDashboard, UserCheck, Users, Home, Megaphone, Bell, Settings,
@@ -42,13 +42,15 @@ export default function AppLayout({ children }) {
         {/* Mobile topbar */}
         <header className="lg:hidden flex items-center gap-3 px-4 h-14 flex-shrink-0"
           style={{ background: '#FFFFFF', borderBottom: '1px solid #E2E8F0' }}>
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}>
-            <span className="text-white font-black text-[10px]">AC</span>
-          </div>
-          <span className="font-bold flex-1 text-base" style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>
-            Area<span style={{ color: '#10B981' }}>Connect</span>
-          </span>
+          <Link to="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', flex: 1 }}>
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}>
+              <span className="text-white font-black text-[10px]">AC</span>
+            </div>
+            <span className="font-bold text-base" style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>
+              Area<span style={{ color: '#10B981' }}>Connect</span>
+            </span>
+          </Link>
           <button
             onClick={() => setSidebarOpen(true)}
             className="p-2 rounded-xl transition-all"
