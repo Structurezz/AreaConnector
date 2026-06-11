@@ -8,11 +8,16 @@ import { Bell, CheckCircle, XCircle, Megaphone, MapPin, Phone, AlertTriangle, Sh
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { useSocket } from '../context/SocketContext';
+import Pagination from '../components/ui/Pagination';
+
+const PAGE_SIZE = 10;
 
 export default function ManagerAlerts() {
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, pages: 1 });
   const [showBroadcast, setShowBroadcast] = useState(false);
   const BLANK_BROADCAST = {
     title: '', type: 'security', severity: 'high',
@@ -22,11 +27,12 @@ export default function ManagerAlerts() {
   const [saving, setSaving] = useState(false);
   const { subscribe } = useSocket() || {};
 
-  const load = async () => {
+  const load = async (p = page) => {
     setLoading(true);
     try {
-      const { data } = await alertAPI.getAll({ status: statusFilter || undefined });
+      const { data } = await alertAPI.getAll({ status: statusFilter || undefined, page: p, limit: PAGE_SIZE });
       setAlerts(data.data);
+      setPagination(data.pagination || { total: data.data.length, pages: 1 });
     } catch {
       toast.error('Failed to load alerts');
     } finally {
@@ -34,7 +40,9 @@ export default function ManagerAlerts() {
     }
   };
 
-  useEffect(() => { load(); }, [statusFilter]);
+  const handlePage = (p) => { setPage(p); load(p); };
+
+  useEffect(() => { setPage(1); load(1); }, [statusFilter]);
 
   useEffect(() => {
     if (!subscribe) return;
@@ -156,6 +164,8 @@ export default function ManagerAlerts() {
           ))}
         </div>
       )}
+
+      <Pagination page={page} pages={pagination.pages} total={pagination.total} limit={PAGE_SIZE} onPage={handlePage} />
 
       <Modal open={showBroadcast} onClose={() => setShowBroadcast(false)} title="Emergency Broadcast" size="lg">
         <form onSubmit={handleBroadcast} className="space-y-5">

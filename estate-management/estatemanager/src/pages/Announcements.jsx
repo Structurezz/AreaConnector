@@ -7,10 +7,13 @@ import Badge from '../components/ui/Badge';
 import { Megaphone, Plus, Pin, Trash2, Edit3 } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
+import Pagination from '../components/ui/Pagination';
 
 const CATEGORY_COLORS = {
   general: 'blue', urgent: 'red', event: 'gold', maintenance: 'yellow',
 };
+
+const PAGE_SIZE = 10;
 
 export default function ManagerAnnouncements() {
   const [announcements, setAnnouncements] = useState([]);
@@ -18,12 +21,15 @@ export default function ManagerAnnouncements() {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ title: '', body: '', category: 'general', isPinned: false });
   const [saving, setSaving] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, pages: 1 });
 
-  const load = async () => {
+  const load = async (p = page) => {
     setLoading(true);
     try {
-      const { data } = await announcementAPI.getAll();
+      const { data } = await announcementAPI.getAll({ page: p, limit: PAGE_SIZE });
       setAnnouncements(data.data);
+      setPagination(data.pagination || { total: data.data.length, pages: 1 });
     } catch {
       toast.error('Failed to load');
     } finally {
@@ -31,7 +37,9 @@ export default function ManagerAnnouncements() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  const handlePage = (p) => { setPage(p); load(p); };
+
+  useEffect(() => { load(1); }, []);
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -121,6 +129,8 @@ export default function ManagerAnnouncements() {
           ))}
         </div>
       )}
+
+      <Pagination page={page} pages={pagination.pages} total={pagination.total} limit={PAGE_SIZE} onPage={handlePage} />
 
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New Announcement" size="lg">
         <form onSubmit={handleCreate} className="space-y-4">
