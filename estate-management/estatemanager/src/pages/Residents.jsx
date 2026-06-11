@@ -5,9 +5,10 @@ import EmptyState from '../components/ui/EmptyState';
 import Modal from '../components/ui/Modal';
 import {
   Users, Search, Plus, UserX, UserCheck,
-  MailPlus, Upload, CheckCircle, AlertCircle, X,
+  MailPlus, Upload, CheckCircle, AlertCircle, X, ChevronLeft,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { format } from 'date-fns';
 import Pagination from '../components/ui/Pagination';
 
 // ── Bulk CSV parser: "Name, email, phone?, unitNumber?" lines ─────────────────
@@ -36,6 +37,133 @@ function unitLabel(u) {
   return `${base} — ${count}/${max}${full ? ' (full)' : ''}`;
 }
 
+function ResidentDrawer({ resident, units, onToggle, onAssignUnit, onClose }) {
+  const [assignUnitId, setAssignUnitId] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (resident) {
+      const cur = resident.unitId?._id || (typeof resident.unitId === 'string' ? resident.unitId : '');
+      setAssignUnitId(cur);
+    }
+  }, [resident]);
+
+  if (!resident) return null;
+  const r = resident;
+
+  const handleAssign = async () => {
+    setSaving(true);
+    try {
+      await onAssignUnit(r._id, assignUnitId || null);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40" onClick={onClose} />
+      {/* Mobile: full page · Desktop (sm+): right panel */}
+      <div className="fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto z-50 flex flex-col bg-white shadow-2xl overflow-hidden sm:w-96">
+
+        {/* Header */}
+        <div className="flex items-center gap-3 px-4 py-4 sm:px-5"
+          style={{ borderBottom: '1px solid rgba(0,0,0,0.07)' }}>
+          <button onClick={onClose}
+            className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors sm:hidden">
+            <ChevronLeft size={20} />
+          </button>
+          <span className="font-semibold text-slate-900 text-sm flex-1">Resident Details</span>
+          <button onClick={onClose}
+            className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors hidden sm:block">
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+          {/* Avatar + name */}
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold flex-shrink-0"
+              style={{ background: 'rgba(16,185,129,0.12)', color: '#34D399', border: '2px solid rgba(16,185,129,0.2)' }}>
+              {r.name[0]?.toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <div className="font-semibold text-slate-900 flex items-center gap-2 flex-wrap text-base">
+                {r.name}
+                {!r.isActive && <span className="badge badge-red text-xs">Suspended</span>}
+              </div>
+              <div className="text-sm text-slate-500 mt-0.5 truncate">{r.email}</div>
+              {r.phone && <div className="text-sm mt-0.5" style={{ color: 'var(--text-dim)' }}>{r.phone}</div>}
+            </div>
+          </div>
+
+          {/* Info rows */}
+          <div style={{ borderRadius: 12, border: '1px solid rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+            {[
+              { label: 'Status', value: r.isActive ? 'Active' : 'Suspended', color: r.isActive ? '#10B981' : '#EF4444' },
+              r.createdAt && { label: 'Member since', value: format(new Date(r.createdAt), 'MMM d, yyyy') },
+            ].filter(Boolean).map((row, i) => (
+              <div key={row.label}
+                className="flex items-center justify-between px-4 py-3"
+                style={{ borderTop: i > 0 ? '1px solid rgba(0,0,0,0.05)' : 'none', background: '#FAFAFA' }}>
+                <span className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-dim)' }}>{row.label}</span>
+                <span className="text-sm font-semibold" style={{ color: row.color || '#0F172A' }}>{row.value}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Unit assignment */}
+          <div className="rounded-xl p-4 space-y-3"
+            style={{ background: '#F8FAFC', border: '1px solid rgba(0,0,0,0.07)' }}>
+            <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-dim)' }}>
+              Assign Apartment
+            </div>
+            <select className="input-field text-sm" value={assignUnitId}
+              onChange={e => setAssignUnitId(e.target.value)}>
+              <option value="">— No apartment —</option>
+              {units.map(u => {
+                const cnt = (u.residentIds || []).length;
+                const mx = u.maxOccupants || 7;
+                const isCurrent = (r.unitId?._id || r.unitId) === u._id;
+                const full = cnt >= mx && !isCurrent;
+                const label = u.block ? `Block ${u.block} · Apt ${u.unitNumber}` : `Apt ${u.unitNumber}`;
+                return (
+                  <option key={u._id} value={u._id} disabled={full}>
+                    {label} — {cnt}/{mx}{full ? ' (full)' : ''}
+                  </option>
+                );
+              })}
+            </select>
+            <button onClick={handleAssign} disabled={saving}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all"
+              style={{
+                background: 'rgba(16,185,129,0.1)',
+                color: '#10B981',
+                border: '1px solid rgba(16,185,129,0.2)',
+              }}>
+              {saving ? 'Saving…' : assignUnitId ? 'Save Assignment' : 'Remove from Apartment'}
+            </button>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-5" style={{ borderTop: '1px solid rgba(0,0,0,0.07)' }}>
+          <button onClick={() => { onToggle(r); onClose(); }}
+            className="w-full py-3 rounded-xl font-semibold text-sm transition-all"
+            style={{
+              background: r.isActive ? 'rgba(239,68,68,0.08)' : 'rgba(16,185,129,0.08)',
+              color: r.isActive ? '#EF4444' : '#10B981',
+              border: `1px solid ${r.isActive ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.2)'}`,
+            }}>
+            {r.isActive ? 'Suspend Resident' : 'Activate Resident'}
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
 const PAGE_SIZE = 15;
 
 export default function ManagerResidents() {
@@ -58,6 +186,7 @@ export default function ManagerResidents() {
   const [bulkResult, setBulkResult] = useState(null);
 
   const [saving, setSaving] = useState(false);
+  const [selected, setSelected] = useState(null);
 
   const load = async (p = page, q = search) => {
     setLoading(true);
@@ -144,9 +273,20 @@ export default function ManagerResidents() {
         await residentAPI.activate(r._id);
         toast.success('Resident activated');
       }
-      load();
+      load(page, search);
     } catch {
       toast.error('Action failed');
+    }
+  };
+
+  const handleAssignUnit = async (residentId, unitId) => {
+    try {
+      await residentAPI.assignUnit(residentId, unitId);
+      toast.success(unitId ? 'Apartment assigned' : 'Removed from apartment');
+      setSelected(null);
+      load(page, search);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to assign');
     }
   };
 
@@ -192,7 +332,8 @@ export default function ManagerResidents() {
             {residents.map((r, i) => (
               <div key={r._id}
                 className="flex items-center gap-4 px-5 py-4 transition-colors"
-                style={{ borderTop: i > 0 ? '1px solid rgba(0,0,0,0.06)' : 'none' }}
+                style={{ borderTop: i > 0 ? '1px solid rgba(0,0,0,0.06)' : 'none', cursor: 'pointer' }}
+                onClick={() => setSelected(r)}
                 onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                 <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
@@ -213,7 +354,7 @@ export default function ManagerResidents() {
                     ? (r.unitId.block ? `Block ${r.unitId.block} · Apt ${r.unitId.unitNumber}` : `Apt ${r.unitId.unitNumber}`)
                     : <span style={{ color: 'var(--text-dim)', fontStyle: 'italic' }}>No apartment</span>}
                 </div>
-                <button onClick={() => handleToggle(r)}
+                <button onClick={(e) => { e.stopPropagation(); handleToggle(r); }}
                   className="p-2 rounded-lg transition-all flex-shrink-0"
                   title={r.isActive ? 'Suspend' : 'Activate'}
                   style={{ color: '#94A3B8' }}
@@ -408,6 +549,14 @@ export default function ManagerResidents() {
           </div>
         )}
       </Modal>
+
+      <ResidentDrawer
+        resident={selected}
+        units={units}
+        onToggle={handleToggle}
+        onAssignUnit={handleAssignUnit}
+        onClose={() => setSelected(null)}
+      />
 
       {/* ── Direct Add Modal ────────────────────────────────────── */}
       <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Add Resident Directly">
