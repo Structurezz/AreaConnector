@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, UserCheck, Users, Home, Megaphone,
   MessageSquare, Bell, Settings, LogOut, CreditCard,
-  Zap, Crown, Music,
+  Zap, Crown, Music, Lock,
 } from 'lucide-react';
 import { usePlan } from '../../hooks/usePlan';
 
@@ -12,19 +12,19 @@ const NAV = [
     section: 'Management',
     links: [
       { to: '/dashboard',     icon: LayoutDashboard, label: 'Dashboard' },
-      { to: '/visitors',      icon: UserCheck,       label: 'Visitors' },
-      { to: '/residents',     icon: Users,           label: 'Residents' },
-      { to: '/units',         icon: Home,            label: 'Units' },
-      { to: '/announcements', icon: Megaphone,       label: 'Announcements' },
-      { to: '/payments',      icon: CreditCard,      label: 'Payments' },
+      { to: '/visitors',      icon: UserCheck,       label: 'Visitors',        feature: 'visitorManagement' },
+      { to: '/residents',     icon: Users,           label: 'Residents',       feature: 'residentManagement' },
+      { to: '/units',         icon: Home,            label: 'Units',           feature: 'unitManagement' },
+      { to: '/announcements', icon: Megaphone,       label: 'Announcements',   feature: 'announcements' },
+      { to: '/payments',      icon: CreditCard,      label: 'Payments',        feature: 'paymentSystem' },
     ],
   },
   {
     section: 'Community',
     links: [
-      { to: '/lounge',  icon: Music,         label: 'Lounge & Events' },
-      { to: '/chat',    icon: MessageSquare, label: 'Community Chat' },
-      { to: '/alerts',  icon: Bell,          label: 'Alerts' },
+      { to: '/lounge',  icon: Music,         label: 'Lounge & Events', feature: 'residentLounge' },
+      { to: '/chat',    icon: MessageSquare, label: 'Community Chat',  feature: 'communityChat' },
+      { to: '/alerts',  icon: Bell,          label: 'Alerts',          feature: 'securityPortal' },
     ],
   },
   {
@@ -38,7 +38,7 @@ const NAV = [
 export default function Sidebar({ mobile = false, onClose }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { planName, planColor, status } = usePlan();
+  const { planName, planColor, status, can } = usePlan();
   const estateName =
     user?.estateId && typeof user.estateId === 'object'
       ? user.estateId.name
@@ -102,19 +102,24 @@ export default function Sidebar({ mobile = false, onClose }) {
               {section}
             </p>
             <div className="space-y-0.5">
-              {links.map(({ to, icon: Icon, label }) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  end={to === '/dashboard'}
-                  onClick={onClose}
-                  className={({ isActive }) =>
-                    isActive ? 'sidebar-link active' : 'sidebar-link'
-                  }>
-                  <Icon size={15} className="flex-shrink-0" />
-                  <span>{label}</span>
-                </NavLink>
-              ))}
+              {links.map(({ to, icon: Icon, label, feature }) => {
+                const locked = feature ? !can(feature) : false;
+                return (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    end={to === '/dashboard'}
+                    onClick={onClose}
+                    className={({ isActive }) =>
+                      isActive ? 'sidebar-link active' : 'sidebar-link'
+                    }
+                    style={{ opacity: locked ? 0.5 : 1 }}>
+                    <Icon size={15} className="flex-shrink-0" />
+                    <span className="flex-1">{label}</span>
+                    {locked && <Lock size={10} style={{ color: '#94A3B8', flexShrink: 0 }} />}
+                  </NavLink>
+                );
+              })}
             </div>
           </div>
         ))}
