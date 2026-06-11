@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { residentAPI, unitAPI } from '../api';
 import Spinner from '../components/ui/Spinner';
 import EmptyState from '../components/ui/EmptyState';
@@ -187,6 +188,7 @@ export default function ManagerResidents() {
 
   const [saving, setSaving] = useState(false);
   const [selected, setSelected] = useState(null);
+  const navigate = useNavigate();
 
   const load = async (p = page, q = search) => {
     setLoading(true);
@@ -333,7 +335,10 @@ export default function ManagerResidents() {
               <div key={r._id}
                 className="flex items-center gap-4 px-5 py-4 transition-colors"
                 style={{ borderTop: i > 0 ? '1px solid rgba(0,0,0,0.06)' : 'none', cursor: 'pointer' }}
-                onClick={() => setSelected(r)}
+                onClick={() => {
+                  if (window.innerWidth < 640) navigate(`/residents/${r._id}`, { state: { resident: r, units } });
+                  else setSelected(r);
+                }}
                 onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                 <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"

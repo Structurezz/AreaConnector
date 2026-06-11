@@ -32,6 +32,7 @@ export const visitorAPI = {
 // Residents
 export const residentAPI = {
   getAll: (params) => api.get('/residents', { params }),
+  getOne: (id) => api.get(`/residents/${id}`),
   invite: (data) => api.post('/residents/invite', data),
   bulkInvite: (residents) => api.post('/residents/bulk-invite', { residents }),
   add: (data) => api.post('/residents', data),

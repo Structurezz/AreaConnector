@@ -23,6 +23,7 @@ import Upgrade from './pages/Upgrade';
 import LoungeManager from './pages/LoungeManager';
 import Guards from './pages/Guards';
 import GuardDetail from './pages/GuardDetail';
+import ResidentDetail from './pages/ResidentDetail';
 
 function RequireManager({ children }) {
   const { user, loading } = useAuth();
@@ -61,6 +62,7 @@ function AppRoutes() {
       <Route path="/visitors" element={<RequireManager><PlanGate feature="visitorManagement" featureName="Visitor Management"><Visitors /></PlanGate></RequireManager>} />
       <Route path="/visitors/:id" element={<RequireManager><PlanGate feature="visitorManagement" featureName="Visitor Management"><VisitorDetail /></PlanGate></RequireManager>} />
       <Route path="/residents" element={<RequireManager><PlanGate feature="residentManagement" featureName="Resident Management"><Residents /></PlanGate></RequireManager>} />
+      <Route path="/residents/:id" element={<RequireManager><PlanGate feature="residentManagement" featureName="Resident Management"><ResidentDetail /></PlanGate></RequireManager>} />
       <Route path="/units" element={<RequireManager><PlanGate feature="unitManagement" featureName="Unit Management"><Units /></PlanGate></RequireManager>} />
       <Route path="/announcements" element={<RequireManager><PlanGate feature="announcements" featureName="Announcements"><Announcements /></PlanGate></RequireManager>} />
       <Route path="/chat" element={<RequireManager><PlanGate feature="communityChat" featureName="Community Chat"><Chat /></PlanGate></RequireManager>} />
