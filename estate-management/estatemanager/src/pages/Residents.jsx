@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-// ── Bulk CSV parser: "Name, email" lines ──────────────────────────────────────
+// ── Bulk CSV parser: "Name, email, phone?, unitNumber?" lines ─────────────────
 function parseBulkText(raw) {
   return raw
     .split('\n')
@@ -17,9 +17,22 @@ function parseBulkText(raw) {
     .filter(Boolean)
     .map(line => {
       const parts = line.split(',').map(s => s.trim());
-      return { name: parts[0] || '', email: parts[1] || '', phone: parts[2] || '' };
+      return {
+        name:       parts[0] || '',
+        email:      parts[1] || '',
+        phone:      parts[2] || '',
+        unitNumber: parts[3] || '',
+      };
     })
     .filter(r => r.name && r.email);
+}
+
+function unitLabel(u) {
+  const base = u.block ? `Block ${u.block} · Apt ${u.unitNumber}` : `Apt ${u.unitNumber}`;
+  const count = (u.residentIds || []).length;
+  const max   = u.maxOccupants || 7;
+  const full  = count >= max;
+  return `${base} — ${count}/${max}${full ? ' (full)' : ''}`;
 }
 
 export default function ManagerResidents() {
@@ -35,7 +48,7 @@ export default function ManagerResidents() {
 
   // forms
   const [form, setForm]             = useState({ name: '', email: '', phone: '', unitId: '' });
-  const [inviteForm, setInviteForm] = useState({ email: '', name: '', phone: '' });
+  const [inviteForm, setInviteForm] = useState({ email: '', name: '', phone: '', unitId: '' });
   const [bulkText, setBulkText]     = useState('');
   const [bulkResult, setBulkResult] = useState(null);
 
@@ -64,7 +77,7 @@ export default function ManagerResidents() {
       const { data } = await residentAPI.invite(inviteForm);
       toast.success(data.message || 'Invitation sent!');
       setShowInvite(false);
-      setInviteForm({ email: '', name: '', phone: '' });
+      setInviteForm({ email: '', name: '', phone: '', unitId: '' });
       load();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to send invitation');
@@ -189,7 +202,9 @@ export default function ManagerResidents() {
                   </div>
                 </div>
                 <div className="text-sm hidden sm:block" style={{ color: 'var(--text-dim)' }}>
-                  {r.unitId ? `Unit ${r.unitId.unitNumber}` : 'No unit'}
+                  {r.unitId
+                    ? (r.unitId.block ? `Block ${r.unitId.block} · Apt ${r.unitId.unitNumber}` : `Apt ${r.unitId.unitNumber}`)
+                    : <span style={{ color: 'var(--text-dim)', fontStyle: 'italic' }}>No apartment</span>}
                 </div>
                 <button onClick={() => handleToggle(r)}
                   className="p-2 rounded-lg transition-all flex-shrink-0"
@@ -238,6 +253,21 @@ export default function ManagerResidents() {
               value={inviteForm.phone}
               onChange={e => setInviteForm({ ...inviteForm, phone: e.target.value })} />
           </div>
+          <div>
+            <label className="text-xs font-semibold mb-1.5 block" style={{ color: 'var(--text-sub)' }}>Apartment (optional)</label>
+            <select className="input-field" value={inviteForm.unitId}
+              onChange={e => setInviteForm({ ...inviteForm, unitId: e.target.value })}>
+              <option value="">— No apartment assigned —</option>
+              {units.map(u => (
+                <option key={u._id} value={u._id} disabled={(u.residentIds || []).length >= (u.maxOccupants || 7)}>
+                  {unitLabel(u)}
+                </option>
+              ))}
+            </select>
+            {units.length === 0 && (
+              <p className="text-xs mt-1" style={{ color: 'var(--text-dim)' }}>No apartments created yet — add them in the Units page first.</p>
+            )}
+          </div>
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={() => setShowInvite(false)} className="btn-outline flex-1">Cancel</button>
             <button type="submit" disabled={saving} className="btn-primary flex-1">
@@ -254,10 +284,14 @@ export default function ManagerResidents() {
             <div className="p-3 rounded-xl text-sm"
               style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', color: '#818CF8' }}>
               <p className="font-semibold mb-1">Format — one resident per line:</p>
-              <code className="text-xs" style={{ color: '#A5B4FC', fontFamily: 'monospace' }}>
-                Full Name, email@address.com<br />
-                Full Name, email@address.com, +2348012345678
+              <code className="text-xs" style={{ color: '#A5B4FC', fontFamily: 'monospace', whiteSpace: 'pre' }}>
+                {'Name, email, phone, apartment\n'}
+                {'Name, email, , 1A\n'}
+                {'Name, email, +234..., 2B'}
               </code>
+              <p className="text-xs mt-2" style={{ color: 'rgba(165,180,252,0.7)' }}>
+                Phone and apartment are optional. Apartment must match an existing unit number (e.g. 1A, 2B, 3C).
+              </p>
             </div>
 
             <div>
@@ -272,7 +306,7 @@ export default function ManagerResidents() {
               <textarea
                 className="input-field font-mono text-xs"
                 rows={10}
-                placeholder={'Chioma Obi, chioma@gmail.com\nEmeka Nwosu, emeka@email.com, +2348012345678\nFatima Bello, fatima@yahoo.com'}
+                placeholder={'Chioma Obi, chioma@gmail.com, , 1A\nEmeka Nwosu, emeka@email.com, +2348012345678, 1B\nFatima Bello, fatima@yahoo.com, , 2A'}
                 value={bulkText}
                 onChange={e => setBulkText(e.target.value)}
               />
@@ -297,6 +331,12 @@ export default function ManagerResidents() {
                       <span className="text-xs ml-2" style={{ color: 'var(--text-dim)' }}>{r.email}</span>
                     </div>
                     {r.phone && <span className="text-xs" style={{ color: 'var(--text-dim)' }}>{r.phone}</span>}
+                    {r.unitNumber && (
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                        style={{ background: 'rgba(16,185,129,0.1)', color: '#34D399' }}>
+                        Apt {r.unitNumber.toUpperCase()}
+                      </span>
+                    )}
                   </div>
                 ))}
                 {parsedPreview.length > 5 && (
@@ -385,16 +425,11 @@ export default function ManagerResidents() {
             <select className="input-field" value={form.unitId}
               onChange={e => setForm({ ...form, unitId: e.target.value })}>
               <option value="">No unit</option>
-              {units.map(u => {
-                const count = (u.residentIds || []).length;
-                const max   = u.maxOccupants || 7;
-                const full  = count >= max;
-                return (
-                  <option key={u._id} value={u._id} disabled={full}>
-                    {u.block ? `Block ${u.block} · ` : ''}Unit {u.unitNumber} — {count}/{max}{full ? ' (full)' : ''}
-                  </option>
-                );
-              })}
+              {units.map(u => (
+                <option key={u._id} value={u._id} disabled={(u.residentIds || []).length >= (u.maxOccupants || 7)}>
+                  {unitLabel(u)}
+                </option>
+              ))}
             </select>
           </div>
           <div className="flex gap-3 pt-1">
