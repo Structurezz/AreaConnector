@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import Sidebar from './Sidebar';
 import { Toaster } from 'react-hot-toast';
+import NotificationBell from '../ui/NotificationBell';
+import { NotificationProvider } from '../../context/NotificationContext';
 
 const BOTTOM_NAV = [
   { to: '/dashboard',   icon: LayoutDashboard, label: 'Home' },
@@ -19,6 +21,7 @@ export default function AppLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
+    <NotificationProvider>
     <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg)' }}>
 
       {/* Mobile sidebar overlay */}
@@ -51,15 +54,18 @@ export default function AppLayout({ children }) {
               Area<span style={{ color: '#10B981' }}>Connect</span>
             </span>
           </Link>
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 rounded-xl transition-all"
-            style={{ color: '#64748B' }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#F1F5F9'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-          >
-            <Menu size={20} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <NotificationBell />
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="p-2 rounded-xl transition-all"
+              style={{ color: '#64748B' }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#F1F5F9'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+            >
+              <Menu size={20} />
+            </button>
+          </div>
         </header>
 
         {/* Page content — pb-24 on mobile to clear bottom nav */}
@@ -109,5 +115,6 @@ export default function AppLayout({ children }) {
         }}
       />
     </div>
+    </NotificationProvider>
   );
 }
