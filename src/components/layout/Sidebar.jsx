@@ -6,6 +6,7 @@ import {
   Zap, Crown, Music, Lock, Shield,
 } from 'lucide-react';
 import { usePlan } from '../../hooks/usePlan';
+import NotificationBell from '../ui/NotificationBell';
 
 const NAV = [
   {
@@ -62,22 +63,25 @@ export default function Sidebar({ mobile = false, onClose }) {
       }}>
 
       {/* Logo / Estate header */}
-      <Link to="/dashboard" className="block px-4 pt-5 pb-4 transition-opacity hover:opacity-80" style={{ borderBottom: '1px solid #E2E8F0', textDecoration: 'none' }}>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', boxShadow: '0 4px 12px rgba(16,185,129,0.25)' }}>
-            <svg width="20" height="20" viewBox="0 0 40 40" fill="none">
-              <path d="M20 4L6 12v16l14 8 14-8V12L20 4z" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" fill="none"/>
-              <path d="M20 9L9 15.5v13L20 35l11-6.5v-13L20 9z" fill="rgba(255,255,255,0.2)"/>
-              <text x="20" y="25" textAnchor="middle" fill="white" fontSize="12" fontWeight="800" fontFamily="system-ui,sans-serif">AC</text>
-            </svg>
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold truncate leading-tight" style={{ color: '#0F172A', letterSpacing: '-0.03em' }}>
-              Area<span style={{ color: '#10B981' }}>Connect</span>
+      <div style={{ borderBottom: '1px solid #E2E8F0', padding: '20px 16px 16px' }}>
+        <div className="flex items-center gap-2">
+          <Link to="/dashboard" className="flex items-center gap-3 flex-1 min-w-0 transition-opacity hover:opacity-80" style={{ textDecoration: 'none' }}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', boxShadow: '0 4px 12px rgba(16,185,129,0.25)' }}>
+              <svg width="20" height="20" viewBox="0 0 40 40" fill="none">
+                <path d="M20 4L6 12v16l14 8 14-8V12L20 4z" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" fill="none"/>
+                <path d="M20 9L9 15.5v13L20 35l11-6.5v-13L20 9z" fill="rgba(255,255,255,0.2)"/>
+                <text x="20" y="25" textAnchor="middle" fill="white" fontSize="12" fontWeight="800" fontFamily="system-ui,sans-serif">AC</text>
+              </svg>
             </div>
-            <div className="text-xs font-medium mt-0.5 truncate" style={{ color: '#94A3B8' }}>{estateName}</div>
-          </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-semibold truncate leading-tight" style={{ color: '#0F172A', letterSpacing: '-0.03em' }}>
+                Area<span style={{ color: '#10B981' }}>Connect</span>
+              </div>
+              <div className="text-xs font-medium mt-0.5 truncate" style={{ color: '#94A3B8' }}>{estateName}</div>
+            </div>
+          </Link>
+          <NotificationBell />
         </div>
 
         {/* Plan badge */}
@@ -92,7 +96,7 @@ export default function Sidebar({ mobile = false, onClose }) {
             </span>
           )}
         </div>
-      </Link>
+      </div>
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-5">
