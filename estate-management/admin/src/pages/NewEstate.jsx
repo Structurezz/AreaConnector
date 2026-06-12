@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { estateAPI, userAPI, planAPI } from '../api';
 import {
   Building2, User, CheckCircle, ArrowRight, ArrowLeft,
-  Eye, EyeOff, Copy, Hash, CreditCard, Check, Crown,
+  Eye, EyeOff, Copy, Hash, CreditCard, Check,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -165,22 +165,36 @@ function ManagerStep({ form, onChange, onNext, onSkip, saving }) {
   );
 }
 
-const BILLING_MODELS = [
-  { id: 'flat_monthly',  label: 'Monthly flat fee', price: '₦50,000/month', billingModel: 'flat', cycle: 'monthly' },
-  { id: 'flat_annual',   label: 'Annual flat fee',  price: '₦400,000/year', billingModel: 'flat', cycle: 'annual', badge: 'Save 33%' },
-  { id: 'per_resident',  label: 'Per resident',     price: '₦2,000/resident/month', billingModel: 'per_resident', cycle: 'monthly' },
-  { id: 'enterprise',    label: 'Enterprise',        price: 'Custom pricing', billingModel: 'flat', cycle: 'monthly', isEnterprise: true },
-];
-
 const STATUS_OPTS = [
   { value: 'trial',     label: 'Trial' },
   { value: 'active',    label: 'Active' },
   { value: 'suspended', label: 'Suspended' },
 ];
 
+const fmt = (n) => n > 0 ? `₦${n.toLocaleString()}` : 'Free';
+
 function PlanStep({ plans, form, onChange, onNext, onBack, saving }) {
-  const growthPlan = plans.find(p => p.slug === 'growth');
-  const canNext = form.selectedBilling && (form.selectedBilling !== 'enterprise');
+  const selected = plans.find(p => p._id === form.selectedPlanId);
+
+  const billingOptions = selected ? [
+    selected.price.monthly >= 0 && {
+      id: 'flat_monthly', label: 'Monthly', billingModel: 'flat', cycle: 'monthly',
+      price: `${fmt(selected.price.monthly)}/mo`,
+    },
+    selected.price.annual > 0 && {
+      id: 'flat_annual', label: 'Annual', billingModel: 'flat', cycle: 'annual',
+      price: `${fmt(selected.price.annual)}/yr`,
+      badge: selected.price.monthly > 0
+        ? `Save ${Math.round((1 - selected.price.annual / (selected.price.monthly * 12)) * 100)}%`
+        : null,
+    },
+    selected.price.perResident > 0 && {
+      id: 'per_resident', label: 'Per resident', billingModel: 'per_resident', cycle: 'monthly',
+      price: `${fmt(selected.price.perResident)}/resident/mo`,
+    },
+  ].filter(Boolean) : [];
+
+  const canNext = !!form.selectedPlanId && !!form.billingOption;
 
   return (
     <div className="space-y-5">
@@ -189,78 +203,91 @@ function PlanStep({ plans, form, onChange, onNext, onBack, saving }) {
         <p className="text-sm" style={{ color: '#94A3B8' }}>Assign a subscription plan and billing model for this estate.</p>
       </div>
 
-      {/* Billing model */}
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#94A3B8' }}>
-          Billing model
-        </p>
-        <div className="space-y-2">
-          {BILLING_MODELS.map(opt => (
-            <button
-              key={opt.id}
-              onClick={() => onChange('selectedBilling', opt.id)}
-              className="w-full text-left rounded-xl px-4 py-3 transition-all flex items-center justify-between"
-              style={form.selectedBilling === opt.id
-                ? { border: '1.5px solid rgba(16,185,129,0.45)', background: 'rgba(16,185,129,0.06)' }
-                : { border: '1px solid #E2E8F0', background: '#FAFAFA' }
-              }
-              onMouseEnter={ev => { if (form.selectedBilling !== opt.id) ev.currentTarget.style.borderColor = '#CBD5E1'; }}
-              onMouseLeave={ev => { if (form.selectedBilling !== opt.id) ev.currentTarget.style.borderColor = '#E2E8F0'; }}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all"
-                  style={form.selectedBilling === opt.id
-                    ? { borderColor: '#10B981', background: '#10B981' }
-                    : { borderColor: '#CBD5E1' }
+      {plans.length === 0 ? (
+        <div className="rounded-xl p-4 text-sm text-center" style={{ background: '#FFFBEB', border: '1px solid #FDE68A', color: '#D97706' }}>
+          No plans found. Create plans in the Plans section first.
+        </div>
+      ) : (
+        <>
+          {/* Plan selector */}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#94A3B8' }}>Select Plan</p>
+            <div className="space-y-2">
+              {plans.map(plan => (
+                <button
+                  key={plan._id}
+                  onClick={() => { onChange('selectedPlanId', plan._id); onChange('billingOption', ''); }}
+                  className="w-full text-left rounded-xl px-4 py-3 transition-all flex items-center justify-between"
+                  style={form.selectedPlanId === plan._id
+                    ? { border: `1.5px solid ${plan.color || '#10B981'}55`, background: `${plan.color || '#10B981'}0D` }
+                    : { border: '1px solid #E2E8F0', background: '#FAFAFA' }
                   }
                 >
-                  {form.selectedBilling === opt.id && (
-                    <Check size={10} className="text-white" strokeWidth={3} />
-                  )}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="text-sm font-semibold"
-                      style={{ color: opt.isEnterprise ? '#7C3AED' : '#0F172A' }}
-                    >
-                      {opt.label}
-                    </span>
-                    {opt.badge && (
-                      <span
-                        className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                        style={{ background: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0' }}
-                      >
-                        {opt.badge}
-                      </span>
-                    )}
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 rounded-full flex-shrink-0"
+                      style={{ background: plan.color || '#10B981' }} />
+                    <div>
+                      <span className="text-sm font-semibold" style={{ color: '#0F172A' }}>{plan.name}</span>
+                      {plan.badge && (
+                        <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                          style={{ background: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0' }}>
+                          {plan.badge}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </div>
-              <span
-                className="text-xs font-semibold"
-                style={{ color: opt.isEnterprise ? '#7C3AED' : '#94A3B8' }}
-              >
-                {opt.price}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
+                  <span className="text-xs font-medium" style={{ color: '#94A3B8' }}>
+                    {plan.price.monthly > 0 ? `from ${fmt(plan.price.monthly)}/mo` : 'Free'}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
 
-      {form.selectedBilling === 'enterprise' && (
-        <div
-          className="rounded-xl p-3.5 text-xs flex gap-2 items-start"
-          style={{ background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.18)', color: '#7C3AED' }}
-        >
-          <Crown size={13} style={{ flexShrink: 0, marginTop: 2 }} />
-          For Enterprise, contact the sales team to set up a custom contract. You can skip plan assignment now and configure it manually.
-        </div>
+          {/* Billing option for selected plan */}
+          {selected && billingOptions.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#94A3B8' }}>Billing Cycle</p>
+              <div className="space-y-2">
+                {billingOptions.map(opt => (
+                  <button
+                    key={opt.id}
+                    onClick={() => onChange('billingOption', opt.id)}
+                    className="w-full text-left rounded-xl px-4 py-3 transition-all flex items-center justify-between"
+                    style={form.billingOption === opt.id
+                      ? { border: '1.5px solid rgba(16,185,129,0.45)', background: 'rgba(16,185,129,0.06)' }
+                      : { border: '1px solid #E2E8F0', background: '#FAFAFA' }
+                    }
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0"
+                        style={form.billingOption === opt.id
+                          ? { borderColor: '#10B981', background: '#10B981' }
+                          : { borderColor: '#CBD5E1' }
+                        }>
+                        {form.billingOption === opt.id && <Check size={10} className="text-white" strokeWidth={3} />}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold" style={{ color: '#0F172A' }}>{opt.label}</span>
+                        {opt.badge && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                            style={{ background: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0' }}>
+                            {opt.badge}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <span className="text-xs font-semibold" style={{ color: '#94A3B8' }}>{opt.price}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Per-resident count */}
-      {form.selectedBilling === 'per_resident' && (
+      {form.billingOption === 'per_resident' && (
         <div>
           <label className="text-sm font-medium mb-1.5 block" style={{ color: '#475569' }}>
             Resident count (optional, for reference)
@@ -273,37 +300,24 @@ function PlanStep({ plans, form, onChange, onNext, onBack, saving }) {
       {/* Status & trial */}
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-xs font-medium mb-1.5 block" style={{ color: '#475569' }}>
-            Subscription Status
-          </label>
+          <label className="text-xs font-medium mb-1.5 block" style={{ color: '#475569' }}>Subscription Status</label>
           <select className="input-field" value={form.status} onChange={e => onChange('status', e.target.value)}>
             {STATUS_OPTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
         </div>
         {form.status === 'trial' && (
           <div>
-            <label className="text-xs font-medium mb-1.5 block" style={{ color: '#475569' }}>
-              Trial Duration (days)
-            </label>
+            <label className="text-xs font-medium mb-1.5 block" style={{ color: '#475569' }}>Trial Duration (days)</label>
             <input type="number" min="1" max="90" className="input-field" placeholder="14"
               value={form.trialDays} onChange={e => onChange('trialDays', e.target.value)} />
           </div>
         )}
       </div>
 
-      {!growthPlan && form.selectedBilling !== 'enterprise' && (
-        <div
-          className="rounded-xl p-3 text-xs"
-          style={{ background: '#FFFBEB', border: '1px solid #FDE68A', color: '#D97706' }}
-        >
-          Growth plan not found in database. Create it in the Plans section first, then assign it here.
-        </div>
-      )}
-
       <div className="flex gap-3 pt-2">
         <button onClick={onBack} className="btn-outline gap-2"><ArrowLeft size={14} /> Back</button>
         <button
-          onClick={() => canNext ? onNext() : onNext('skip')}
+          onClick={() => onNext(canNext ? null : 'skip')}
           disabled={saving}
           className={`flex-1 gap-2 ${canNext ? 'btn-primary' : 'btn-outline'}`}
         >
@@ -425,7 +439,8 @@ export default function NewEstate() {
   const [estateForm, setEstateForm] = useState({ name: '', address: '' });
   const [managerForm, setManagerForm] = useState({ name: '', email: '', phone: '', password: '' });
   const [planForm, setPlanForm] = useState({
-    selectedBilling: 'flat_monthly',
+    selectedPlanId: '',
+    billingOption: '',
     status: 'trial',
     trialDays: '14',
     residentCount: '',
@@ -473,38 +488,40 @@ export default function NewEstate() {
   };
 
   const handleAssignPlan = async (skip) => {
-    const billing = BILLING_MODELS.find(b => b.id === planForm.selectedBilling);
-    if (skip === 'skip' || !billing || billing.isEnterprise) {
-      setResult(r => ({ ...r, planLabel: billing?.isEnterprise ? 'Enterprise (pending)' : null }));
+    if (skip === 'skip') {
       setStep(3);
       return;
     }
 
-    const growthPlan = plans.find(p => p.slug === 'growth');
-    if (!growthPlan) {
-      toast.error('Growth plan not found — please create it in the Plans section first.');
-      return;
-    }
+    const plan = plans.find(p => p._id === planForm.selectedPlanId);
+    const BILLING_OPTIONS = {
+      flat_monthly: { cycle: 'monthly', billingModel: 'flat' },
+      flat_annual:  { cycle: 'annual',  billingModel: 'flat' },
+      per_resident: { cycle: 'monthly', billingModel: 'per_resident' },
+    };
+    const billing = BILLING_OPTIONS[planForm.billingOption];
+
+    if (!plan || !billing) { setStep(3); return; }
 
     setSaving(true);
     try {
       await planAPI.assign({
         estateId: result.estate._id,
-        planId: growthPlan._id,
+        planId: plan._id,
         cycle: billing.cycle,
         billingModel: billing.billingModel,
         residentCount: billing.billingModel === 'per_resident' ? parseInt(planForm.residentCount) || 0 : 0,
         status: planForm.status,
         trialDays: planForm.status === 'trial' ? parseInt(planForm.trialDays) || 14 : 0,
-        notes: `Assigned via admin onboarding — ${billing.label}`,
+        notes: `Assigned via admin onboarding — ${plan.name} · ${planForm.billingOption.replace('_', ' ')}`,
       });
 
-      const labelMap = {
-        flat_monthly: 'Growth · Monthly (₦50,000/mo)',
-        flat_annual:  'Growth · Annual (₦400,000/yr)',
-        per_resident: `Growth · Per-resident (₦2,000/resident/mo)`,
+      const priceMap = {
+        flat_monthly: plan.price.monthly > 0 ? `${fmt(plan.price.monthly)}/mo` : 'Free',
+        flat_annual:  plan.price.annual > 0  ? `${fmt(plan.price.annual)}/yr`  : 'Free',
+        per_resident: `${fmt(plan.price.perResident)}/resident/mo`,
       };
-      setResult(r => ({ ...r, planLabel: labelMap[planForm.selectedBilling] || billing.label }));
+      setResult(r => ({ ...r, planLabel: `${plan.name} · ${priceMap[planForm.billingOption]}` }));
       setStep(3);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to assign plan');
