@@ -12,6 +12,7 @@ import Onboarding from './pages/Onboarding';
 import Dashboard from './pages/Dashboard';
 import Visitors from './pages/Visitors';
 import VisitorDetail from './pages/VisitorDetail';
+import NewVisitorPage from './pages/NewVisitorPage';
 import Residents from './pages/Residents';
 import Units from './pages/Units';
 import Announcements from './pages/Announcements';
@@ -60,6 +61,7 @@ function AppRoutes() {
       } />
       <Route path="/dashboard" element={<RequireManager><Dashboard /></RequireManager>} />
       <Route path="/visitors" element={<RequireManager><PlanGate feature="visitorManagement" featureName="Visitor Management"><Visitors /></PlanGate></RequireManager>} />
+      <Route path="/visitors/new" element={<RequireManager><PlanGate feature="visitorManagement" featureName="Visitor Management"><NewVisitorPage /></PlanGate></RequireManager>} />
       <Route path="/visitors/:id" element={<RequireManager><PlanGate feature="visitorManagement" featureName="Visitor Management"><VisitorDetail /></PlanGate></RequireManager>} />
       <Route path="/residents" element={<RequireManager><PlanGate feature="residentManagement" featureName="Resident Management"><Residents /></PlanGate></RequireManager>} />
       <Route path="/residents/:id" element={<RequireManager><PlanGate feature="residentManagement" featureName="Resident Management"><ResidentDetail /></PlanGate></RequireManager>} />

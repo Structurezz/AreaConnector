@@ -441,7 +441,7 @@ function CreatePassForm({ onClose, onSuccess }) {
 }
 
 /* ─────────────────────────────────────────────────────── */
-/*  Create Pass Drawer (sidebar on desktop, modal mobile)  */
+/*  Create Pass Drawer (desktop only — mobile uses /visitors/new) */
 /* ─────────────────────────────────────────────────────── */
 function CreatePassDrawer({ open, onClose, onSuccess }) {
   useEffect(() => {
@@ -455,13 +455,9 @@ function CreatePassDrawer({ open, onClose, onSuccess }) {
   return (
     <div className="fixed inset-0 z-50 flex" onClick={onClose}>
       <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
-
-      {/* Desktop: right sidebar panel */}
-      <div
-        className="hidden lg:flex absolute right-0 top-0 bottom-0 w-[480px] flex-col bg-white animate-slide-in-right"
+      <div className="absolute right-0 top-0 bottom-0 w-[480px] flex flex-col bg-white animate-slide-in-right"
         style={{ boxShadow: '-16px 0 48px rgba(15,23,42,0.12)', borderLeft: '1px solid #E2E8F0' }}
-        onClick={e => e.stopPropagation()}
-      >
+        onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 py-5 flex-shrink-0"
           style={{ borderBottom: '1px solid #E2E8F0' }}>
           <h2 className="text-lg font-semibold" style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>
@@ -474,28 +470,6 @@ function CreatePassDrawer({ open, onClose, onSuccess }) {
           </button>
         </div>
         <div className="flex-1 overflow-y-auto p-6">
-          <CreatePassForm onClose={onClose} onSuccess={onSuccess} />
-        </div>
-      </div>
-
-      {/* Mobile: centered modal */}
-      <div
-        className="lg:hidden relative m-auto w-full max-w-lg bg-white rounded-2xl animate-fade-in overflow-hidden"
-        style={{ maxHeight: '90vh', border: '1px solid #E2E8F0', boxShadow: '0 20px 48px rgba(15,23,42,0.14)' }}
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between p-6 flex-shrink-0"
-          style={{ borderBottom: '1px solid #E2E8F0' }}>
-          <h2 className="text-lg font-semibold" style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>
-            Create Guest Pass
-          </h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg transition-all" style={{ color: '#94A3B8' }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.color = '#0F172A'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#94A3B8'; }}>
-            <X size={18} />
-          </button>
-        </div>
-        <div className="overflow-y-auto p-6">
           <CreatePassForm onClose={onClose} onSuccess={onSuccess} />
         </div>
       </div>
@@ -871,7 +845,7 @@ export default function ManagerVisitors() {
           <h1 className="text-2xl font-bold mb-1" style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>Visitor Log</h1>
           <p className="text-sm" style={{ color: '#64748B' }}>All visitor records for your estate</p>
         </div>
-        <button onClick={() => setShowCreate(true)} className="btn-primary gap-2">
+        <button onClick={() => window.innerWidth < 1024 ? navigate('/visitors/new') : setShowCreate(true)} className="btn-primary gap-2">
           <Plus size={15} /> Create Guest Pass
         </button>
       </div>
@@ -901,7 +875,7 @@ export default function ManagerVisitors() {
           <div className="flex flex-col items-center py-16 gap-3">
             <UserCheck size={40} style={{ color: '#CBD5E1' }} />
             <p className="font-medium" style={{ color: '#94A3B8' }}>No visitors found</p>
-            <button onClick={() => setShowCreate(true)} className="btn-primary gap-2 mt-1">
+            <button onClick={() => window.innerWidth < 1024 ? navigate('/visitors/new') : setShowCreate(true)} className="btn-primary gap-2 mt-1">
               <Plus size={14} /> Create Guest Pass
             </button>
           </div>
