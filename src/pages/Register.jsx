@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   Building2, Eye, EyeOff, AlertCircle, ArrowRight, ArrowLeft,
@@ -12,17 +12,22 @@ const STEPS = ['Account', 'Estate', 'Plan', 'Done'];
 
 const BILLING_OPTIONS = [
   {
-    id: 'flat_monthly', label: 'Monthly flat fee', price: '₦50,000', period: '/month',
-    sub: 'For up to 150 residents', billingModel: 'flat', cycle: 'monthly', highlight: false,
+    id: 'starter', slug: 'starter', label: 'Starter',
+    price: '₦20,000', period: '/month',
+    sub: 'Up to 50 residents · 1 gate',
+    billingModel: 'flat', cycle: 'monthly', highlight: false,
   },
   {
-    id: 'flat_annual', label: 'Annual flat fee', price: '₦400,000', period: '/year',
-    sub: 'Save ₦200,000 vs monthly', billingModel: 'flat', cycle: 'annual',
-    highlight: true, badge: 'Best value',
+    id: 'growth', slug: 'growth', label: 'Growth',
+    price: '₦47,000', period: '/month',
+    sub: 'Up to 200 residents · Unlimited gates',
+    billingModel: 'flat', cycle: 'monthly', highlight: true, badge: 'Most popular',
   },
   {
-    id: 'per_resident', label: 'Per-resident', price: '₦2,000', period: '/resident/month',
-    sub: 'Ideal for smaller or growing estates', billingModel: 'per_resident', cycle: 'monthly', highlight: false,
+    id: 'premium', slug: 'premium', label: 'Premium',
+    price: '₦80,000', period: '/month',
+    sub: 'Up to 500 residents · Lounge & AI included',
+    billingModel: 'flat', cycle: 'monthly', highlight: false,
   },
 ];
 
@@ -320,15 +325,20 @@ function DoneStep({ estateName, estateCode, billingLabel }) {
 
 /* ── Main Register page ── */
 export default function Register() {
+  const [searchParams]    = useSearchParams();
   const [step, setStep]   = useState(0);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [done, setDone]   = useState({ estateName: '', estateCode: '', billingLabel: '' });
   const { register } = useAuth();
 
-  const [account, setAccount]   = useState({ name: '', email: '', phone: '', password: '', confirm: '' });
-  const [estate, setEstate]     = useState({ estateName: '', estateAddress: '' });
-  const [selectedPlan, setSelectedPlan] = useState(BILLING_OPTIONS[0]);
+  const [account, setAccount] = useState({ name: '', email: '', phone: '', password: '', confirm: '' });
+  const [estate, setEstate]   = useState({ estateName: '', estateAddress: '' });
+
+  // Pre-select plan from ?plan= URL param (set by landing page CTA buttons)
+  const planParam = searchParams.get('plan'); // 'starter' | 'growth' | 'premium'
+  const initialPlan = BILLING_OPTIONS.find(o => o.id === planParam) || BILLING_OPTIONS[1]; // default Growth
+  const [selectedPlan, setSelectedPlan] = useState(initialPlan);
 
   const setAcct = (k, v) => setAccount(f => ({ ...f, [k]: v }));
   const setEst  = (k, v) => setEstate(f => ({ ...f, [k]: v }));
@@ -341,6 +351,7 @@ export default function Register() {
         name: account.name, email: account.email, phone: account.phone,
         password: account.password, role: 'estate_manager',
         estateName: estate.estateName, estateAddress: estate.estateAddress,
+        planSlug: selectedPlan.slug,
         billingModel: selectedPlan.billingModel, cycle: selectedPlan.cycle,
       });
       const estateCode = user?.estateId?.estateCode || user?.estateId || '—';
