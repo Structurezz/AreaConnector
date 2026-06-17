@@ -93,6 +93,7 @@ export default function ManagerPayments() {
   const [resolvedAccount, setResolvedAccount] = useState(null);
   const [resolving, setResolving] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [confirmingBank, setConfirmingBank] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -180,22 +181,33 @@ export default function ManagerPayments() {
     } catch { toast.error('Failed'); }
   };
 
-  // Bank account resolve + save
-  const handleResolveAccount = async () => {
+  // Step 1 — verify account name only
+  const handleVerifyAccount = async () => {
     if (bankForm.accountNumber.length !== 10 || !bankForm.bankCode) return;
     setResolving(true);
     setResolvedAccount(null);
     try {
-      // We submit and the backend resolves
-      const { data } = await api.post('/payments/wallet/bank', bankForm);
+      const { data } = await api.post('/payments/wallet/resolve', bankForm);
       setResolvedAccount(data.data);
-      toast.success('Bank account saved!');
-      setShowBankSetup(false);
-      setBankForm({ bankCode: '', accountNumber: '' });
-      loadWallet();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Could not verify account');
     } finally { setResolving(false); }
+  };
+
+  // Step 2 — save after user confirms the name
+  const handleConfirmSave = async () => {
+    if (!resolvedAccount) return;
+    setConfirmingBank(true);
+    try {
+      await api.post('/payments/wallet/bank', bankForm);
+      toast.success('Bank account saved!');
+      setShowBankSetup(false);
+      setBankForm({ bankCode: '', accountNumber: '' });
+      setResolvedAccount(null);
+      loadWallet();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not save bank account');
+    } finally { setConfirmingBank(false); }
   };
 
   const handleWithdraw = async (e) => {
@@ -645,35 +657,62 @@ export default function ManagerPayments() {
             <Landmark size={13} className="mt-0.5 shrink-0" />
             Enter your Nigerian bank account to receive withdrawals via Paystack.
           </div>
+
           <div>
             <label className="text-sm text-slate-500 mb-1.5 block">Bank</label>
             <select className="input-field" value={bankForm.bankCode}
-              onChange={(e) => setBankForm({ ...bankForm, bankCode: e.target.value })}>
+              onChange={(e) => { setBankForm({ ...bankForm, bankCode: e.target.value }); setResolvedAccount(null); }}>
               <option value="">Select a bank...</option>
               {banks.map((b) => (
                 <option key={b.code} value={b.code}>{b.name}</option>
               ))}
             </select>
           </div>
+
           <div>
             <label className="text-sm text-slate-500 mb-1.5 block">Account Number</label>
             <input className="input-field" placeholder="10-digit account number" maxLength={10}
               value={bankForm.accountNumber}
-              onChange={(e) => setBankForm({ ...bankForm, accountNumber: e.target.value.replace(/\D/g, '') })} />
+              onChange={(e) => { setBankForm({ ...bankForm, accountNumber: e.target.value.replace(/\D/g, '') }); setResolvedAccount(null); }} />
           </div>
+
+          {/* Resolved account name preview */}
+          {resolvedAccount && (
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+              <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-emerald-800">{resolvedAccount.accountName}</div>
+                <div className="text-xs text-emerald-600">Account name confirmed</div>
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={() => setShowBankSetup(false)} className="btn-outline flex-1">Cancel</button>
-            <button
-              onClick={handleResolveAccount}
-              disabled={resolving || bankForm.accountNumber.length !== 10 || !bankForm.bankCode}
-              className="btn-primary flex-1 gap-2"
-            >
-              {resolving ? (
-                <><RefreshCw size={13} className="animate-spin" /> Verifying...</>
-              ) : (
-                <><BadgeCheck size={14} /> Verify &amp; Save</>
-              )}
-            </button>
+
+            {!resolvedAccount ? (
+              <button
+                onClick={handleVerifyAccount}
+                disabled={resolving || bankForm.accountNumber.length !== 10 || !bankForm.bankCode}
+                className="btn-primary flex-1 gap-2"
+              >
+                {resolving
+                  ? <><RefreshCw size={13} className="animate-spin" /> Verifying…</>
+                  : <><BadgeCheck size={14} /> Verify Account</>
+                }
+              </button>
+            ) : (
+              <button
+                onClick={handleConfirmSave}
+                disabled={confirmingBank}
+                className="btn-primary flex-1 gap-2"
+              >
+                {confirmingBank
+                  ? <><RefreshCw size={13} className="animate-spin" /> Saving…</>
+                  : <><CheckCircle2 size={14} /> Confirm &amp; Save</>
+                }
+              </button>
+            )}
           </div>
         </div>
       </Modal>

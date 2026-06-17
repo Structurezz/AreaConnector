@@ -7,12 +7,15 @@ export const authAPI = {
   logout: () => api.post('/auth/logout'),
   getMe: () => api.get('/auth/me'),
   refresh: () => api.post('/auth/refresh'),
+  switchEstate: (estateId) => api.post('/auth/switch-estate', { estateId }),
 };
 
 // Estates
 export const estateAPI = {
   create: (data) => api.post('/estates', data),
   getAll: () => api.get('/estates'),
+  getMine: () => api.get('/estates/mine'),
+  addEstate: (data) => api.post('/estates/add', data),
   getOne: (id) => api.get(`/estates/${id}`),
   update: (id, data) => api.patch(`/estates/${id}`, data),
   getStats: () => api.get('/estates/stats'),
@@ -145,6 +148,7 @@ export const paymentAPI = {
   // Wallet
   getWallet: () => api.get('/payments/wallet'),
   getBanks: () => api.get('/payments/wallet/banks'),
+  resolveAccount: (data) => api.post('/payments/wallet/resolve', data),
   saveBankAccount: (data) => api.post('/payments/wallet/bank', data),
   withdraw: (data) => api.post('/payments/wallet/withdraw', data),
 };

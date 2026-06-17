@@ -12,7 +12,11 @@ export const AuthProvider = ({ children }) => {
   const fetchMe = useCallback(async () => {
     try {
       const { data } = await authAPI.getMe();
-      setUser(data.data);
+      const u = data.data;
+      setUser(u);
+      if (u?.estateId && typeof u.estateId === 'object') {
+        setEstate(u.estateId);
+      }
     } catch {
       setUser(null);
       localStorage.removeItem('accessToken');
@@ -68,8 +72,18 @@ export const AuthProvider = ({ children }) => {
     return u;
   };
 
+  const switchEstate = async (estateId) => {
+    const { data } = await authAPI.switchEstate(estateId);
+    const { accessToken, estate: e } = data.data;
+    localStorage.setItem('accessToken', accessToken);
+    flushSync(() => {
+      setEstate(e);
+      setUser(prev => prev ? { ...prev, estateId: e } : prev);
+    });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, estate, loading, login, logout, register, fetchMe }}>
+    <AuthContext.Provider value={{ user, estate, loading, login, logout, register, fetchMe, switchEstate }}>
       {children}
     </AuthContext.Provider>
   );

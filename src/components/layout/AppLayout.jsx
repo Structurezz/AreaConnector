@@ -7,6 +7,7 @@ import {
 import Sidebar from './Sidebar';
 import { Toaster } from 'react-hot-toast';
 import NotificationBell from '../ui/NotificationBell';
+import EstateSwitcher from '../ui/EstateSwitcher';
 import { NotificationProvider } from '../../context/NotificationContext';
 
 const BOTTOM_NAV = [
@@ -45,15 +46,18 @@ export default function AppLayout({ children }) {
         {/* Mobile topbar */}
         <header className="lg:hidden flex items-center gap-3 px-4 h-14 flex-shrink-0"
           style={{ background: '#FFFFFF', borderBottom: '1px solid #E2E8F0' }}>
-          <Link to="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', flex: 1 }}>
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}>
-              <span className="text-white font-black text-[10px]">AC</span>
-            </div>
-            <span className="font-bold text-base" style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>
-              Area<span style={{ color: '#10B981' }}>Connect</span>
-            </span>
-          </Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+            <Link to="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', flexShrink: 0 }}>
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}>
+                <span className="text-white font-black text-[10px]">AC</span>
+              </div>
+              <span className="font-bold text-base" style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>
+                Area<span style={{ color: '#10B981' }}>Connect</span>
+              </span>
+            </Link>
+            <EstateSwitcher compact />
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <NotificationBell />
             <button

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { usePlan } from '../../hooks/usePlan';
 import NotificationBell from '../ui/NotificationBell';
+import EstateSwitcher from '../ui/EstateSwitcher';
 
 const NAV = [
   {
@@ -78,7 +79,7 @@ export default function Sidebar({ mobile = false, onClose }) {
               <div className="text-sm font-semibold truncate leading-tight" style={{ color: '#0F172A', letterSpacing: '-0.03em' }}>
                 Area<span style={{ color: '#10B981' }}>Connect</span>
               </div>
-              <div className="text-xs font-medium mt-0.5 truncate" style={{ color: '#94A3B8' }}>{estateName}</div>
+              <EstateSwitcher />
             </div>
           </Link>
           <NotificationBell />
