@@ -143,6 +143,7 @@ export const paymentAPI = {
   createSchedule: (data) => api.post('/payments/schedules', data),
   deleteSchedule: (id) => api.delete(`/payments/schedules/${id}`),
   getSchedulePayments: (scheduleId) => api.get(`/payments/schedules/${scheduleId}/payments`),
+  getInvoice: (paymentId) => api.get(`/payments/${paymentId}/invoice`),
   recordManual: (paymentId, data) => api.patch(`/payments/${paymentId}/manual`, data),
   waive: (paymentId, data) => api.patch(`/payments/${paymentId}/waive`, data),
   // Wallet

@@ -8,12 +8,16 @@ const STORAGE_KEY = 'ac_manager_notifications';
 const MAX_STORED = 50;
 
 const TYPE_CONFIG = {
-  payment_received: { icon: '💰', label: 'Payment',     color: '#10B981' },
-  new_resident:     { icon: '👤', label: 'Resident',    color: '#6366F1' },
-  visitor_checkin:  { icon: '🚪', label: 'Visitor In',  color: '#0EA5E9' },
-  visitor_checkout: { icon: '🚪', label: 'Visitor Out', color: '#F59E0B' },
-  new_alert:        { icon: '🚨', label: 'Alert',       color: '#EF4444' },
-  new_announcement: { icon: '📢', label: 'Announcement',color: '#8B5CF6' },
+  payment_received:    { icon: '💰', label: 'Payment',       color: '#10B981' },
+  payment_due:         { icon: '📋', label: 'Payment Due',   color: '#F59E0B' },
+  payment_overdue:     { icon: '⚠️', label: 'Overdue',       color: '#EF4444' },
+  new_resident:        { icon: '👤', label: 'Resident',      color: '#6366F1' },
+  visitor_checkin:     { icon: '🚪', label: 'Visitor In',    color: '#0EA5E9' },
+  visitor_checkout:    { icon: '🚪', label: 'Visitor Out',   color: '#F59E0B' },
+  new_alert:           { icon: '🚨', label: 'Alert',         color: '#EF4444' },
+  new_announcement:    { icon: '📢', label: 'Announcement',  color: '#8B5CF6' },
+  plan_expiry_warning: { icon: '🔔', label: 'Subscription',  color: '#D97706' },
+  plan_expiry_urgent:  { icon: '🚨', label: 'Plan Expiring', color: '#EF4444' },
 };
 
 function loadStored() {
@@ -50,6 +54,14 @@ export function NotificationProvider({ children }) {
       { duration: 5000 }
     );
   }, []);
+
+  useEffect(() => {
+    const handlePlanExpiry = (e) => {
+      addNotification({ id: `plan-expiry-${Date.now()}`, ...e.detail });
+    };
+    window.addEventListener('plan:expiry', handlePlanExpiry);
+    return () => window.removeEventListener('plan:expiry', handlePlanExpiry);
+  }, [addNotification]);
 
   useEffect(() => {
     const unsubs = [

@@ -1,9 +1,11 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import AppLayout from './components/layout/AppLayout';
 import PlanGate from './components/ui/PlanGate';
+import SubscriptionWall from './components/ui/SubscriptionWall';
 import { LoadingScreen } from './components/ui/Spinner';
+import { usePlan } from './hooks/usePlan';
 import { Toaster } from 'react-hot-toast';
 
 import Login from './pages/Login';
@@ -26,9 +28,12 @@ import Guards from './pages/Guards';
 import GuardDetail from './pages/GuardDetail';
 import ResidentDetail from './pages/ResidentDetail';
 
-function RequireManager({ children }) {
+function RequireManager({ children, allowWhenBlocked = false }) {
   const { user, loading } = useAuth();
-  if (loading) return <LoadingScreen />;
+  const { isBlocked, status, loading: planLoading } = usePlan();
+  const location = useLocation();
+
+  if (loading || planLoading) return <LoadingScreen />;
   if (!user) return <Navigate to="/login" replace />;
   if (user.role !== 'estate_manager') {
     return (
@@ -42,6 +47,10 @@ function RequireManager({ children }) {
   }
   if (user.estateId && !localStorage.getItem(`onboarding_done_${user._id}`)) {
     return <Navigate to="/onboarding" replace />;
+  }
+  // Show suspension wall but keep the sidebar (with estate switcher) accessible
+  if (isBlocked && !allowWhenBlocked) {
+    return <AppLayout><SubscriptionWall status={status} /></AppLayout>;
   }
   return <AppLayout>{children}</AppLayout>;
 }
@@ -70,8 +79,8 @@ function AppRoutes() {
       <Route path="/chat" element={<RequireManager><PlanGate feature="communityChat" featureName="Community Chat"><Chat /></PlanGate></RequireManager>} />
       <Route path="/payments" element={<RequireManager><PlanGate feature="paymentSystem" featureName="Payments"><Payments /></PlanGate></RequireManager>} />
       <Route path="/alerts" element={<RequireManager><PlanGate feature="securityPortal" featureName="Security & Alerts"><Alerts /></PlanGate></RequireManager>} />
-      <Route path="/settings" element={<RequireManager><Settings /></RequireManager>} />
-      <Route path="/upgrade" element={<RequireManager><Upgrade /></RequireManager>} />
+      <Route path="/settings" element={<RequireManager allowWhenBlocked><Settings /></RequireManager>} />
+      <Route path="/upgrade" element={<RequireManager allowWhenBlocked><Upgrade /></RequireManager>} />
       <Route path="/lounge" element={<RequireManager><PlanGate feature="residentLounge" featureName="Lounge & Events"><LoungeManager /></PlanGate></RequireManager>} />
       <Route path="/guards" element={<RequireManager><Guards /></RequireManager>} />
       <Route path="/guards/:id" element={<RequireManager><GuardDetail /></RequireManager>} />

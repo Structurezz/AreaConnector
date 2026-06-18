@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import api from '../api/axios';
 import Spinner from '../components/ui/Spinner';
 import Modal from '../components/ui/Modal';
+import InvoiceModal from '../components/ui/InvoiceModal';
 import {
   Wallet, Plus, TrendingUp, Clock, AlertCircle, CheckCircle2,
   ChevronRight, X, CreditCard, Banknote, Building,
   ChevronLeft, ShieldCheck, Wrench, Gift, FileText,
   ArrowDownCircle, ArrowUpCircle, RefreshCw, BadgeCheck,
-  CircleDollarSign, Landmark, SendHorizonal, History,
+  CircleDollarSign, Landmark, SendHorizonal, History, Receipt,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -88,6 +89,7 @@ export default function ManagerPayments() {
     title: '', description: '', type: 'security_dues',
     amount: '', frequency: 'monthly', dueDate: '',
   });
+  const [invoicePaymentId, setInvoicePaymentId] = useState(null);
   const [bankForm, setBankForm] = useState({ bankCode: '', accountNumber: '' });
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [resolvedAccount, setResolvedAccount] = useState(null);
@@ -388,8 +390,8 @@ export default function ManagerPayments() {
                         {p.method || '—'}
                       </td>
                       <td className="px-5 py-3.5 text-right">
-                        {p.status !== 'paid' && p.status !== 'waived' && (
-                          <div className="flex items-center justify-end gap-1.5">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {p.status !== 'paid' && p.status !== 'waived' && (<>
                             <button onClick={() => { setShowManual(p); setManualForm({ method: 'cash', notes: '', paidAt: '' }); }}
                               className="text-xs text-slate-400 hover:text-emerald-600 transition-colors px-2 py-1 rounded hover:bg-emerald-50">
                               Mark Paid
@@ -398,9 +400,19 @@ export default function ManagerPayments() {
                               className="text-xs text-slate-400 hover:text-slate-600 transition-colors px-2 py-1 rounded hover:bg-slate-100">
                               Waive
                             </button>
-                          </div>
-                        )}
-                        {p.status === 'paid' && <CheckCircle2 size={16} className="text-emerald-600 ml-auto" />}
+                          </>)}
+                          <button
+                            onClick={() => setInvoicePaymentId(p._id)}
+                            title={p.status === 'paid' ? 'View Receipt' : 'View Invoice'}
+                            className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded transition-colors"
+                            style={{ color: '#6366F1', background: 'transparent' }}
+                            onMouseEnter={e => { e.currentTarget.style.background = '#EEF2FF'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                          >
+                            <Receipt size={13} />
+                            {p.status === 'paid' ? 'Receipt' : 'Invoice'}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -778,6 +790,11 @@ export default function ManagerPayments() {
           </div>
         </form>
       </Modal>
+
+      <InvoiceModal
+        paymentId={invoicePaymentId}
+        onClose={() => setInvoicePaymentId(null)}
+      />
     </div>
   );
 }
