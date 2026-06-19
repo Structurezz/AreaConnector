@@ -88,7 +88,7 @@ function InvoiceDocument({ inv }) {
           flex: 1.2, position: 'relative', overflow: 'hidden', minHeight: 130,
         }}>
           <img
-            src="/estate-hero.jpeg"
+            src={`${window.location.origin}/estate-hero.jpeg`}
             alt="estate"
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           />
@@ -269,17 +269,39 @@ export default function InvoiceModal({ paymentId, onClose }) {
     const el = document.getElementById('invoice-print-area');
     if (!el) return;
     const win = window.open('', '_blank');
-    win.document.write(`
-      <html><head><title>${inv?.invoiceNumber || 'Invoice'}</title>
-      <style>
-        body { margin: 0; font-family: 'Segoe UI', Arial, sans-serif; }
-        @media print { body { margin: 0; } }
-      </style>
-      </head><body>${el.outerHTML}</body></html>
-    `);
+    win.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${inv?.invoiceNumber || 'Invoice'}</title>
+  <base href="${window.location.origin}/">
+  <style>
+    *, *::before, *::after {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      color-adjust: exact !important;
+      box-sizing: border-box;
+    }
+    html, body {
+      margin: 0; padding: 0;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #fff;
+    }
+    @page {
+      margin: 0;
+      size: A4 portrait;
+    }
+    @media print {
+      html, body { margin: 0; padding: 0; }
+    }
+    img { max-width: 100%; }
+  </style>
+</head>
+<body>${el.outerHTML}</body>
+</html>`);
     win.document.close();
     win.focus();
-    setTimeout(() => { win.print(); win.close(); }, 400);
+    setTimeout(() => { win.print(); win.close(); }, 500);
   };
 
   if (!paymentId) return null;
@@ -312,17 +334,30 @@ export default function InvoiceModal({ paymentId, onClose }) {
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
             {!loading && inv && (
-              <button
-                onClick={handlePrint}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '7px 14px', borderRadius: 8, border: 'none',
-                  background: '#10B981', color: '#fff', fontSize: 12,
-                  fontWeight: 700, cursor: 'pointer',
-                }}
-              >
-                <Printer size={13} /> Print / Save PDF
-              </button>
+              <>
+                <button
+                  onClick={handlePrint}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '7px 14px', borderRadius: 8, border: 'none',
+                    background: '#1E293B', color: '#94A3B8', fontSize: 12,
+                    fontWeight: 700, cursor: 'pointer',
+                  }}
+                >
+                  <Printer size={13} /> Print
+                </button>
+                <button
+                  onClick={handlePrint}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '7px 14px', borderRadius: 8, border: 'none',
+                    background: '#10B981', color: '#fff', fontSize: 12,
+                    fontWeight: 700, cursor: 'pointer',
+                  }}
+                >
+                  <Download size={13} /> Download PDF
+                </button>
+              </>
             )}
             <button
               onClick={onClose}
