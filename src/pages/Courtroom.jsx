@@ -361,7 +361,7 @@ function FileDisputeForm({ onFiled, residents }) {
                 onChange={e => set('defendantUserId', e.target.value)}>
                 <option value="">— Select a resident —</option>
                 {residents.map(r => (
-                  <option key={r._id} value={r._id}>{r.name} {r.unit ? `(${r.unit})` : ''}</option>
+                  <option key={r._id} value={r._id}>{r.name}{r.unit ? ` — ${r.unit}` : ''}</option>
                 ))}
               </select>
             </div>
@@ -1239,8 +1239,13 @@ export default function Courtroom() {
 
   const loadResidents = async () => {
     try {
-      const res = await residentAPI.getAll();
-      setResidents((res.data.residents || []).map(r => ({ _id: r.userId?._id || r._id, name: r.userId?.name || r.name, unit: r.unitId?.name })));
+      const res = await residentAPI.getAll({ limit: 200 });
+      const list = res.data.data || res.data.residents || [];
+      setResidents(list.map(r => ({
+        _id: r._id,
+        name: r.name,
+        unit: r.unitId ? `${r.unitId.block ? r.unitId.block + ' ' : ''}${r.unitId.unitNumber}` : null,
+      })));
     } catch { setResidents([]); }
   };
 
