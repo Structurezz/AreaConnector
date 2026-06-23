@@ -1,4 +1,8 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import {
+  Siren, UserCheck, UserMinus, Megaphone, Banknote, Clock,
+  AlertCircle, UserPlus, Bell, BellRing, Scale, Users, ShoppingBag,
+} from 'lucide-react';
 import { useSocket } from './SocketContext';
 import toast from 'react-hot-toast';
 
@@ -7,18 +11,27 @@ const NotificationContext = createContext(null);
 const STORAGE_KEY = 'ac_manager_notifications';
 const MAX_STORED = 50;
 
-const TYPE_CONFIG = {
-  payment_received:    { icon: '💰', label: 'Payment',       color: '#10B981' },
-  payment_due:         { icon: '📋', label: 'Payment Due',   color: '#F59E0B' },
-  payment_overdue:     { icon: '⚠️', label: 'Overdue',       color: '#EF4444' },
-  new_resident:        { icon: '👤', label: 'Resident',      color: '#6366F1' },
-  visitor_checkin:     { icon: '🚪', label: 'Visitor In',    color: '#0EA5E9' },
-  visitor_checkout:    { icon: '🚪', label: 'Visitor Out',   color: '#F59E0B' },
-  new_alert:           { icon: '🚨', label: 'Alert',         color: '#EF4444' },
-  new_announcement:    { icon: '📢', label: 'Announcement',  color: '#8B5CF6' },
-  plan_expiry_warning: { icon: '🔔', label: 'Subscription',  color: '#D97706' },
-  plan_expiry_urgent:  { icon: '🚨', label: 'Plan Expiring', color: '#EF4444' },
+export const TYPE_CONFIG = {
+  // ── Security Alerts ──────────────────────────────────────
+  new_alert:           { Icon: Siren,       label: 'Alert',         color: '#EF4444', isAlert: true  },
+  alert_broadcast:     { Icon: Siren,       label: 'Broadcast',     color: '#EF4444', isAlert: true  },
+
+  // ── Normal Notifications ─────────────────────────────────
+  payment_received:    { Icon: Banknote,    label: 'Payment',       color: '#10B981', isAlert: false },
+  payment_due:         { Icon: Clock,       label: 'Payment Due',   color: '#F59E0B', isAlert: false },
+  payment_overdue:     { Icon: AlertCircle, label: 'Overdue',       color: '#EF4444', isAlert: false },
+  new_resident:        { Icon: UserPlus,    label: 'Resident',      color: '#6366F1', isAlert: false },
+  visitor_checkin:     { Icon: UserCheck,   label: 'Visitor In',    color: '#0EA5E9', isAlert: false },
+  visitor_checkout:    { Icon: UserMinus,   label: 'Visitor Out',   color: '#F59E0B', isAlert: false },
+  new_announcement:    { Icon: Megaphone,   label: 'Announcement',  color: '#8B5CF6', isAlert: false },
+  plan_expiry_warning: { Icon: Bell,        label: 'Subscription',  color: '#D97706', isAlert: false },
+  plan_expiry_urgent:  { Icon: BellRing,    label: 'Plan Expiring', color: '#EF4444', isAlert: false },
+  court_update:        { Icon: Scale,       label: 'Courtroom',     color: '#D97706', isAlert: false },
+  jury_summoned:       { Icon: Users,       label: 'Jury Duty',     color: '#7C3AED', isAlert: false },
+  marketplace_item:    { Icon: ShoppingBag, label: 'Marketplace',   color: '#10B981', isAlert: false },
 };
+
+const DEFAULT_CFG = { Icon: Bell, label: 'Notification', color: '#10B981', isAlert: false };
 
 function loadStored() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
@@ -31,7 +44,9 @@ export function NotificationProvider({ children }) {
   const [unreadCount, setUnreadCount] = useState(() => loadStored().filter(n => !n.readAt).length);
 
   const addNotification = useCallback((notif) => {
-    const entry = { ...notif, createdAt: notif.createdAt || new Date().toISOString() };
+    const entry = { ...notif, id: notif.id || String(Date.now()), createdAt: notif.createdAt || new Date().toISOString() };
+    const cfg = TYPE_CONFIG[entry.type] || DEFAULT_CFG;
+    const Icon = cfg.Icon;
 
     setNotifications(prev => {
       const updated = [entry, ...prev].slice(0, MAX_STORED);
@@ -40,18 +55,25 @@ export function NotificationProvider({ children }) {
     });
     setUnreadCount(n => n + 1);
 
-    const cfg = TYPE_CONFIG[notif.type] || { icon: '🔔' };
     toast(
-      (t) => (
+      () => (
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-          <span style={{ fontSize: 18, lineHeight: 1 }}>{cfg.icon}</span>
+          <div style={{
+            width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+            background: cfg.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Icon size={15} color={cfg.color} />
+          </div>
           <div>
-            <div style={{ fontWeight: 700, fontSize: 13, color: '#0F172A' }}>{notif.title}</div>
-            <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{notif.body}</div>
+            <div style={{ fontWeight: 700, fontSize: 13, color: '#0F172A' }}>{entry.title}</div>
+            <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{entry.body}</div>
           </div>
         </div>
       ),
-      { duration: 5000 }
+      {
+        duration: cfg.isAlert ? 8000 : 5000,
+        style: cfg.isAlert ? { borderLeft: '3px solid #EF4444' } : {},
+      }
     );
   }, []);
 
@@ -65,14 +87,14 @@ export function NotificationProvider({ children }) {
 
   useEffect(() => {
     const unsubs = [
-      subscribe('notification', (notif) => addNotification(notif)),
+      subscribe('notification', (n) => addNotification(n)),
 
       subscribe('visitor_update', (visitor) => {
-        const checkedOut = !!(visitor.checkOutTime);
+        const out = !!visitor.checkOutTime;
         addNotification({
           id: visitor._id || String(Date.now()),
-          type: checkedOut ? 'visitor_checkout' : 'visitor_checkin',
-          title: checkedOut ? 'Visitor Checked Out' : 'Visitor Checked In',
+          type: out ? 'visitor_checkout' : 'visitor_checkin',
+          title: out ? 'Visitor Checked Out' : 'Visitor Checked In',
           body: `${visitor.name || 'A visitor'} — ${visitor.hostName || ''}`.trim().replace(/—\s*$/, ''),
           meta: { visitorId: visitor._id },
         });
@@ -82,8 +104,8 @@ export function NotificationProvider({ children }) {
         addNotification({
           id: alert._id || String(Date.now()),
           type: 'new_alert',
-          title: 'Security Alert',
-          body: alert.message || alert.title || 'New alert raised',
+          title: alert.title || 'Security Alert',
+          body: alert.message || alert.note || 'New alert raised in your estate',
           meta: { alertId: alert._id },
         });
       }),
@@ -98,14 +120,13 @@ export function NotificationProvider({ children }) {
         });
       }),
     ];
-
     return () => unsubs.forEach(fn => fn?.());
   }, [subscribe, addNotification]);
 
   const markAllRead = useCallback(() => {
     const ts = new Date().toISOString();
     setNotifications(prev => {
-      const updated = prev.map(n => (n.readAt ? n : { ...n, readAt: ts }));
+      const updated = prev.map(n => n.readAt ? n : { ...n, readAt: ts });
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       return updated;
     });
@@ -118,8 +139,10 @@ export function NotificationProvider({ children }) {
     localStorage.removeItem(STORAGE_KEY);
   }, []);
 
+  const alertCount = notifications.filter(n => !n.readAt && TYPE_CONFIG[n.type]?.isAlert).length;
+
   return (
-    <NotificationContext.Provider value={{ notifications, unreadCount, markAllRead, clearAll, TYPE_CONFIG }}>
+    <NotificationContext.Provider value={{ notifications, unreadCount, alertCount, markAllRead, clearAll, TYPE_CONFIG }}>
       {children}
     </NotificationContext.Provider>
   );
