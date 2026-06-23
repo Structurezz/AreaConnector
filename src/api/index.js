@@ -163,3 +163,20 @@ export const guardAPI = {
   activate: (id) => api.patch(`/guards/${id}/activate`),
   remove: (id) => api.delete(`/guards/${id}`),
 };
+
+// Courtroom
+export const courtAPI = {
+  listCases:         (params) => api.get('/court', { params }),
+  getCase:           (id) => api.get(`/court/${id}`),
+  getStats:          () => api.get('/court/stats'),
+  fileCase:          (data) => api.post('/court', data),
+  openCase:          (id) => api.patch(`/court/${id}/open`),
+  hireLawyer:        (id, data) => api.post(`/court/${id}/lawyer`, data),
+  submitArgument:    (id, data) => api.post(`/court/${id}/argument`, data),
+  submitEvidence:    (id, data) => api.post(`/court/${id}/evidence`, data),
+  castJuryVote:      (id, data) => api.post(`/court/${id}/jury-vote`, data),
+  deliverVerdict:    (id) => api.post(`/court/${id}/verdict`),
+  proposeSettlement: (id, data) => api.post(`/court/${id}/settle`, data),
+  fileAppeal:        (id, data) => api.post(`/court/${id}/appeal`, data),
+  payFine:           (id) => api.post(`/court/${id}/pay-fine`),
+};

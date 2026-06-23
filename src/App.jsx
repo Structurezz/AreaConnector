@@ -27,6 +27,7 @@ import LoungeManager from './pages/LoungeManager';
 import Guards from './pages/Guards';
 import GuardDetail from './pages/GuardDetail';
 import ResidentDetail from './pages/ResidentDetail';
+import Courtroom from './pages/Courtroom';
 
 function RequireManager({ children, allowWhenBlocked = false }) {
   const { user, loading } = useAuth();
@@ -84,6 +85,7 @@ function AppRoutes() {
       <Route path="/lounge" element={<RequireManager><PlanGate feature="residentLounge" featureName="Lounge & Events"><LoungeManager /></PlanGate></RequireManager>} />
       <Route path="/guards" element={<RequireManager><Guards /></RequireManager>} />
       <Route path="/guards/:id" element={<RequireManager><GuardDetail /></RequireManager>} />
+      <Route path="/courtroom" element={<RequireManager><Courtroom /></RequireManager>} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
