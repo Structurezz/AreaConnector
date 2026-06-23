@@ -10,26 +10,35 @@ import AuthLayout from '../components/auth/AuthLayout';
 
 const STEPS = ['Account', 'Estate', 'Plan', 'Done'];
 
-const BILLING_OPTIONS = [
+const PLANS = [
   {
     id: 'starter', slug: 'starter', label: 'Starter',
-    price: '₦20,000', period: '/month',
-    sub: 'Up to 50 residents · 1 gate',
-    billingModel: 'flat', cycle: 'monthly', highlight: false,
+    sub: 'For small estates',
+    monthly: 20000, annual: 192000,
+    billingModel: 'flat',
+    features: ['Up to 50 residents', '1 security gate', 'Visitor & QR pass management', 'Payment schedules & wallet', 'Guard mobile app'],
   },
   {
     id: 'growth', slug: 'growth', label: 'Growth',
-    price: '₦47,000', period: '/month',
-    sub: 'Up to 200 residents · Unlimited gates',
-    billingModel: 'flat', cycle: 'monthly', highlight: true, badge: 'Most popular',
+    sub: 'For growing communities',
+    monthly: 47000, annual: 451200,
+    billingModel: 'flat', badge: 'Most popular',
+    features: ['Up to 200 residents', 'Unlimited gates', 'Community chat & marketplace', 'Events & polls', 'Priority email support'],
   },
   {
     id: 'premium', slug: 'premium', label: 'Premium',
-    price: '₦80,000', period: '/month',
-    sub: 'Up to 500 residents · Lounge & AI included',
-    billingModel: 'flat', cycle: 'monthly', highlight: false,
+    sub: 'For large estates',
+    monthly: 80000, annual: 768000,
+    billingModel: 'flat',
+    features: ['Up to 500 residents', 'Unlimited gates', 'Lounge social feed', 'AI insights & analytics', 'Dedicated support'],
   },
 ];
+
+const TRIAL_PLAN = {
+  id: 'trial', slug: 'growth', label: '14-Day Free Trial',
+  isTrial: true, billingModel: 'flat',
+  features: ['All Growth plan features', 'Up to 200 residents & unlimited gates', 'No credit card required', 'Cancel or upgrade any time'],
+};
 
 /* ── Step indicator ── */
 function StepIndicator({ current }) {
@@ -190,65 +199,140 @@ function EstateStep({ form, onChange, onNext, onBack }) {
   );
 }
 
+const fmt = n => '₦' + n.toLocaleString('en-NG');
+
 /* ── Step 2: Plan ── */
-function PlanStep({ selected, onSelect, onNext, onBack, loading }) {
+function PlanStep({ selected, onSelect, onNext, onBack, loading, billingCycle, onCycleChange }) {
   return (
-    <div className="space-y-4">
-      <div className="mb-5">
-        <h2 className="text-2xl font-bold text-slate-900 mb-1 tracking-tight">Choose your billing</h2>
-        <p className="text-sm text-slate-500">
-          Start with a <span className="text-emerald-600 font-semibold">14-day free trial</span> — no payment now.
-        </p>
+    <div className="space-y-3">
+      <div className="mb-4">
+        <h2 className="text-2xl font-bold text-slate-900 mb-1 tracking-tight">Choose your plan</h2>
+        <p className="text-sm text-slate-500">Start free, upgrade when you're ready.</p>
       </div>
 
-      <div className="space-y-2.5">
-        {BILLING_OPTIONS.map(opt => (
-          <button key={opt.id} onClick={() => onSelect(opt)}
-            className="w-full text-left rounded-xl border p-4 transition-all"
+      {/* Free trial card */}
+      <button onClick={() => onSelect(TRIAL_PLAN)}
+        className="w-full text-left rounded-xl p-4 transition-all"
+        style={{
+          border: selected?.id === 'trial' ? '2px solid #10B981' : '2px solid #D1FAE5',
+          background: selected?.id === 'trial' ? 'rgba(16,185,129,0.08)' : 'rgba(240,253,244,0.6)',
+        }}>
+        <div className="flex items-start gap-3">
+          <div className="rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all"
             style={{
-              border: selected?.id === opt.id
-                ? '1px solid #10B981'
-                : '1px solid #E2E8F0',
-              background: selected?.id === opt.id
-                ? 'rgba(16,185,129,0.05)'
-                : '#FFFFFF',
+              width: 18, height: 18,
+              borderColor: selected?.id === 'trial' ? '#10B981' : '#34D399',
+              background: selected?.id === 'trial' ? '#10B981' : 'transparent',
             }}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all"
-                  style={{
-                    borderColor: selected?.id === opt.id ? '#10B981' : '#CBD5E1',
-                    background:  selected?.id === opt.id ? '#10B981' : 'transparent',
-                  }}>
-                  {selected?.id === opt.id && <Check size={11} color="#ffffff" strokeWidth={3}/>}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-900 font-semibold text-sm">{opt.label}</span>
-                    {opt.badge && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200">
-                        {opt.badge}
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs mt-0.5 text-slate-400">{opt.sub}</div>
-                </div>
-              </div>
-              <div className="text-right flex-shrink-0">
-                <span className="text-slate-900 font-bold">{opt.price}</span>
-                <span className="text-xs text-slate-400"> {opt.period}</span>
-              </div>
+            {selected?.id === 'trial' && <Check size={10} color="#fff" strokeWidth={3}/>}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-bold text-emerald-900 text-sm">14-Day Free Trial</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-600 text-white">Recommended</span>
             </div>
-          </button>
-        ))}
+            <p className="text-xs text-emerald-700 mb-2.5">Full Growth plan · No credit card required</p>
+            <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+              {TRIAL_PLAN.features.map(f => (
+                <div key={f} className="flex items-start gap-1.5 text-xs text-emerald-700">
+                  <Check size={9} className="text-emerald-500 flex-shrink-0 mt-0.5" strokeWidth={3}/>
+                  {f}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </button>
+
+      {/* Divider */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1 h-px bg-slate-200"/>
+        <span className="text-xs text-slate-400 font-medium whitespace-nowrap">or choose a paid plan</span>
+        <div className="flex-1 h-px bg-slate-200"/>
       </div>
 
-      <div className="rounded-xl p-3.5 text-xs flex gap-2.5 items-start bg-emerald-50 border border-emerald-200 text-emerald-700">
-        <CheckCircle size={14} className="flex-shrink-0 mt-0.5 text-emerald-600"/>
-        All plans include: visitor management, QR passes, community chat, announcements, payments, guard app, and analytics.
+      {/* Billing cycle toggle */}
+      <div className="flex items-center p-1 rounded-xl bg-slate-100 border border-slate-200">
+        <button onClick={() => onCycleChange('monthly')}
+          className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all"
+          style={billingCycle === 'monthly'
+            ? { background: '#fff', color: '#0F172A', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }
+            : { color: '#64748B' }}>
+          Monthly
+        </button>
+        <button onClick={() => onCycleChange('annual')}
+          className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
+          style={billingCycle === 'annual'
+            ? { background: '#fff', color: '#0F172A', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }
+            : { color: '#64748B' }}>
+          Annual
+          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-600">Save 20%</span>
+        </button>
       </div>
 
-      <div className="flex gap-3 pt-1">
+      {/* Plan cards */}
+      <div className="space-y-2">
+        {PLANS.map(plan => {
+          const isSelected = selected?.id === plan.id;
+          const displayPrice = billingCycle === 'annual' ? plan.annual : plan.monthly;
+          const periodLabel = billingCycle === 'annual' ? '/year' : '/month';
+          const monthlyEquiv = billingCycle === 'annual' ? Math.round(plan.annual / 12) : null;
+
+          return (
+            <button key={plan.id} onClick={() => onSelect({ ...plan, cycle: billingCycle })}
+              className="w-full text-left rounded-xl border p-3.5 transition-all"
+              style={{
+                borderColor: isSelected ? '#10B981' : '#E2E8F0',
+                background: isSelected ? 'rgba(16,185,129,0.05)' : '#fff',
+              }}>
+              <div className="flex items-start gap-2.5">
+                <div className="rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all"
+                  style={{
+                    width: 18, height: 18,
+                    borderColor: isSelected ? '#10B981' : '#CBD5E1',
+                    background: isSelected ? '#10B981' : 'transparent',
+                  }}>
+                  {isSelected && <Check size={10} color="#fff" strokeWidth={3}/>}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-sm text-slate-900">{plan.label}</span>
+                      {plan.badge && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200">
+                          {plan.badge}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <div className="text-slate-900 font-bold text-sm leading-tight">{fmt(displayPrice)}</div>
+                      <div className="text-[10px] text-slate-400 leading-tight">{periodLabel}</div>
+                      {monthlyEquiv && (
+                        <div className="text-[10px] text-emerald-600 font-semibold leading-tight">{fmt(monthlyEquiv)}/mo</div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-0.5">
+                    {plan.features.map(f => (
+                      <div key={f} className="flex items-start gap-1.5 text-xs text-slate-500">
+                        <Check size={9} className="text-emerald-400 flex-shrink-0 mt-0.5" strokeWidth={3}/>
+                        {f}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="rounded-xl p-3 text-xs flex gap-2 items-start bg-slate-50 border border-slate-200 text-slate-500">
+        <CheckCircle size={13} className="flex-shrink-0 mt-0.5 text-emerald-500"/>
+        All plans include visitor management, QR passes, community chat, announcements, payments, guard app &amp; analytics.
+      </div>
+
+      <div className="flex gap-3">
         <button onClick={onBack}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-slate-100 border border-slate-200 text-slate-600 hover:bg-slate-200 transition-all">
           <ArrowLeft size={14}/> Back
@@ -262,7 +346,9 @@ function PlanStep({ selected, onSelect, onNext, onBack, loading }) {
                 <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" strokeOpacity=".3"/>
                 <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round"/>
               </svg> Creating estate…</>
-            : <>Start Free Trial <ArrowRight size={15}/></>}
+            : selected?.isTrial
+              ? <>Start Free Trial <ArrowRight size={15}/></>
+              : <>Continue <ArrowRight size={15}/></>}
         </button>
       </div>
     </div>
@@ -334,10 +420,13 @@ export default function Register() {
 
   const [account, setAccount] = useState({ name: '', email: '', phone: '', password: '', confirm: '' });
   const [estate, setEstate]   = useState({ estateName: '', estateAddress: '' });
+  const [billingCycle, setBillingCycle] = useState('monthly');
 
-  // Pre-select plan from ?plan= URL param (set by landing page CTA buttons)
-  const planParam = searchParams.get('plan'); // 'starter' | 'growth' | 'premium'
-  const initialPlan = BILLING_OPTIONS.find(o => o.id === planParam) || BILLING_OPTIONS[1]; // default Growth
+  // Pre-select plan from ?plan= URL param; default to free trial
+  const planParam = searchParams.get('plan');
+  const initialPlan = planParam === 'trial'
+    ? TRIAL_PLAN
+    : (PLANS.find(p => p.id === planParam) || TRIAL_PLAN);
   const [selectedPlan, setSelectedPlan] = useState(initialPlan);
 
   const setAcct = (k, v) => setAccount(f => ({ ...f, [k]: v }));
@@ -347,18 +436,28 @@ export default function Register() {
     setLoading(true);
     setError('');
     try {
-      const user = await register({
+      const cycle = selectedPlan.isTrial ? 'monthly' : billingCycle;
+      const payload = {
         name: account.name, email: account.email, phone: account.phone,
         password: account.password, role: 'estate_manager',
         estateName: estate.estateName, estateAddress: estate.estateAddress,
         planSlug: selectedPlan.slug,
-        billingModel: selectedPlan.billingModel, cycle: selectedPlan.cycle,
-      });
+        billingModel: selectedPlan.billingModel,
+        cycle,
+      };
+      if (selectedPlan.isTrial) payload.trialDays = 14;
+
+      const user = await register(payload);
       const estateCode = user?.estateId?.estateCode || user?.estateId || '—';
+      const billingLabel = selectedPlan.isTrial
+        ? '14-Day Free Trial (Growth)'
+        : `${selectedPlan.label} — ${billingCycle === 'annual'
+            ? `${fmt(selectedPlan.annual)}/year`
+            : `${fmt(selectedPlan.monthly)}/month`}`;
       setDone({
         estateName: estate.estateName,
         estateCode: typeof estateCode === 'object' ? estateCode.estateCode : estateCode,
-        billingLabel: selectedPlan.label,
+        billingLabel,
       });
       setStep(3);
     } catch (err) {
@@ -416,7 +515,8 @@ export default function Register() {
       )}
       {step === 2 && (
         <PlanStep selected={selectedPlan} onSelect={setSelectedPlan}
-          onNext={handleSubmit} onBack={() => setStep(1)} loading={loading}/>
+          onNext={handleSubmit} onBack={() => setStep(1)} loading={loading}
+          billingCycle={billingCycle} onCycleChange={setBillingCycle}/>
       )}
       {step === 3 && (
         <DoneStep estateName={done.estateName} estateCode={done.estateCode} billingLabel={done.billingLabel}/>
