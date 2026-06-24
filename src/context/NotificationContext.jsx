@@ -33,7 +33,7 @@ export const TYPE_CONFIG = {
 
 const DEFAULT_CFG = { Icon: Bell, label: 'Notification', color: '#10B981', isAlert: false };
 
-const SIREN_URL = 'https://areaconnectapi-production.up.railway.app/engyclick-police-siren-sound-effect-317645.mp3';
+const SIREN_URL = 'https://areaconnectapi-production.up.railway.app/public/engyclick-police-siren-sound-effect-317645.mp3';
 
 function playSiren(durationMs = 4000) {
   try {
