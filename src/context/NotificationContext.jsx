@@ -33,6 +33,14 @@ export const TYPE_CONFIG = {
 
 const DEFAULT_CFG = { Icon: Bell, label: 'Notification', color: '#10B981', isAlert: false };
 
+function playSiren(durationMs = 4000) {
+  try {
+    const audio = new Audio('/siren.mp3');
+    audio.play().catch(() => {});
+    setTimeout(() => { audio.pause(); audio.currentTime = 0; }, durationMs);
+  } catch (_) {}
+}
+
 function loadStored() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
   catch { return []; }
@@ -54,6 +62,11 @@ export function NotificationProvider({ children }) {
       return updated;
     });
     setUnreadCount(n => n + 1);
+
+    if (cfg.isAlert) {
+      const sirenDuration = entry.type === 'alert_broadcast' ? 6000 : 4000;
+      playSiren(sirenDuration);
+    }
 
     toast(
       () => (
