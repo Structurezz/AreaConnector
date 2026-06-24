@@ -7,6 +7,7 @@ import {
 import Sidebar from './Sidebar';
 import { Toaster } from 'react-hot-toast';
 import NotificationBell from '../ui/NotificationBell';
+import AlertModal from '../ui/AlertModal';
 import EstateSwitcher from '../ui/EstateSwitcher';
 import { NotificationProvider } from '../../context/NotificationContext';
 
@@ -23,6 +24,7 @@ export default function AppLayout({ children }) {
 
   return (
     <NotificationProvider>
+    <AlertModal />
     <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg)' }}>
 
       {/* Mobile sidebar overlay */}

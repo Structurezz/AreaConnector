@@ -64,6 +64,12 @@ export function NotificationProvider({ children }) {
   const { subscribe } = useSocket();
   const [notifications, setNotifications] = useState(loadStored);
   const [unreadCount, setUnreadCount] = useState(() => loadStored().filter(n => !n.readAt).length);
+  const [activeAlert, setActiveAlert] = useState(null);
+
+  const dismissAlert = useCallback(() => {
+    stopSiren();
+    setActiveAlert(null);
+  }, []);
 
   const addNotification = useCallback((notif) => {
     const entry = { ...notif, id: notif.id || String(Date.now()), createdAt: notif.createdAt || new Date().toISOString() };
@@ -79,6 +85,8 @@ export function NotificationProvider({ children }) {
 
     if (cfg.isAlert) {
       playSiren(60000);
+      setActiveAlert(entry);
+      return;
     }
 
     toast(
@@ -96,10 +104,7 @@ export function NotificationProvider({ children }) {
           </div>
         </div>
       ),
-      {
-        duration: cfg.isAlert ? 8000 : 5000,
-        style: cfg.isAlert ? { borderLeft: '3px solid #EF4444' } : {},
-      }
+      { duration: 5000 }
     );
   }, []);
 
@@ -127,12 +132,19 @@ export function NotificationProvider({ children }) {
       }),
 
       subscribe('new_alert', (alert) => {
+        const isBroadcast = !!alert.isEmergencyBroadcast;
+        const role = alert.raisedByRole || alert.residentId?.role || 'resident';
+        const name = alert.residentId?.name;
+        const phone = alert.residentId?.phone;
+        const unit = alert.unitId
+          ? `${alert.unitId.block ? `Block ${alert.unitId.block} · ` : ''}Unit ${alert.unitId.unitNumber}`
+          : null;
         addNotification({
           id: alert._id || String(Date.now()),
-          type: 'new_alert',
-          title: alert.title || 'Security Alert',
-          body: alert.message || alert.note || 'New alert raised in your estate',
-          meta: { alertId: alert._id },
+          type: isBroadcast ? 'alert_broadcast' : 'new_alert',
+          title: alert.title || (isBroadcast ? 'Estate Broadcast' : 'Security Alert'),
+          body: alert.note || alert.message || 'New alert raised in your estate',
+          meta: { alertId: alert._id, raisedByRole: role, raisedByName: name, raisedByPhone: phone, raisedByUnit: unit },
         });
       }),
 
@@ -168,7 +180,7 @@ export function NotificationProvider({ children }) {
   const alertCount = notifications.filter(n => !n.readAt && TYPE_CONFIG[n.type]?.isAlert).length;
 
   return (
-    <NotificationContext.Provider value={{ notifications, unreadCount, alertCount, markAllRead, clearAll, stopSiren, TYPE_CONFIG }}>
+    <NotificationContext.Provider value={{ notifications, unreadCount, alertCount, activeAlert, dismissAlert, markAllRead, clearAll, stopSiren, TYPE_CONFIG }}>
       {children}
     </NotificationContext.Provider>
   );
