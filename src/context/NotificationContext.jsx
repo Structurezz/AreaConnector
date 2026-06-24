@@ -66,8 +66,7 @@ export function NotificationProvider({ children }) {
     setUnreadCount(n => n + 1);
 
     if (cfg.isAlert) {
-      const sirenDuration = entry.type === 'alert_broadcast' ? 6000 : 4000;
-      playSiren(sirenDuration);
+      playSiren(60000);
     }
 
     toast(
