@@ -35,11 +35,23 @@ const DEFAULT_CFG = { Icon: Bell, label: 'Notification', color: '#10B981', isAle
 
 const SIREN_URL = 'https://areaconnectapi-production.up.railway.app/public/engyclick-police-siren-sound-effect-317645.mp3';
 
-function playSiren(durationMs = 4000) {
+let _sirenAudio = null;
+let _sirenTimer = null;
+
+function playSiren(durationMs = 60000) {
   try {
-    const audio = new Audio(SIREN_URL);
-    audio.play().catch(() => {});
-    setTimeout(() => { audio.pause(); audio.currentTime = 0; }, durationMs);
+    if (_sirenAudio) { _sirenAudio.pause(); _sirenAudio.currentTime = 0; }
+    clearTimeout(_sirenTimer);
+    _sirenAudio = new Audio(SIREN_URL);
+    _sirenAudio.play().catch(() => {});
+    _sirenTimer = setTimeout(() => stopSiren(), durationMs);
+  } catch (_) {}
+}
+
+function stopSiren() {
+  try {
+    clearTimeout(_sirenTimer);
+    if (_sirenAudio) { _sirenAudio.pause(); _sirenAudio.currentTime = 0; _sirenAudio = null; }
   } catch (_) {}
 }
 
@@ -156,7 +168,7 @@ export function NotificationProvider({ children }) {
   const alertCount = notifications.filter(n => !n.readAt && TYPE_CONFIG[n.type]?.isAlert).length;
 
   return (
-    <NotificationContext.Provider value={{ notifications, unreadCount, alertCount, markAllRead, clearAll, TYPE_CONFIG }}>
+    <NotificationContext.Provider value={{ notifications, unreadCount, alertCount, markAllRead, clearAll, stopSiren, TYPE_CONFIG }}>
       {children}
     </NotificationContext.Provider>
   );
