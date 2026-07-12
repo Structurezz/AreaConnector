@@ -5,7 +5,6 @@ import { Eye, EyeOff, AlertCircle, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
 import AuthLayout from '../components/auth/AuthLayout';
 
-const DEMO = { label: 'Estate Manager', email: 'manager@estate-demo.com', password: 'Manager@123' };
 const PILLS = ['Auto Gate Control', '24/7 Monitoring', 'Resident Portal', 'Smart Payments'];
 
 const MOBILE_CSS = `
@@ -144,20 +143,6 @@ function MobileLogin({ form, setForm, showPw, setShowPw, loading, error, handleS
         <h2 style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.03em', marginBottom: 2 }}>Welcome back</h2>
         <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 22 }}>Sign in to manage your estate</p>
 
-        {/* Demo chip */}
-        <button
-          onClick={() => setForm({ email: DEMO.email, password: DEMO.password })}
-          style={{
-            width: '100%', textAlign: 'left', padding: '11px 14px', borderRadius: 12,
-            background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)',
-            cursor: 'pointer', marginBottom: 22,
-          }}>
-          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', color: '#10B981', textTransform: 'uppercase', marginBottom: 3 }}>
-            Try Demo Account
-          </div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{DEMO.email}</div>
-        </button>
-
         {/* Error */}
         {error && (
           <div style={{
@@ -288,20 +273,6 @@ export default function Login() {
             </div>
             <h1 className="text-2xl font-bold mb-1.5 tracking-tight" style={{ color: '#0F172A' }}>Welcome back</h1>
             <p className="text-sm" style={{ color: '#475569' }}>Sign in to manage your estate</p>
-          </div>
-
-          {/* Demo quick-fill */}
-          <div className="mb-6 rounded-xl p-3.5" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-            <p className="text-xs font-semibold uppercase tracking-widest mb-2.5" style={{ color: '#94A3B8' }}>Demo Account</p>
-            <button
-              onClick={() => { setForm({ email: DEMO.email, password: DEMO.password }); setError(''); }}
-              className="w-full text-left px-3 py-2.5 rounded-lg transition-all"
-              style={{ background: '#FFFFFF', border: '1px solid #E2E8F0' }}
-              onMouseOver={e => e.currentTarget.style.borderColor = 'rgba(16,185,129,0.4)'}
-              onMouseOut={e  => e.currentTarget.style.borderColor = '#E2E8F0'}>
-              <div className="text-xs font-semibold" style={{ color: '#0F172A' }}>{DEMO.label}</div>
-              <div className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>{DEMO.email}</div>
-            </button>
           </div>
 
           {/* Form */}
