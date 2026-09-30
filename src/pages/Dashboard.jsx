@@ -64,7 +64,7 @@ export default function ManagerDashboard() {
 
       {/* ── Hero ── */}
       <div
-        className="relative overflow-hidden rounded-3xl p-5 pt-6 sm:p-8"
+        className="relative overflow-hidden rounded-3xl p-4 pt-5 sm:p-8"
         style={{
           background:
             'radial-gradient(120% 90% at 100% 0%, #34D399 0%, transparent 55%),' +
@@ -91,35 +91,53 @@ export default function ManagerDashboard() {
           style={{ background: 'rgba(4,120,87,0.55)' }} />
 
         <div className="relative">
-          {/* Top row: pills + avatar */}
-          <div className="flex items-center justify-between gap-3 mb-5">
-            <div className="flex items-center gap-2 flex-wrap min-w-0">
-              <span className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
-                style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)', backdropFilter: 'blur(6px)' }}>
-                <span className="relative flex w-1.5 h-1.5">
-                  <span className="absolute inset-0 rounded-full bg-emerald-200 animate-ping opacity-75" />
-                  <span className="relative w-1.5 h-1.5 rounded-full bg-white" />
+          {/* Top row: greeting + avatar (mobile-first compact) */}
+          <div className="flex items-start justify-between gap-3 mb-3 sm:mb-5">
+            <div className="min-w-0 flex-1">
+              {/* Pills — inline, wrap on desktop */}
+              <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                <span className="inline-flex items-center gap-1.5 text-[9px] sm:text-xs font-bold uppercase tracking-wider px-2 py-0.5 sm:py-1 rounded-full"
+                  style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)', backdropFilter: 'blur(6px)' }}>
+                  <span className="relative flex w-1.5 h-1.5">
+                    <span className="absolute inset-0 rounded-full bg-emerald-200 animate-ping opacity-75" />
+                    <span className="relative w-1.5 h-1.5 rounded-full bg-white" />
+                  </span>
+                  Live
                 </span>
-                Live
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold px-2.5 py-1 rounded-full truncate"
-                style={{ background: 'rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.92)', border: '1px solid rgba(255,255,255,0.20)' }}>
-                {format(new Date(), 'EEE, MMM d')}
-              </span>
+                <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-semibold px-2 py-0.5 sm:py-1 rounded-full truncate"
+                  style={{ background: 'rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.92)', border: '1px solid rgba(255,255,255,0.20)' }}>
+                  {format(new Date(), 'EEE, MMM d')}
+                </span>
+              </div>
+              {/* Merged greeting + name — one line on mobile, layered on desktop */}
+              <h1 className="text-white font-black" style={{ letterSpacing: '-0.03em', lineHeight: 1.1 }}>
+                <span className="hidden sm:block text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.72)', letterSpacing: '0.12em' }}>
+                  {greeting()}
+                </span>
+                <span className="block text-xl sm:text-5xl" style={{ letterSpacing: '-0.03em' }}>
+                  <span className="sm:hidden">{greeting()}, </span>{firstName}{' '}
+                  <span className="inline-block">👋</span>
+                </span>
+              </h1>
+              <p className="text-[11px] sm:text-base mt-1 sm:mt-2 flex items-center gap-1.5 truncate" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                <Sparkles size={11} className="flex-shrink-0" style={{ color: '#A7F3D0' }} />
+                <span className="truncate"><span className="font-semibold text-white">{estateName}</span></span>
+              </p>
             </div>
+
             <Link to="/settings" className="flex-shrink-0 relative group">
               {user?.profilePhoto ? (
                 <img
                   src={user.profilePhoto}
                   alt=""
-                  className="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover"
+                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover"
                   style={{
                     border: '1.5px solid rgba(255,255,255,0.55)',
                     boxShadow: '0 6px 16px rgba(0,0,0,0.18)',
                   }}
                 />
               ) : (
-                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-bold text-base sm:text-lg text-white"
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-bold text-sm sm:text-lg text-white"
                   style={{
                     background: 'linear-gradient(135deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 100%)',
                     border: '1.5px solid rgba(255,255,255,0.55)',
@@ -128,25 +146,13 @@ export default function ManagerDashboard() {
                   {firstName[0]?.toUpperCase()}
                 </div>
               )}
-              <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-300 border-2"
+              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-emerald-300 border-2"
                 style={{ borderColor: '#047857' }} />
             </Link>
           </div>
 
-          {/* Greeting */}
-          <div className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.72)' }}>
-            {greeting()}
-          </div>
-          <h1 className="text-4xl sm:text-5xl font-black text-white mb-2" style={{ letterSpacing: '-0.04em', lineHeight: 1.05 }}>
-            {firstName} <span className="inline-block animate-slide-down">👋</span>
-          </h1>
-          <p className="text-sm sm:text-base mb-5 flex items-center gap-1.5" style={{ color: 'rgba(255,255,255,0.85)' }}>
-            <Sparkles size={13} className="flex-shrink-0" style={{ color: '#A7F3D0' }} />
-            <span className="truncate"><span className="font-semibold text-white">{estateName}</span> · Today's snapshot</span>
-          </p>
-
-          {/* Stat tiles — icons + numbers */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+          {/* Stat tiles — compact on mobile (no icon, tighter padding) */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mt-3 sm:mt-4">
             {[
               { label: 'Residents',      value: stats?.totalResidents || 0, Icon: UsersRound },
               { label: 'Visitors Today', value: stats?.todaysVisitors  || 0, Icon: UserCheck  },
@@ -156,7 +162,7 @@ export default function ManagerDashboard() {
               const isDanger = alert && value > 0;
               return (
                 <div key={label}
-                  className="relative rounded-2xl p-3 sm:p-4 overflow-hidden"
+                  className="relative rounded-xl sm:rounded-2xl px-3 py-2.5 sm:p-4 overflow-hidden"
                   style={{
                     background: isDanger
                       ? 'linear-gradient(135deg, rgba(239,68,68,0.32) 0%, rgba(220,38,38,0.20) 100%)'
@@ -166,34 +172,47 @@ export default function ManagerDashboard() {
                     WebkitBackdropFilter: 'blur(10px)',
                     boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15)',
                   }}>
-                  <div className="flex items-center justify-between mb-1.5">
+                  {/* Icon row — desktop only */}
+                  <div className="hidden sm:flex items-center justify-between mb-1.5">
                     <div className="w-7 h-7 rounded-lg flex items-center justify-center"
                       style={{ background: 'rgba(255,255,255,0.20)' }}>
                       <Icon size={14} style={{ color: '#fff' }} />
                     </div>
-                    {dot && (
-                      <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
-                    )}
+                    {dot && <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />}
                     {isDanger && (
                       <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
                         style={{ background: 'rgba(255,255,255,0.22)', color: '#fff' }}>New</span>
                     )}
                   </div>
-                  <div className="text-2xl sm:text-3xl font-black text-white leading-none mb-1" style={{ letterSpacing: '-0.03em' }}>
-                    {value}
+
+                  {/* Mobile: inline mini row — number + label side by side */}
+                  <div className="sm:hidden flex items-center gap-2">
+                    <Icon size={14} style={{ color: 'rgba(255,255,255,0.85)' }} className="flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-lg font-black text-white leading-none flex items-center gap-1.5">
+                        {value}
+                        {dot && <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse" />}
+                      </div>
+                      <div className="text-[10px] font-medium truncate mt-0.5" style={{ color: 'rgba(255,255,255,0.78)' }}>
+                        {label}
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-[10px] sm:text-xs font-medium truncate" style={{ color: 'rgba(255,255,255,0.78)' }}>
-                    {label}
+
+                  {/* Desktop: stacked number + label (unchanged) */}
+                  <div className="hidden sm:block">
+                    <div className="text-3xl font-black text-white leading-none mb-1" style={{ letterSpacing: '-0.03em' }}>{value}</div>
+                    <div className="text-xs font-medium truncate" style={{ color: 'rgba(255,255,255,0.78)' }}>{label}</div>
                   </div>
                 </div>
               );
             })}
           </div>
 
-          {/* Action row */}
-          <div className="flex items-stretch gap-2 mt-5">
+          {/* Action row — single button on mobile (Visitors is already in bottom nav) */}
+          <div className="flex items-stretch gap-2 mt-3 sm:mt-5">
             <Link to="/alerts"
-              className="flex-1 inline-flex items-center justify-center gap-2 text-sm font-bold px-4 py-3 rounded-xl transition-all relative group"
+              className="flex-1 inline-flex items-center justify-center gap-2 text-sm font-bold px-4 py-2.5 sm:py-3 rounded-xl transition-all relative group"
               style={{
                 background: '#fff',
                 color: '#047857',
@@ -210,7 +229,7 @@ export default function ManagerDashboard() {
               <ChevronRight size={14} className="ml-0.5 opacity-60 group-hover:translate-x-0.5 transition-transform" />
             </Link>
             <Link to="/visitors"
-              className="inline-flex items-center justify-center gap-1.5 text-sm font-semibold px-4 py-3 rounded-xl transition-all"
+              className="hidden sm:inline-flex items-center justify-center gap-1.5 text-sm font-semibold px-4 py-3 rounded-xl transition-all"
               style={{
                 background: 'rgba(255,255,255,0.16)',
                 color: '#fff',
