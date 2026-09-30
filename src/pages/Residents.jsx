@@ -63,9 +63,10 @@ function ResidentDrawer({ resident, units, onToggle, onAssignUnit, onClose }) {
 
   return (
     <>
-      <div className="fixed inset-0 z-40" onClick={onClose} />
-      {/* Mobile: full page · Desktop (sm+): right panel */}
-      <div className="fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto z-50 flex flex-col bg-white shadow-2xl overflow-hidden sm:w-96">
+      <div className="fixed inset-x-0 top-14 bottom-0 lg:top-0 z-40 bg-slate-900/30 backdrop-blur-sm lg:bg-transparent lg:backdrop-blur-none animate-fade-in" onClick={onClose} />
+      {/* Mobile sheet from below the topbar · Tablet/desktop right panel */}
+      <div className="fixed inset-x-0 top-14 bottom-0 sm:inset-x-auto sm:right-0 sm:left-auto sm:w-96 lg:top-0 z-50 flex flex-col bg-white shadow-2xl overflow-hidden animate-slide-in"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
 
         {/* Header */}
         <div className="flex items-center gap-3 px-4 py-4 sm:px-5"
