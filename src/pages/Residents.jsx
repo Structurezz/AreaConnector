@@ -85,10 +85,16 @@ function ResidentDrawer({ resident, units, onToggle, onAssignUnit, onClose }) {
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
           {/* Avatar + name */}
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold flex-shrink-0"
-              style={{ background: 'rgba(16,185,129,0.12)', color: '#34D399', border: '2px solid rgba(16,185,129,0.2)' }}>
-              {r.name[0]?.toUpperCase()}
-            </div>
+            {r.profilePhoto ? (
+              <img src={r.profilePhoto} alt=""
+                className="w-16 h-16 rounded-full object-cover flex-shrink-0"
+                style={{ border: '2px solid rgba(16,185,129,0.25)' }} />
+            ) : (
+              <div className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold flex-shrink-0"
+                style={{ background: 'rgba(16,185,129,0.12)', color: '#34D399', border: '2px solid rgba(16,185,129,0.2)' }}>
+                {r.name[0]?.toUpperCase()}
+              </div>
+            )}
             <div className="min-w-0">
               <div className="font-semibold text-slate-900 flex items-center gap-2 flex-wrap text-base">
                 {r.name}
@@ -341,10 +347,16 @@ export default function ManagerResidents() {
                 }}
                 onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
-                  style={{ background: 'rgba(16,185,129,0.12)', color: '#34D399', border: '1px solid rgba(16,185,129,0.2)' }}>
-                  {r.name[0]?.toUpperCase()}
-                </div>
+                {r.profilePhoto ? (
+                  <img src={r.profilePhoto} alt=""
+                    className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                    style={{ border: '1px solid rgba(16,185,129,0.25)' }} />
+                ) : (
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
+                    style={{ background: 'rgba(16,185,129,0.12)', color: '#34D399', border: '1px solid rgba(16,185,129,0.2)' }}>
+                    {r.name[0]?.toUpperCase()}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-slate-900 text-sm flex items-center gap-2">
                     {r.name}

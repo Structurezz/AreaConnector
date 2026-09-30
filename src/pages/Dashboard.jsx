@@ -108,14 +108,26 @@ export default function ManagerDashboard() {
               </span>
             </div>
             <Link to="/settings" className="flex-shrink-0 relative group">
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-bold text-base sm:text-lg text-white"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 100%)',
-                  border: '1.5px solid rgba(255,255,255,0.55)',
-                  boxShadow: '0 6px 16px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.35)',
-                }}>
-                {firstName[0]?.toUpperCase()}
-              </div>
+              {user?.profilePhoto ? (
+                <img
+                  src={user.profilePhoto}
+                  alt=""
+                  className="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover"
+                  style={{
+                    border: '1.5px solid rgba(255,255,255,0.55)',
+                    boxShadow: '0 6px 16px rgba(0,0,0,0.18)',
+                  }}
+                />
+              ) : (
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-bold text-base sm:text-lg text-white"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 100%)',
+                    border: '1.5px solid rgba(255,255,255,0.55)',
+                    boxShadow: '0 6px 16px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.35)',
+                  }}>
+                  {firstName[0]?.toUpperCase()}
+                </div>
+              )}
               <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-300 border-2"
                 style={{ borderColor: '#047857' }} />
             </Link>

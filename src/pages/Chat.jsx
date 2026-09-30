@@ -162,10 +162,16 @@ function NewDMModal({ onClose, onSelect }) {
               users.map(u => (
                 <button key={u._id} onClick={() => onSelect(u)}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left hover:bg-slate-50">
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
-                    style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', color: '#10B981' }}>
-                    {u.name[0]?.toUpperCase()}
-                  </div>
+                  {u.profilePhoto ? (
+                    <img src={u.profilePhoto} alt=""
+                      className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+                      style={{ border: '1px solid rgba(16,185,129,0.25)' }} />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
+                      style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', color: '#10B981' }}>
+                      {u.name[0]?.toUpperCase()}
+                    </div>
+                  )}
                   <div className="min-w-0">
                     <div className="text-sm font-medium truncate" style={{ color: '#0F172A' }}>{u.name}</div>
                     <div className="text-xs capitalize" style={{ color: '#94A3B8' }}>{u.role?.replace(/_/g, ' ')}</div>
@@ -336,10 +342,16 @@ function Thread({ thread, currentUser, subscribe, emit, estateName }) {
           </>
         ) : (
           <>
-            <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold flex-shrink-0"
-              style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', color: '#10B981' }}>
-              {partner?.name?.[0]?.toUpperCase()}
-            </div>
+            {partner?.profilePhoto ? (
+              <img src={partner.profilePhoto} alt=""
+                className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                style={{ border: '1px solid rgba(16,185,129,0.25)' }} />
+            ) : (
+              <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold flex-shrink-0"
+                style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', color: '#10B981' }}>
+                {partner?.name?.[0]?.toUpperCase()}
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <div className="font-semibold text-sm truncate" style={{ color: '#0F172A' }}>{partner?.name}</div>
               <div className="text-xs capitalize" style={{ color: '#94A3B8' }}>{partner?.role?.replace(/_/g, ' ')}</div>
@@ -364,10 +376,16 @@ function Thread({ thread, currentUser, subscribe, emit, estateName }) {
               </>
             ) : (
               <>
-                <div className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl"
-                  style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', color: '#10B981' }}>
-                  {partner?.name?.[0]?.toUpperCase()}
-                </div>
+                {partner?.profilePhoto ? (
+                  <img src={partner.profilePhoto} alt=""
+                    className="w-14 h-14 rounded-full object-cover"
+                    style={{ border: '1px solid rgba(16,185,129,0.25)' }} />
+                ) : (
+                  <div className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl"
+                    style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', color: '#10B981' }}>
+                    {partner?.name?.[0]?.toUpperCase()}
+                  </div>
+                )}
                 <div className="font-medium" style={{ color: '#0F172A' }}>Start a conversation</div>
                 <div className="text-sm" style={{ color: '#94A3B8' }}>Send {partner?.name} a message</div>
               </>
@@ -412,19 +430,25 @@ function Thread({ thread, currentUser, subscribe, emit, estateName }) {
 
 // ─── Conversation list item ────────────────────────────────────────
 
-function ConvoItem({ label, sub, active, unread, isGroup, avatar, onClick }) {
+function ConvoItem({ label, sub, active, unread, isGroup, avatar, photoUrl, onClick }) {
   return (
     <button onClick={onClick}
       className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all"
       style={active
         ? { background: '#F0FDF4', color: '#0F172A' }
         : { color: '#475569' }}>
-      <div className="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold"
-        style={isGroup
-          ? { background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', color: '#10B981' }
-          : { background: '#F1F5F9', border: '1px solid #E2E8F0', color: '#475569' }}>
-        {isGroup ? <Users size={15} /> : avatar}
-      </div>
+      {!isGroup && photoUrl ? (
+        <img src={photoUrl} alt=""
+          className="w-9 h-9 rounded-full flex-shrink-0 object-cover"
+          style={{ border: '1px solid #E2E8F0' }} />
+      ) : (
+        <div className="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold"
+          style={isGroup
+            ? { background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', color: '#10B981' }
+            : { background: '#F1F5F9', border: '1px solid #E2E8F0', color: '#475569' }}>
+          {isGroup ? <Users size={15} /> : avatar}
+        </div>
+      )}
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium truncate" style={{ color: active ? '#0F172A' : '#0F172A' }}>{label}</div>
         {sub && <div className="text-xs truncate" style={{ color: '#94A3B8' }}>{sub}</div>}
@@ -566,6 +590,7 @@ export default function Chat() {
                 active={activeThread.type === 'dm' && activeThread.partner?._id?.toString() === c._id?.toString()}
                 unread={c.unread || 0}
                 avatar={c.partner?.name?.[0]?.toUpperCase()}
+                photoUrl={c.partner?.profilePhoto}
                 onClick={() => openThread({ type: 'dm', partner: c.partner || { _id: c._id } })}
               />
             ))

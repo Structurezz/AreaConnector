@@ -117,10 +117,16 @@ export default function ResidentDetail() {
       {/* Avatar card */}
       <div className="glass-card p-6 mb-4">
         <div className="flex items-center gap-5">
-          <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-black flex-shrink-0"
-            style={{ background: 'rgba(16,185,129,0.12)', color: '#34D399', border: '2px solid rgba(16,185,129,0.2)' }}>
-            {resident.name[0]?.toUpperCase()}
-          </div>
+          {resident.profilePhoto ? (
+            <img src={resident.profilePhoto} alt=""
+              className="w-20 h-20 rounded-2xl object-cover flex-shrink-0"
+              style={{ border: '2px solid rgba(16,185,129,0.25)' }} />
+          ) : (
+            <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-black flex-shrink-0"
+              style={{ background: 'rgba(16,185,129,0.12)', color: '#34D399', border: '2px solid rgba(16,185,129,0.2)' }}>
+              {resident.name[0]?.toUpperCase()}
+            </div>
+          )}
           <div className="min-w-0">
             <div className="text-xl font-bold text-slate-900 leading-tight">{resident.name}</div>
             <div className="text-sm text-slate-500 mt-1">{resident.email}</div>
