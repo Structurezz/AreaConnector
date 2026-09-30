@@ -226,172 +226,205 @@ export default function ManagerDashboard() {
         </div>
       </div>
 
-      {/* ── Main grid ── */}
-      <div className="grid lg:grid-cols-2 gap-5">
+      {/* ── Row 1: Map (2fr) + Alerts/Notices stack (1fr) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-        {/* Recent Visitors — half width */}
-        <div className="glass-card overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4"
-            style={{ borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
-            <h2 className="font-semibold flex items-center gap-2 text-sm"
-              style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>
-              <div className="w-6 h-6 rounded-lg flex items-center justify-center"
-                style={{ background: 'rgba(16,185,129,0.10)' }}>
-                <UserCheck size={13} style={{ color: '#059669' }} />
-              </div>
-              Recent Visitors
-            </h2>
-            <Link to="/visitors"
-              className="flex items-center gap-1 text-xs font-medium transition-colors"
-              style={{ color: '#059669' }}
-              onMouseEnter={e => e.currentTarget.style.color = '#10B981'}
-              onMouseLeave={e => e.currentTarget.style.color = '#059669'}>
-              View all <ArrowRight size={11} />
-            </Link>
-          </div>
-
-          {recentVisitors.length === 0 ? (
-            <div className="p-10 text-center text-sm" style={{ color: '#94A3B8' }}>
-              No visitors registered yet
-            </div>
-          ) : (
-            <div>
-              {recentVisitors.map((v, i) => (
-                <div key={v._id}
-                  className="flex items-center gap-3 px-5 py-3 transition-colors"
-                  style={{ borderTop: i > 0 ? '1px solid rgba(0,0,0,0.04)' : 'none' }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
-                    style={{ background: 'rgba(16,185,129,0.10)', color: '#059669', border: '1px solid rgba(16,185,129,0.18)' }}>
-                    {v.visitorName[0]?.toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm truncate" style={{ color: '#0F172A' }}>{v.visitorName}</div>
-                    <div className="text-xs truncate mt-0.5" style={{ color: '#94A3B8' }}>
-                      {v.purpose} · Host: {v.hostResidentId?.name || '—'}
-                    </div>
-                  </div>
-                  <div className="text-right flex-shrink-0 space-y-1">
-                    <Badge variant={visitorStatusBadge(v.status)}>{v.status}</Badge>
-                    <div className="text-xs" style={{ color: '#CBD5E1' }}>
-                      {format(new Date(v.expectedDate), 'MMM d')}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Right column */}
-        <div className="space-y-4">
-
-          {/* Estate Location Map */}
+        {/* Estate Map — hero of the body */}
+        <div className="lg:col-span-2">
           <EstateMap
             name={estate?.name || estateName}
             address={estate?.address}
             location={estate?.location}
-            height={200}
+            height={320}
             variant="card"
           />
+        </div>
 
-          {/* Open Alerts */}
-          <div className="glass-card p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-sm flex items-center gap-2"
-                style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>
+        {/* Right rail: Alerts + Notices */}
+        <div className="space-y-4">
+
+          {/* Open Alerts — mood shifts based on state */}
+          <div className="relative overflow-hidden rounded-2xl p-4"
+            style={{
+              background: openAlerts.length > 0
+                ? 'linear-gradient(135deg, #FEE2E2 0%, #FEF2F2 100%)'
+                : 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(16,185,129,0.02) 100%)',
+              border: openAlerts.length > 0 ? '1px solid #FECACA' : '1px solid rgba(16,185,129,0.18)',
+            }}>
+            {openAlerts.length > 0 && (
+              <span className="absolute -top-8 -right-8 w-24 h-24 rounded-full pointer-events-none"
+                style={{ background: 'rgba(239,68,68,0.12)' }} />
+            )}
+            <div className="relative flex items-center justify-between mb-3">
+              <h2 className="font-bold text-sm flex items-center gap-2" style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>
                 <div className="w-6 h-6 rounded-lg flex items-center justify-center"
-                  style={{ background: 'rgba(239,68,68,0.08)' }}>
-                  <Shield size={13} style={{ color: '#EF4444' }} />
+                  style={{ background: openAlerts.length > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.12)' }}>
+                  <Shield size={12} style={{ color: openAlerts.length > 0 ? '#DC2626' : '#059669' }} />
                 </div>
-                Open Alerts
+                Live Alerts
+                {openAlerts.length > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-black text-white"
+                    style={{ background: '#DC2626' }}>
+                    {openAlerts.length}
+                  </span>
+                )}
               </h2>
-              <Link to="/alerts"
-                className="text-xs font-medium transition-colors"
-                style={{ color: '#059669' }}
-                onMouseEnter={e => e.currentTarget.style.color = '#10B981'}
-                onMouseLeave={e => e.currentTarget.style.color = '#059669'}>
-                Manage
+              <Link to="/alerts" className="text-[11px] font-semibold transition-colors flex items-center gap-0.5"
+                style={{ color: openAlerts.length > 0 ? '#DC2626' : '#059669' }}>
+                Open <ArrowRight size={10} />
               </Link>
             </div>
 
             {openAlerts.length === 0 ? (
-              <div className="text-center py-3">
-                <div className="w-8 h-8 rounded-xl mx-auto mb-2 flex items-center justify-center"
-                  style={{ background: 'rgba(16,185,129,0.08)' }}>
-                  <span className="text-base">✓</span>
-                </div>
-                <div className="text-sm font-medium" style={{ color: '#059669' }}>All clear</div>
-                <div className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>No open alerts</div>
+              <div className="relative text-xs" style={{ color: '#059669' }}>
+                <span className="font-semibold">All quiet.</span> <span style={{ color: '#94A3B8' }}>No open alerts right now.</span>
               </div>
             ) : (
-              <div className="space-y-2">
-                {openAlerts.map((a) => (
-                  <div key={a._id}
-                    className="flex items-center gap-2.5 p-2.5 rounded-xl"
-                    style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
-                    <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
+              <div className="relative space-y-1.5">
+                {openAlerts.slice(0, 3).map((a) => (
+                  <Link key={a._id} to="/alerts"
+                    className="flex items-center gap-2 px-2.5 py-2 rounded-xl transition-all"
+                    style={{ background: 'rgba(255,255,255,0.65)', textDecoration: 'none' }}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs font-semibold capitalize truncate" style={{ color: '#DC2626' }}>{a.type} alert</div>
-                      <div className="text-xs truncate mt-0.5" style={{ color: '#94A3B8' }}>
-                        {a.residentId?.name}
-                      </div>
+                      <div className="text-xs font-bold capitalize truncate" style={{ color: '#0F172A' }}>{a.type}</div>
+                      <div className="text-[11px] truncate" style={{ color: '#94A3B8' }}>{a.residentId?.name || 'Unknown'}</div>
                     </div>
-                    <div className="text-xs flex-shrink-0" style={{ color: '#CBD5E1' }}>
+                    <div className="text-[10px] font-medium flex-shrink-0" style={{ color: '#94A3B8' }}>
                       {format(new Date(a.createdAt), 'HH:mm')}
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Announcements */}
-          <div className="glass-card p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-sm flex items-center gap-2"
-                style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>
+          {/* Notices — clean list, sharp typography */}
+          <div className="glass-card p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-bold text-sm flex items-center gap-2" style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>
                 <div className="w-6 h-6 rounded-lg flex items-center justify-center"
-                  style={{ background: 'rgba(217,119,6,0.10)' }}>
-                  <Megaphone size={13} style={{ color: '#D97706' }} />
+                  style={{ background: 'rgba(217,119,6,0.12)' }}>
+                  <Megaphone size={12} style={{ color: '#D97706' }} />
                 </div>
                 Notices
               </h2>
-              <Link to="/announcements"
-                className="text-xs font-medium transition-colors"
-                style={{ color: '#059669' }}
-                onMouseEnter={e => e.currentTarget.style.color = '#10B981'}
-                onMouseLeave={e => e.currentTarget.style.color = '#059669'}>
-                Post
+              <Link to="/announcements" className="text-[11px] font-semibold transition-colors flex items-center gap-0.5"
+                style={{ color: '#D97706' }}>
+                Post <Plus size={10} />
               </Link>
             </div>
 
             {announcements.length === 0 ? (
-              <Link to="/announcements"
-                className="flex items-center gap-2 text-xs font-medium transition-colors"
-                style={{ color: '#10B981' }}
-                onMouseEnter={e => e.currentTarget.style.color = '#059669'}
-                onMouseLeave={e => e.currentTarget.style.color = '#10B981'}>
-                <Plus size={12} /> Post first announcement
-              </Link>
+              <div className="text-xs" style={{ color: '#94A3B8' }}>Nothing posted yet.</div>
             ) : (
-              <div className="space-y-3">
-                {announcements.map((a) => (
-                  <div key={a._id} className="flex items-start gap-2.5">
-                    <div className="w-1 h-1 rounded-full mt-1.5 flex-shrink-0" style={{ background: '#10B981' }} />
-                    <div className="min-w-0">
-                      <div className="text-xs font-medium truncate" style={{ color: '#0F172A' }}>{a.title}</div>
-                      <div className="text-xs mt-0.5" style={{ color: '#CBD5E1' }}>
+              <div className="space-y-2.5">
+                {announcements.slice(0, 3).map((a) => (
+                  <Link key={a._id} to="/announcements"
+                    className="flex items-start gap-2 py-1 transition-all"
+                    style={{ textDecoration: 'none' }}>
+                    <div className="w-1 h-1 rounded-full mt-1.5 flex-shrink-0" style={{ background: '#D97706' }} />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-semibold truncate" style={{ color: '#0F172A' }}>{a.title}</div>
+                      <div className="text-[10px] mt-0.5" style={{ color: '#CBD5E1' }}>
                         {format(new Date(a.createdAt), 'MMM d')}
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
           </div>
         </div>
+      </div>
+
+      {/* ── Row 2: Recent Visitors as a horizontal card stream ── */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-bold flex items-center gap-2" style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>
+            <span className="w-7 h-7 rounded-lg flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.14), rgba(16,185,129,0.06))', border: '1px solid rgba(16,185,129,0.20)' }}>
+              <UserCheck size={13} style={{ color: '#059669' }} />
+            </span>
+            Recent Visitors
+            {recentVisitors.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold"
+                style={{ background: 'rgba(16,185,129,0.10)', color: '#059669' }}>
+                {recentVisitors.length}
+              </span>
+            )}
+          </h2>
+          <Link to="/visitors" className="flex items-center gap-1 text-xs font-semibold transition-colors"
+            style={{ color: '#059669' }}>
+            View all <ArrowRight size={11} />
+          </Link>
+        </div>
+
+        {recentVisitors.length === 0 ? (
+          <div className="glass-card p-8 text-center">
+            <UserCheck size={28} className="mx-auto mb-2" style={{ color: '#CBD5E1' }} />
+            <p className="text-sm" style={{ color: '#94A3B8' }}>No visitors registered yet</p>
+          </div>
+        ) : (
+          <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory"
+            style={{ scrollbarWidth: 'thin' }}>
+            {recentVisitors.slice(0, 8).map((v) => (
+              <Link key={v._id} to="/visitors"
+                className="snap-start flex-shrink-0 w-[220px] rounded-2xl p-3.5 transition-all group"
+                style={{
+                  background: '#FFFFFF',
+                  border: '1px solid rgba(15,23,42,0.06)',
+                  boxShadow: '0 1px 2px rgba(15,23,42,0.04)',
+                  textDecoration: 'none',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 24px rgba(15,23,42,0.10)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 1px 2px rgba(15,23,42,0.04)'; }}>
+                <div className="flex items-center gap-2.5 mb-2.5">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0"
+                    style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.14), rgba(16,185,129,0.05))', color: '#059669', border: '1px solid rgba(16,185,129,0.20)' }}>
+                    {v.visitorName[0]?.toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-bold truncate" style={{ color: '#0F172A', letterSpacing: '-0.01em' }}>
+                      {v.visitorName}
+                    </div>
+                    <div className="text-[10px] mt-0.5" style={{ color: '#94A3B8' }}>
+                      {format(new Date(v.expectedDate), 'MMM d · HH:mm')}
+                    </div>
+                  </div>
+                </div>
+                <div className="mb-2">
+                  <Badge variant={visitorStatusBadge(v.status)}>{v.status}</Badge>
+                </div>
+                <div className="text-[11px] truncate leading-relaxed" style={{ color: '#64748B' }}>
+                  <span style={{ color: '#94A3B8' }}>For</span>{' '}
+                  <span className="font-medium" style={{ color: '#334155' }}>
+                    {v.hostResidentId?.name || 'Unknown host'}
+                  </span>
+                </div>
+                {v.purpose && (
+                  <div className="text-[10px] mt-1 truncate uppercase tracking-wider font-semibold" style={{ color: '#CBD5E1' }}>
+                    {v.purpose}
+                  </div>
+                )}
+              </Link>
+            ))}
+            {/* Trailing "view all" tile */}
+            <Link to="/visitors"
+              className="snap-start flex-shrink-0 w-[140px] rounded-2xl flex flex-col items-center justify-center gap-2 transition-all"
+              style={{
+                background: 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.02))',
+                border: '1px dashed rgba(16,185,129,0.30)',
+                textDecoration: 'none',
+                color: '#059669',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'linear-gradient(135deg, rgba(16,185,129,0.14), rgba(16,185,129,0.04))'}
+              onMouseLeave={e => e.currentTarget.style.background = 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.02))'}>
+              <ArrowRight size={18} />
+              <span className="text-xs font-bold">View all</span>
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* ── Quick Actions ── */}
