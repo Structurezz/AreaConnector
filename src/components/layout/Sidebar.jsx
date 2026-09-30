@@ -149,16 +149,32 @@ export default function Sidebar({ mobile = false, onClose }) {
 
       {/* User footer */}
       <div className="px-3 pb-4 pt-2" style={{ borderTop: '1px solid #E2E8F0' }}>
-        <div className="flex items-center gap-2.5 px-2 py-2 rounded-xl mb-1">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 text-white"
-            style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', fontSize: '0.75rem' }}>
-            {initials}
-          </div>
+        <Link
+          to="/settings"
+          onClick={onClose}
+          className="flex items-center gap-2.5 px-2 py-2 rounded-xl mb-1 transition-all"
+          style={{ textDecoration: 'none' }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#F8FAFC'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+        >
+          {user?.profilePhoto ? (
+            <img
+              src={user.profilePhoto}
+              alt=""
+              className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+              style={{ border: '1.5px solid rgba(16,185,129,0.30)' }}
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 text-white"
+              style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', fontSize: '0.75rem' }}>
+              {initials}
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <div className="text-sm font-semibold truncate leading-tight" style={{ color: '#0F172A' }}>{user?.name}</div>
             <div className="text-xs truncate" style={{ color: '#94A3B8' }}>{user?.email}</div>
           </div>
-        </div>
+        </Link>
         <button
           onClick={async () => { await logout(); navigate('/login'); }}
           className="flex items-center gap-2 w-full px-3 py-2 rounded-xl text-sm font-medium transition-all"

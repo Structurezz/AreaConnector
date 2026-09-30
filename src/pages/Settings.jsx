@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { estateAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 import Spinner from '../components/ui/Spinner';
+import ProfileCard from '../components/ProfileCard';
 import { Settings2, Save, ScrollText, Upload, FileText, Trash2, Download, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -104,12 +105,14 @@ export default function ManagerSettings() {
   return (
     <div className="max-w-2xl space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-3xl font-display font-bold mb-1" style={{ color: '#0F172A' }}>Estate Settings</h1>
+        <h1 className="text-3xl font-display font-bold mb-1" style={{ color: '#0F172A' }}>Settings</h1>
         <p className="text-sm" style={{ color: '#64748B' }}>
           {estate?.name} · Code:{' '}
           <span className="font-mono font-semibold" style={{ color: '#10B981' }}>{estate?.estateCode}</span>
         </p>
       </div>
+
+      <ProfileCard />
 
       <div className="glass-card p-6 space-y-1">
         <h2 className="text-base font-semibold mb-4 flex items-center gap-2" style={{ color: '#0F172A' }}>
