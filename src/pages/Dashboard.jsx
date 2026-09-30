@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { visitorStatusBadge } from '../components/ui/Badge';
 import Badge from '../components/ui/Badge';
 import Spinner from '../components/ui/Spinner';
+import EstateMap from '../components/EstateMap';
 import { format } from 'date-fns';
 
 function greeting() {
@@ -24,21 +25,29 @@ export default function ManagerDashboard() {
   const [recentVisitors, setRecentVisitors] = useState([]);
   const [openAlerts, setOpenAlerts]   = useState([]);
   const [announcements, setAnnouncements] = useState([]);
+  const [estate, setEstate]           = useState(null);
   const [loading, setLoading]         = useState(true);
 
+  const estateId = user?.estateId?._id || user?.estateId;
+
   useEffect(() => {
-    Promise.all([
+    const calls = [
       estateAPI.getStats(),
       visitorAPI.getAll({ limit: 6 }),
       alertAPI.getAll({ status: 'open', limit: 4 }),
       announcementAPI.getAll({ limit: 3 }),
-    ]).then(([s, v, a, n]) => {
+    ];
+    if (estateId) calls.push(estateAPI.getOne(estateId));
+
+    Promise.all(calls).then((results) => {
+      const [s, v, a, n, e] = results;
       setStats(s.data.data);
       setRecentVisitors(v.data.data);
       setOpenAlerts(a.data.data);
       setAnnouncements(n.data.data);
+      if (e) setEstate(e.data.data);
     }).catch(console.error).finally(() => setLoading(false));
-  }, []);
+  }, [estateId]);
 
   if (loading) return (
     <div className="flex items-center justify-center h-64"><Spinner size={32} /></div>
@@ -131,10 +140,10 @@ export default function ManagerDashboard() {
       </div>
 
       {/* ── Main grid ── */}
-      <div className="grid lg:grid-cols-3 gap-5">
+      <div className="grid lg:grid-cols-2 gap-5">
 
-        {/* Recent Visitors — 2 cols */}
-        <div className="lg:col-span-2 glass-card overflow-hidden">
+        {/* Recent Visitors — half width */}
+        <div className="glass-card overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4"
             style={{ borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
             <h2 className="font-semibold flex items-center gap-2 text-sm"
@@ -190,6 +199,15 @@ export default function ManagerDashboard() {
 
         {/* Right column */}
         <div className="space-y-4">
+
+          {/* Estate Location Map */}
+          <EstateMap
+            name={estate?.name || estateName}
+            address={estate?.address}
+            location={estate?.location}
+            height={200}
+            variant="card"
+          />
 
           {/* Open Alerts */}
           <div className="glass-card p-5">

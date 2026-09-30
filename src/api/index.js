@@ -19,6 +19,17 @@ export const estateAPI = {
   getOne: (id) => api.get(`/estates/${id}`),
   update: (id, data) => api.patch(`/estates/${id}`, data),
   getStats: () => api.get('/estates/stats'),
+  // Constitution
+  getConstitutionMeta: (id) => api.get(`/estates/${id}/constitution/meta`),
+  uploadConstitution:  (id, file) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    return api.post(`/estates/${id}/constitution`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  deleteConstitution: (id) => api.delete(`/estates/${id}/constitution`),
+  constitutionFileUrl: (id) => `/estates/${id}/constitution/file`,
 };
 
 // Visitors
@@ -182,4 +193,8 @@ export const courtAPI = {
   payFine:           (id) => api.post(`/court/${id}/pay-fine`),
   chatWithLawyer:    (id, message) => api.post(`/court/${id}/chat`, { message }),
   requestAdjournment:(id, reason) => api.post(`/court/${id}/adjourn`, { reason }),
+  // Manager-as-judge controls
+  setMode:           (id, data) => api.patch(`/court/${id}/mode`, data),
+  managerVerdict:    (id, data) => api.post(`/court/${id}/manager-verdict`, data),
+  overrideVerdict:   (id, data) => api.post(`/court/${id}/override-verdict`, data),
 };
