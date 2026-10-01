@@ -149,9 +149,21 @@ export default function ManagerAlerts() {
                     )}
                   </div>
                   {a.title && <div className="text-slate-900 font-semibold text-sm mb-0.5">{a.title}</div>}
-                  <div className="text-slate-500 text-xs mb-1">
-                    {a.residentId?.name}{a.unitId?.unitNumber ? ` · Unit ${a.unitId.unitNumber}` : ''}
-                    {a.location && <><span className="mx-1.5">·</span><MapPin size={10} className="inline mr-0.5" />{a.location}</>}
+                  <div className="flex items-center gap-1.5 text-slate-500 text-xs mb-1 flex-wrap">
+                    {a.residentId?.profilePhoto ? (
+                      <img src={a.residentId.profilePhoto} alt=""
+                        className="w-5 h-5 rounded-full object-cover flex-shrink-0"
+                        style={{ border: '1px solid rgba(16,185,129,0.25)' }} />
+                    ) : a.residentId?.name ? (
+                      <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black flex-shrink-0"
+                        style={{ background: 'rgba(16,185,129,0.14)', color: '#059669' }}>
+                        {a.residentId.name[0]?.toUpperCase()}
+                      </div>
+                    ) : null}
+                    <span>
+                      {a.residentId?.name}{a.unitId?.unitNumber ? ` · Unit ${a.unitId.unitNumber}` : ''}
+                      {a.location && <><span className="mx-1.5">·</span><MapPin size={10} className="inline mr-0.5" />{a.location}</>}
+                    </span>
                   </div>
                   {a.note && <p className="text-slate-600 text-sm mb-1.5">{a.note}</p>}
                   {a.actionRequired && (
