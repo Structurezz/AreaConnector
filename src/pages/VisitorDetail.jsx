@@ -397,8 +397,15 @@ export default function VisitorDetailPage() {
           ))}
         </div>
 
-        {/* Actions */}
-        <div className="space-y-2 pb-8">
+        {/* Actions (sit just above the mobile bottom nav) */}
+        <div
+          className="sticky lg:static z-20 space-y-2 pt-3 pb-2 lg:pb-8 -mx-4 lg:mx-0 px-4 lg:px-0"
+          style={{
+            bottom: 'calc(env(safe-area-inset-bottom) + 54px)',
+            background: 'linear-gradient(to top, rgba(248,250,252,0.98) 70%, rgba(248,250,252,0))',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+          }}>
           {visitor.status === 'active' && (
             <button onClick={handleCheckIn} className="btn-primary w-full gap-2"><LogIn size={14} /> Check In</button>
           )}
