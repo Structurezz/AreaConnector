@@ -397,15 +397,20 @@ export default function VisitorDetailPage() {
           ))}
         </div>
 
-        {/* Actions (sit just above the mobile bottom nav) */}
+        {/* Spacer so the fixed bar doesn't cover the end of the page */}
+        <div className="h-32 lg:hidden" aria-hidden />
+
+        {/* Actions (fixed above the mobile bottom nav; static on desktop) */}
         <div
-          className="sticky lg:static z-20 space-y-2 pt-3 pb-0 lg:pb-8 -mx-4 lg:mx-0 px-4 lg:px-0"
-          style={{
-            bottom: 'calc(env(safe-area-inset-bottom) + 50px)',
-            background: 'linear-gradient(to top, rgba(248,250,252,0.98) 70%, rgba(248,250,252,0))',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-          }}>
+          className="fixed inset-x-0 z-30 lg:static lg:inset-x-auto lg:z-auto"
+          style={{ bottom: 'calc(env(safe-area-inset-bottom) + 48px)' }}>
+          <div
+            className="max-w-xl mx-auto px-4 pt-3 pb-1 lg:px-0 lg:pt-1 lg:pb-8 space-y-2"
+            style={{
+              background: 'linear-gradient(to top, rgba(248,250,252,0.98) 70%, rgba(248,250,252,0))',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+            }}>
           {visitor.status === 'active' && (
             <button onClick={handleCheckIn} className="btn-primary w-full gap-2"><LogIn size={14} /> Check In</button>
           )}
@@ -427,6 +432,7 @@ export default function VisitorDetailPage() {
           <div className="flex gap-3">
             <button onClick={copyCode} className="btn-outline flex-1 gap-2"><Share2 size={14} /> Copy Code</button>
             <button onClick={() => navigate('/visitors')} className="btn-outline flex-1">Back</button>
+          </div>
           </div>
         </div>
       </div>
