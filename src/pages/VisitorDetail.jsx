@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { visitorAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import Badge, { visitorStatusBadge } from '../components/ui/Badge';
 import Spinner from '../components/ui/Spinner';
 import { ArrowLeft, UserCheck, Share2, CheckCircle, LogIn, LogOut, Ban, MessageCircle } from 'lucide-react';
@@ -195,6 +196,28 @@ function PassTimer({ visitor }) {
 
   if (['checked-out', 'blacklisted', 'expired'].includes(visitor.status)) return null;
 
+  if (visitor.status === 'checked-in') {
+    const entryTime = visitor.entryTime ? new Date(visitor.entryTime) : null;
+    return (
+      <div className="rounded-xl p-4"
+        style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)' }}>
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: 'rgba(16,185,129,0.14)' }}>
+            <CheckCircle size={20} style={{ color: '#059669' }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#059669' }}>Arrived</div>
+            <div className="text-sm font-bold mt-0.5" style={{ color: '#0F172A' }}>
+              Checked in{entryTime ? ` at ${entryTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
+            </div>
+          </div>
+          <span className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse" style={{ background: '#10B981' }} />
+        </div>
+      </div>
+    );
+  }
+
   if (now < start) {
     return (
       <div className="rounded-xl p-4 text-center" style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.14)' }}>
@@ -234,6 +257,7 @@ export default function VisitorDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { subscribe } = useSocket() || {};
   const [visitor, setVisitor] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -245,6 +269,17 @@ export default function VisitorDetailPage() {
   };
 
   useEffect(() => { load(); }, [id]);
+
+  // Live updates — if the guard checks the visitor in/out while we're viewing
+  // the page, the timer should flip to the "arrived" card instantly.
+  useEffect(() => {
+    if (!subscribe) return;
+    const unsub = subscribe('visitor_update', (incoming) => {
+      if (!incoming?._id || incoming._id?.toString() !== id?.toString()) return;
+      setVisitor((prev) => (prev ? { ...prev, ...incoming } : incoming));
+    });
+    return unsub;
+  }, [subscribe, id]);
 
   const copyCode = () => {
     navigator.clipboard?.writeText(visitor.visitorCode);
