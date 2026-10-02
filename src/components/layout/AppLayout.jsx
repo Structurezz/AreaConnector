@@ -11,6 +11,7 @@ import AlertModal from '../ui/AlertModal';
 import EstateSwitcher from '../ui/EstateSwitcher';
 import { NotificationProvider } from '../../context/NotificationContext';
 import PodcastLivePill from '../PodcastLivePill';
+import LiveNotificationModal from '../LiveNotificationModal';
 
 const BOTTOM_NAV = [
   { to: '/dashboard',   icon: LayoutDashboard, label: 'Home' },
@@ -84,6 +85,9 @@ export default function AppLayout({ children }) {
 
       {/* Floating "AreaConnect FM is LIVE" pill */}
       <PodcastLivePill />
+
+      {/* Live notification modal (DJ / Announcement / Podcast) */}
+      <LiveNotificationModal />
 
       {/* ── Mobile bottom navigation ── */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t"
