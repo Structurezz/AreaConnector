@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { announcementAPI } from '../api';
 import Spinner from '../components/ui/Spinner';
 import EmptyState from '../components/ui/EmptyState';
 import Modal from '../components/ui/Modal';
 import Badge from '../components/ui/Badge';
-import { Megaphone, Plus, Pin, Trash2, Edit3 } from 'lucide-react';
+import { Megaphone, Plus, Pin, Trash2, Edit3, Radio, Mic } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import Pagination from '../components/ui/Pagination';
@@ -16,6 +17,7 @@ const CATEGORY_COLORS = {
 const PAGE_SIZE = 10;
 
 export default function ManagerAnnouncements() {
+  const navigate = useNavigate();
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -84,11 +86,31 @@ export default function ManagerAnnouncements() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-3xl font-display font-bold text-slate-900 mb-1">Announcements</h1>
-          <p className="text-slate-500 text-sm">Post notices and updates for residents</p>
+          <p className="text-slate-500 text-sm">Post notices or go live over the air</p>
         </div>
-        <button onClick={() => setShowCreate(true)} className="btn-primary gap-2">
-          <Plus size={16} /> New Announcement
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={() => navigate('/announcements/live')}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm"
+            style={{ background: 'linear-gradient(135deg, #EF4444, #DC2626)', color: '#fff', boxShadow: '0 8px 20px -8px rgba(239,68,68,0.6)' }}>
+            <Radio size={14} /> Broadcast live
+          </button>
+          <button onClick={() => setShowCreate(true)} className="btn-primary gap-2">
+            <Plus size={16} /> New Announcement
+          </button>
+        </div>
+      </div>
+
+      {/* Explainer banner */}
+      <div className="rounded-xl p-4 flex items-start gap-3 border" style={{ background: 'linear-gradient(135deg, #FEF2F2, #FEE2E2)', borderColor: '#FECACA' }}>
+        <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#FEE2E2', color: '#DC2626' }}>
+          <Mic size={16} />
+        </div>
+        <div className="min-w-0">
+          <div className="text-sm font-bold" style={{ color: '#991B1B' }}>Live broadcast — voice over the air</div>
+          <div className="text-xs mt-0.5" style={{ color: '#7F1D1D' }}>
+            For urgent updates: residents get an instant push notification and can tap in to hear you speak. Preempts any active DJ set.
+          </div>
+        </div>
       </div>
 
       {loading ? (

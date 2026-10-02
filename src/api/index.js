@@ -140,6 +140,25 @@ export const loungeAPI = {
   resetDefaults: () => api.post('/lounge/reset-defaults'),
 };
 
+// Live DJ host + mixtapes
+export const djAPI = {
+  getActive:     () => api.get('/dj/active'),
+  start:         (data) => api.post('/dj/start', data),
+  updateTrack:   (id, data) => api.patch(`/dj/${id}/track`, data),
+  end:           (id) => api.post(`/dj/${id}/end`),
+  listMixtapes:  () => api.get('/dj/mixtapes'),
+  saveMixtape:   (data) => api.post('/dj/mixtapes', data),
+  deleteMixtape: (id) => api.delete(`/dj/mixtapes/${id}`),
+  recordPlay:    (id) => api.post(`/dj/mixtapes/${id}/play`),
+};
+
+// Admin podcast — listener side (manager can also listen)
+export const podcastAPI = {
+  getLive:      () => api.get('/podcast/live'),
+  getUpcoming:  () => api.get('/podcast/upcoming'),
+  listEpisodes: () => api.get('/podcast/episodes'),
+};
+
 // Plan / subscription
 export const planAPI = {
   getMySubscription: () => api.get('/plans/my-subscription'),

@@ -24,6 +24,8 @@ import Payments from './pages/Payments';
 import Settings from './pages/Settings';
 import Upgrade from './pages/Upgrade';
 import LoungeManager from './pages/LoungeManager';
+import DJConsole from './pages/DJConsole';
+import AnnouncementBroadcast from './pages/AnnouncementBroadcast';
 import Guards from './pages/Guards';
 import GuardDetail from './pages/GuardDetail';
 import ResidentDetail from './pages/ResidentDetail';
@@ -77,12 +79,14 @@ function AppRoutes() {
       <Route path="/residents/:id" element={<RequireManager><PlanGate feature="residentManagement" featureName="Resident Management"><ResidentDetail /></PlanGate></RequireManager>} />
       <Route path="/units" element={<RequireManager><PlanGate feature="unitManagement" featureName="Unit Management"><Units /></PlanGate></RequireManager>} />
       <Route path="/announcements" element={<RequireManager><PlanGate feature="announcements" featureName="Announcements"><Announcements /></PlanGate></RequireManager>} />
+      <Route path="/announcements/live" element={<RequireManager><PlanGate feature="announcements" featureName="Announcements"><AnnouncementBroadcast /></PlanGate></RequireManager>} />
       <Route path="/chat" element={<RequireManager><PlanGate feature="communityChat" featureName="Community Chat"><Chat /></PlanGate></RequireManager>} />
       <Route path="/payments" element={<RequireManager><PlanGate feature="paymentSystem" featureName="Payments"><Payments /></PlanGate></RequireManager>} />
       <Route path="/alerts" element={<RequireManager><PlanGate feature="securityPortal" featureName="Security & Alerts"><Alerts /></PlanGate></RequireManager>} />
       <Route path="/settings" element={<RequireManager allowWhenBlocked><Settings /></RequireManager>} />
       <Route path="/upgrade" element={<RequireManager allowWhenBlocked><Upgrade /></RequireManager>} />
       <Route path="/lounge" element={<RequireManager><PlanGate feature="residentLounge" featureName="Lounge & Events"><LoungeManager /></PlanGate></RequireManager>} />
+      <Route path="/lounge/dj" element={<RequireManager><PlanGate feature="residentLounge" featureName="Lounge & Events"><DJConsole /></PlanGate></RequireManager>} />
       <Route path="/guards" element={<RequireManager><Guards /></RequireManager>} />
       <Route path="/guards/:id" element={<RequireManager><GuardDetail /></RequireManager>} />
       <Route path="/courtroom" element={<RequireManager><Courtroom /></RequireManager>} />

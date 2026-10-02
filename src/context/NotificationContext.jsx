@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback } from 'rea
 import {
   Siren, UserCheck, UserMinus, Megaphone, Banknote, Clock,
   AlertCircle, UserPlus, Bell, BellRing, Scale, Users, ShoppingBag,
+  Mic, Radio,
 } from 'lucide-react';
 import { useSocket } from './SocketContext';
 import toast from 'react-hot-toast';
@@ -29,6 +30,11 @@ export const TYPE_CONFIG = {
   court_update:        { Icon: Scale,       label: 'Courtroom',     color: '#D97706', isAlert: false },
   jury_summoned:       { Icon: Users,       label: 'Jury Duty',     color: '#7C3AED', isAlert: false },
   marketplace_item:    { Icon: ShoppingBag, label: 'Marketplace',   color: '#10B981', isAlert: false },
+
+  // ── Live audio ──────────────────────────────────────────
+  live_dj:             { Icon: Mic,          label: 'Lounge Live',   color: '#6366F1', isAlert: false },
+  live_announcement:   { Icon: Megaphone,    label: 'Announcement',  color: '#EF4444', isAlert: false },
+  live_podcast:        { Icon: Radio,        label: 'AreaConnect FM',color: '#8B5CF6', isAlert: false },
 };
 
 const DEFAULT_CFG = { Icon: Bell, label: 'Notification', color: '#10B981', isAlert: false };

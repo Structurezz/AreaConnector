@@ -1,15 +1,18 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   Music, Calendar, BarChart2, Plus, Trash2, X,
   RefreshCw, Check, Lock, Users, Shuffle, ChevronDown,
   Pin, Eye, EyeOff, Zap, TrendingUp, Activity,
   MessageCircle, Trophy, ShoppingBag, Newspaper, Lightbulb,
   Dumbbell, Handshake, PartyPopper, Heart, ImageIcon,
-  Send, ChevronRight, MoreHorizontal,
+  Send, ChevronRight, MoreHorizontal, Mic, Radio, Play, Headphones,
 } from 'lucide-react';
-import { eventAPI, pollAPI, loungeAPI, postAPI } from '../api';
+import { eventAPI, pollAPI, loungeAPI, postAPI, djAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import PodcastFM from '../components/PodcastFM';
+import DJLive from '../components/DJLive';
 
 // ── Helpers ────────────────────────────────────────────────────────
 const SERVER_URL = (import.meta.env.VITE_API_URL || 'https://areaconnectapi-production.up.railway.app/api').replace('/api', '');
@@ -851,14 +854,20 @@ function PollsTab() {
 
 // ── Music Tab ─────────────────────────────────────────────────────
 function MusicTab() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [defaultsPage, setDefaultsPage] = useState(1);
+  const [activeDJ, setActiveDJ] = useState(null);
+  const [mixtapes, setMixtapes] = useState([]);
   const DJ_PAGE = 10;
 
   const load = useCallback(() => {
     setLoading(true);
     loungeAPI.getSession().then(({data})=>setSession(data.data)).catch(()=>toast.error('Failed to load')).finally(()=>setLoading(false));
+    djAPI.getActive().then(({data})=>setActiveDJ(data.data)).catch(()=>{});
+    djAPI.listMixtapes().then(({data})=>setMixtapes(data.data || [])).catch(()=>{});
   },[]);
   useEffect(()=>{load();},[load]);
 
@@ -876,6 +885,71 @@ function MusicTab() {
 
   return (
     <div className="space-y-6">
+      {/* ── Live now banner (any host in the estate) ───────────── */}
+      <DJLive />
+
+      {/* ── Go Live / Live DJ hero ─────────────────────────────── */}
+      <div className="rounded-2xl p-5 relative overflow-hidden"
+        style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', color: '#fff' }}>
+        <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full opacity-20" style={{ background: 'rgba(255,255,255,0.4)' }} />
+        <div className="relative flex items-center gap-4 flex-wrap">
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.3)' }}>
+            {activeDJ ? <Radio size={22} /> : <Mic size={22} />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] font-bold tracking-[0.14em] uppercase opacity-80">
+              {activeDJ ? (activeDJ.hostUserId === user?._id ? 'Your set is live' : 'A resident is live') : 'Lounge Radio'}
+            </div>
+            <div className="text-lg font-extrabold leading-tight">
+              {activeDJ
+                ? (activeDJ.hostUserId === user?._id ? 'Open your decks' : `${activeDJ.hostName} is on air`)
+                : 'Go live as DJ or make an announcement'}
+            </div>
+            <div className="text-xs opacity-85 mt-0.5">
+              {activeDJ
+                ? (activeDJ.hostUserId === user?._id ? 'Finish the set or change track.' : 'Tune in from the banner above, or start an announcement to override.')
+                : "Play tracks and talk live, or push an urgent announcement to the whole estate."}
+            </div>
+          </div>
+          <button onClick={()=>navigate('/lounge/dj')}
+            className="px-4 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 whitespace-nowrap"
+            style={{ background: '#fff', color: '#065F46' }}>
+            {activeDJ && activeDJ.hostUserId === user?._id
+              ? <><Radio size={14}/> Open decks</>
+              : <><Mic size={14}/> Go live</>}
+          </button>
+        </div>
+      </div>
+
+      {/* ── AreaConnect FM podcast (upcoming + past) ────────────── */}
+      <PodcastFM />
+
+      {/* ── Mixtape archive ─────────────────────────────────────── */}
+      {mixtapes.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <Headphones size={14} className="text-emerald-500" />
+            <h3 className="text-sm font-bold" style={{ color: '#0F172A' }}>Mixtape Archive</h3>
+            <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: '#94A3B8', background: '#F1F5F9' }}>{mixtapes.length}</span>
+          </div>
+          <div className="space-y-2">
+            {mixtapes.slice(0, 5).map(m => (
+              <div key={m._id} className="rounded-xl p-3 flex items-center gap-3 border" style={{ background:'#fff', borderColor:'#F1F5F9' }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(16,185,129,0.12)', color: '#059669' }}>
+                  <Play size={14} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold truncate" style={{ color: '#0F172A' }}>{m.title}</p>
+                  <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
+                    {m.hostName} · {Math.round((m.totalDurationSec || 0) / 60)} min · {m.setlist?.length || 0} tracks · {m.peakListeners || 0} peak
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center gap-2 flex-wrap">
         <button onClick={async()=>{const next=!session?.isAutoDJ;const{data}=await loungeAPI.updateMood({isAutoDJ:next});setSession(data.data);toast.success(`AutoDJ ${next?'on':'off'}`);}}
           className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border"
