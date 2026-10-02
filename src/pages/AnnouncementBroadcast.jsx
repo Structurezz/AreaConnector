@@ -31,7 +31,7 @@ export default function AnnouncementBroadcast() {
   const [library, setLibrary]     = useState([]);
   const [bgTrack, setBgTrack]     = useState(null);  // { videoId, title, artist } or null
   const [current, setCurrent]     = useState(null);
-  const [musicVol, setMusicVol]   = useState(40);    // defaults quieter — this is background
+  const [musicVol, setMusicVol]   = useState(20);    // very quiet background — voice is the point
   const [showPicker, setPicker]   = useState(false);
 
   const startRef  = useRef(0);

@@ -5,6 +5,7 @@ import {
   Mic, Radio,
 } from 'lucide-react';
 import { useSocket } from './SocketContext';
+import { useAuth }   from './AuthContext';
 import toast from 'react-hot-toast';
 
 const NotificationContext = createContext(null);
@@ -70,6 +71,8 @@ const LIVE_TYPES = new Set(['live_dj', 'live_announcement', 'live_podcast']);
 
 export function NotificationProvider({ children }) {
   const { subscribe } = useSocket();
+  const { user }      = useAuth() || {};
+  const currentUserId = user?._id ? String(user._id) : null;
   const [notifications, setNotifications] = useState(loadStored);
   const [unreadCount, setUnreadCount] = useState(() => loadStored().filter(n => !n.readAt).length);
   const [activeAlert, setActiveAlert] = useState(null);
@@ -100,7 +103,10 @@ export function NotificationProvider({ children }) {
       return;
     }
 
+    // Suppress for the host themselves
     if (LIVE_TYPES.has(entry.type)) {
+      const hostId = entry.meta?.hostUserId ? String(entry.meta.hostUserId) : null;
+      if (hostId && currentUserId && hostId === currentUserId) return;
       setActiveLive(entry);
       return;
     }
@@ -122,7 +128,7 @@ export function NotificationProvider({ children }) {
       ),
       { duration: 5000 }
     );
-  }, []);
+  }, [currentUserId]);
 
   useEffect(() => {
     const handlePlanExpiry = (e) => {

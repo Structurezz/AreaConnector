@@ -59,7 +59,7 @@ export default function DJConsole() {
   const [saving, setSaving]     = useState(false);
   const [uploadPct, setUploadPct] = useState(0);
   const [peak, setPeak]         = useState(0);
-  const [musicVol, setMusicVol] = useState(60); // 0-100, broadcast to listeners
+  const [musicVol, setMusicVol] = useState(45); // 0-100, broadcast — voice must sit on top
 
   const recorderRef = useRef(createVoiceRecorder());
   const sessionStartRef = useRef(0);

@@ -885,8 +885,8 @@ function MusicTab() {
 
   return (
     <div className="space-y-6">
-      {/* ── Live now banner (any host in the estate) ───────────── */}
-      <DJLive />
+      {/* ── Live now banner (announcements show on /announcements instead) ─── */}
+      <DJLive only="not-announcement" />
 
       {/* ── Go Live / Live DJ hero ─────────────────────────────── */}
       <div className="rounded-2xl p-5 relative overflow-hidden"

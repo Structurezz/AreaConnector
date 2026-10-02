@@ -9,6 +9,7 @@ import { Megaphone, Plus, Pin, Trash2, Edit3, Radio, Mic } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import Pagination from '../components/ui/Pagination';
+import DJLive from '../components/DJLive';
 
 const CATEGORY_COLORS = {
   general: 'blue', urgent: 'red', event: 'gold', maintenance: 'yellow',
@@ -99,6 +100,9 @@ export default function ManagerAnnouncements() {
           </button>
         </div>
       </div>
+
+      {/* Live announcement banner (shows when a manager is on air right now) */}
+      <DJLive only="announcement" />
 
       {/* Explainer banner */}
       <div className="rounded-xl p-4 flex items-start gap-3 border" style={{ background: 'linear-gradient(135deg, #FEF2F2, #FEE2E2)', borderColor: '#FECACA' }}>
