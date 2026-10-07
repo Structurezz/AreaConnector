@@ -25,6 +25,7 @@ import Settings from './pages/Settings';
 import Upgrade from './pages/Upgrade';
 import LoungeManager from './pages/LoungeManager';
 import DJConsole from './pages/DJConsole';
+import Podcasts from './pages/Podcasts';
 import AnnouncementBroadcast from './pages/AnnouncementBroadcast';
 import Guards from './pages/Guards';
 import GuardDetail from './pages/GuardDetail';
@@ -87,6 +88,7 @@ function AppRoutes() {
       <Route path="/upgrade" element={<RequireManager allowWhenBlocked><Upgrade /></RequireManager>} />
       <Route path="/lounge" element={<RequireManager><PlanGate feature="residentLounge" featureName="Lounge & Events"><LoungeManager /></PlanGate></RequireManager>} />
       <Route path="/lounge/dj" element={<RequireManager><PlanGate feature="residentLounge" featureName="Lounge & Events"><DJConsole /></PlanGate></RequireManager>} />
+      <Route path="/podcasts" element={<RequireManager><PlanGate feature="residentLounge" featureName="Podcast"><Podcasts /></PlanGate></RequireManager>} />
       <Route path="/guards" element={<RequireManager><Guards /></RequireManager>} />
       <Route path="/guards/:id" element={<RequireManager><GuardDetail /></RequireManager>} />
       <Route path="/courtroom" element={<RequireManager><Courtroom /></RequireManager>} />

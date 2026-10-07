@@ -11,7 +11,6 @@ import {
 import { eventAPI, pollAPI, loungeAPI, postAPI, djAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
-import PodcastFM from '../components/PodcastFM';
 import DJLive from '../components/DJLive';
 
 // ── Helpers ────────────────────────────────────────────────────────
@@ -920,9 +919,6 @@ function MusicTab() {
           </button>
         </div>
       </div>
-
-      {/* ── AreaConnect FM podcast (upcoming + past) ────────────── */}
-      <PodcastFM />
 
       {/* ── Mixtape archive ─────────────────────────────────────── */}
       {mixtapes.length > 0 && (

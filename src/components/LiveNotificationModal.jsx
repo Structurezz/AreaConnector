@@ -28,7 +28,7 @@ const VARIANTS = {
     accentDark: '#6D28D9',
     gradient: 'linear-gradient(135deg, #4C1D95 0%, #6D28D9 55%, #8B5CF6 100%)',
     cta: 'Tune in',
-    target: '/lounge',
+    target: '/podcasts',
   },
 };
 
