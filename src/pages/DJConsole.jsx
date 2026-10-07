@@ -9,6 +9,8 @@ import { useAuth }   from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { djAPI, loungeAPI } from '../api';
 import { useLiveAudio } from '../hooks/useLiveAudio';
+import { Fader }      from '../components/MixerDeck';
+import AudiencePanel  from '../components/AudiencePanel';
 
 const BRAND       = '#10B981';
 const BRAND_DARK  = '#059669';
@@ -409,32 +411,22 @@ export default function DJConsole() {
             </div>
           </div>
 
-          {/* Music ducking slider — syncs to listeners */}
-          <div style={{ padding: '12px 18px', borderTop: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button onClick={() => applyVolume(musicVol === 0 ? 60 : 0)}
-              style={{ width: 32, height: 32, borderRadius: 10, border: '1px solid #E2E8F0', background: '#fff', color: '#64748B', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              title="Mute music">
-              {musicVol === 0 ? <VolumeX size={14}/> : musicVol < 40 ? <Volume1 size={14}/> : <Volume2 size={14}/>}
-            </button>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>
-                <span>Music volume</span>
-                <span>{musicVol}%</span>
-              </div>
-              <input type="range" min="0" max="100" value={musicVol}
-                onChange={e => applyVolume(Number(e.target.value))}
-                style={{ width: '100%', accentColor: BRAND }} />
-            </div>
-            <button onClick={() => applyVolume(20)}
-              style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #E2E8F0', background: '#F8FAFC', color: '#64748B', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
-              title="Duck the music while you talk">
-              Duck
-            </button>
-            <button onClick={() => applyVolume(80)}
-              style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #E2E8F0', background: '#F8FAFC', color: '#64748B', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
-              title="Pump the music back up">
-              Up
-            </button>
+          {/* Mixer: Music + Mic vertical faders — syncs to listeners */}
+          <div style={{ padding: '12px 18px', borderTop: '1px solid #F1F5F9', background: '#0F172A', display: 'flex', gap: 12 }}>
+            <Fader label="Music" value={musicVol} max={100} unit="%"
+              disabled={!current}
+              onChange={applyVolume}
+              color={BRAND}
+              icon={musicVol === 0 ? <VolumeX size={13}/> : musicVol < 40 ? <Volume1 size={13}/> : <Volume2 size={13}/>}
+              quickActions={[{ label: 'Duck', value: 20 }, { label: 'Up', value: 60 }]}
+            />
+            <Fader label="Mic" value={Math.round((live.micGain || 1) * 100)} max={200} unit="%"
+              disabled={false}
+              onChange={(v) => live.setMicGain((v || 0) / 100)}
+              color="#10B981"
+              icon={<Mic size={13}/>}
+              quickActions={[{ label: 'Low', value: 80 }, { label: 'Hot', value: 150 }]}
+            />
           </div>
         </div>
 
@@ -469,6 +461,11 @@ export default function DJConsole() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Audience panel — chat + likes + reactions from the room */}
+      <div style={{ marginTop: 14, background: 'linear-gradient(180deg, #0F172A, #1E1B4B)', borderRadius: 18, padding: 14, border: '1px solid #334155' }}>
+        <AudiencePanel roomType="dj" roomId={session._id} accent={BRAND} />
       </div>
 
       {/* Save mixtape modal */}

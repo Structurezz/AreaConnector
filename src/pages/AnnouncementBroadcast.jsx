@@ -9,6 +9,8 @@ import { useAuth }    from '../context/AuthContext';
 import { useSocket }  from '../context/SocketContext';
 import { djAPI, loungeAPI } from '../api';
 import { useLiveAudio } from '../hooks/useLiveAudio';
+import { Fader }      from '../components/MixerDeck';
+import AudiencePanel  from '../components/AudiencePanel';
 
 const RED      = '#EF4444';
 const RED_DARK = '#DC2626';
@@ -266,27 +268,26 @@ export default function AnnouncementBroadcast() {
             </div>
           </div>
 
-          {/* Music volume + change track (if music is set) */}
+          {/* Mixer: Music + Mic faders */}
+          <div style={{ marginTop: 16, padding: 12, borderRadius: 12, background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: 10 }}>
+            <Fader label="Music" value={musicVol} max={100} unit="%"
+              disabled={!hasMusic}
+              onChange={applyVolume}
+              color="#fff"
+              icon={musicVol === 0 ? <VolumeX size={13}/> : musicVol < 40 ? <Volume1 size={13}/> : <Volume2 size={13}/>}
+              quickActions={[{ label: 'Duck', value: 15 }, { label: 'Up', value: 60 }]}
+            />
+            <Fader label="Mic" value={Math.round((live.micGain || 1) * 100)} max={200} unit="%"
+              disabled={false}
+              onChange={(v) => live.setMicGain((v || 0) / 100)}
+              color="#10B981"
+              icon={<Mic size={13}/>}
+              quickActions={[{ label: 'Low', value: 80 }, { label: 'Hot', value: 150 }]}
+            />
+          </div>
+
           {hasMusic && (
             <>
-              <div style={{ marginTop: 16, padding: 10, borderRadius: 12, background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <button onClick={() => applyVolume(musicVol === 0 ? 40 : 0)}
-                  style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.08)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {musicVol === 0 ? <VolumeX size={13}/> : musicVol < 40 ? <Volume1 size={13}/> : <Volume2 size={13}/>}
-                </button>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, fontWeight: 700, opacity: 0.75, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 2 }}>
-                    <span>Music under voice</span><span>{musicVol}%</span>
-                  </div>
-                  <input type="range" min="0" max="100" value={musicVol}
-                    onChange={e => applyVolume(Number(e.target.value))}
-                    style={{ width: '100%', accentColor: '#fff' }} />
-                </div>
-                <button onClick={() => applyVolume(15)}
-                  style={{ padding: '5px 10px', borderRadius: 7, background: 'rgba(255,255,255,0.14)', border: 'none', color: '#fff', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>Duck</button>
-                <button onClick={() => applyVolume(60)}
-                  style={{ padding: '5px 10px', borderRadius: 7, background: 'rgba(255,255,255,0.14)', border: 'none', color: '#fff', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>Up</button>
-              </div>
               {upcoming.length > 0 && (
                 <details style={{ marginTop: 10 }}>
                   <summary style={{ cursor: 'pointer', fontSize: 11, opacity: 0.85, fontWeight: 700 }}>Change track →</summary>
@@ -314,6 +315,12 @@ export default function AnnouncementBroadcast() {
           </button>
         </div>
       </div>
+
+      {/* Audience panel */}
+      <div style={{ marginTop: 14, background: 'linear-gradient(180deg, #0F172A, #1E1B4B)', borderRadius: 18, padding: 14, border: '1px solid #334155' }}>
+        <AudiencePanel roomType="dj" roomId={session._id} accent="#EF4444" />
+      </div>
+
       <style>{`@keyframes ping { 75%,100% { transform: scale(2.4); opacity: 0; } }`}</style>
     </div>
   );
