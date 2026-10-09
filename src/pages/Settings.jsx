@@ -3,7 +3,7 @@ import { estateAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 import Spinner from '../components/ui/Spinner';
 import ProfileCard from '../components/ProfileCard';
-import { Settings2, Save, ScrollText, Upload, FileText, Trash2, Download, Sparkles } from 'lucide-react';
+import { Settings2, Save, ScrollText, Upload, FileText, Trash2, Download, Sparkles, MapPin, Building2, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 
@@ -26,6 +26,10 @@ export default function ManagerSettings() {
   });
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Editable estate info (name + address)
+  const [infoDraft, setInfoDraft] = useState({ name: '', address: '' });
+  const [infoSaving, setInfoSaving] = useState(false);
   const [constitution, setConstitution] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -45,6 +49,7 @@ export default function ManagerSettings() {
     estateAPI.getOne(estateId).then(({ data }) => {
       setEstate(data.data);
       setSettings(data.data.settings || {});
+      setInfoDraft({ name: data.data.name || '', address: data.data.address || '' });
     }).catch(console.error).finally(() => setLoading(false));
     loadConstitution();
   }, [estateId]);
@@ -92,6 +97,46 @@ export default function ManagerSettings() {
       await estateAPI.update(estate._id, { settings });
       toast.success('Settings saved');
     } catch { toast.error('Failed'); } finally { setSaving(false); }
+  };
+
+  // ── Save estate info (name + address). Backend geocodes on address change
+  // whenever GOOGLE_MAPS_API_KEY is set, so the pin updates automatically.
+  const infoDirty = (
+    (infoDraft.name    || '').trim() !== (estate?.name    || '').trim() ||
+    (infoDraft.address || '').trim() !== (estate?.address || '').trim()
+  );
+
+  const handleSaveInfo = async () => {
+    const name = (infoDraft.name || '').trim();
+    const address = (infoDraft.address || '').trim();
+    if (!name)    { toast.error('Estate name is required'); return; }
+    if (!address) { toast.error('Address is required'); return; }
+    setInfoSaving(true);
+    try {
+      const addressChanged = address !== (estate?.address || '').trim();
+      const { data } = await estateAPI.update(estate._id, { name, address });
+      setEstate(data.data);
+      setInfoDraft({ name: data.data.name || '', address: data.data.address || '' });
+      // Backend reports what happened with Google geocoding
+      const outcome = data.geocode;
+      if (addressChanged) {
+        if (outcome === 'success' || outcome === 'manual') {
+          toast.success('Address saved and pin updated on the map');
+        } else if (outcome === 'failed') {
+          toast('Address saved. We couldn\'t find a map pin — try adding more detail (street, city).', { icon: '⚠️' });
+        } else if (outcome === 'not_configured') {
+          toast('Address saved. Google Maps isn\'t configured on the server, so the pin didn\'t update.', { icon: '⚠️' });
+        } else {
+          toast.success('Address saved');
+        }
+      } else {
+        toast.success('Estate info saved');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to save estate info');
+    } finally {
+      setInfoSaving(false);
+    }
   };
 
   if (loading) return <div className="flex justify-center p-12"><Spinner /></div>;
@@ -244,21 +289,87 @@ export default function ManagerSettings() {
         />
       </div>
 
-      {/* Estate info */}
-      <div className="glass-card p-6 space-y-1">
-        <h2 className="text-base font-semibold mb-4" style={{ color: '#0F172A' }}>Estate Information</h2>
-        <div className="divide-y" style={{ '--tw-divide-opacity': 1 }}>
-          {[
-            ['Estate Name', estate?.name],
-            ['Address', estate?.address],
-            ['Invite Code', estate?.estateCode],
-            ['Manager', user?.name],
-          ].map(([label, value]) => (
-            <div key={label} className="flex justify-between items-center py-3">
-              <span className="text-sm" style={{ color: '#64748B' }}>{label}</span>
-              <span className="text-sm font-semibold font-mono" style={{ color: '#0F172A' }}>{value}</span>
+      {/* Estate info — editable */}
+      <div className="glass-card p-6">
+        <div className="flex items-start justify-between mb-4 gap-3">
+          <div>
+            <h2 className="text-base font-semibold flex items-center gap-2" style={{ color: '#0F172A' }}>
+              <Building2 size={18} style={{ color: '#10B981' }} /> Estate Information
+            </h2>
+            <p className="text-xs mt-1" style={{ color: '#64748B' }}>
+              Keep your estate name and address up to date. The map pin is re-generated automatically from the address.
+            </p>
+          </div>
+          {estate?.location?.lat && estate?.location?.lng && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full flex-shrink-0"
+                  style={{ background: 'rgba(16,185,129,0.10)', color: '#059669' }}
+                  title="This address has a verified Google Maps pin.">
+              <CheckCircle2 size={10} /> Geocoded
+            </span>
+          )}
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-semibold mb-1.5 block" style={{ color: '#475569' }}>Estate name</label>
+            <input
+              className="w-full rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all"
+              style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#0F172A' }}
+              onFocus={e => (e.currentTarget.style.borderColor = '#10B981')}
+              onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+              value={infoDraft.name}
+              onChange={e => setInfoDraft({ ...infoDraft, name: e.target.value })}
+              placeholder="e.g. Sunrise Estate"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold mb-1.5 block flex items-center gap-1.5" style={{ color: '#475569' }}>
+              <MapPin size={12} style={{ color: '#10B981' }} /> Street address
+            </label>
+            <textarea
+              rows={2}
+              className="w-full rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all resize-none"
+              style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#0F172A', fontFamily: 'inherit' }}
+              onFocus={e => (e.currentTarget.style.borderColor = '#10B981')}
+              onBlur={e => (e.currentTarget.style.borderColor = '#E2E8F0')}
+              value={infoDraft.address}
+              onChange={e => setInfoDraft({ ...infoDraft, address: e.target.value })}
+              placeholder="e.g. 24 Admiralty Way, Lekki Phase 1, Lagos"
+            />
+            <p className="text-[11px] mt-1.5 flex items-center gap-1" style={{ color: '#94A3B8' }}>
+              <MapPin size={10} /> We re-geocode via Google Maps as soon as you save.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-1" style={{ borderTop: '1px solid #F1F5F9' }}>
+            <div className="text-xs" style={{ color: '#64748B' }}>
+              Invite code
+              <span className="ml-2 font-mono font-semibold" style={{ color: '#10B981' }}>{estate?.estateCode || '—'}</span>
+              <span className="ml-3">· Manager <span className="font-semibold" style={{ color: '#0F172A' }}>{user?.name || '—'}</span></span>
             </div>
-          ))}
+            <div className="flex items-center gap-2">
+              {infoDirty && (
+                <button
+                  type="button"
+                  onClick={() => setInfoDraft({ name: estate?.name || '', address: estate?.address || '' })}
+                  className="text-xs font-semibold px-3 py-2 rounded-lg transition-all"
+                  style={{ background: '#F1F5F9', color: '#475569' }}
+                >
+                  Cancel
+                </button>
+              )}
+              <button
+                onClick={handleSaveInfo}
+                disabled={!infoDirty || infoSaving}
+                className="btn-primary gap-2"
+                style={{ opacity: (!infoDirty || infoSaving) ? 0.6 : 1 }}
+              >
+                <Save size={16} />
+                {infoSaving ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
