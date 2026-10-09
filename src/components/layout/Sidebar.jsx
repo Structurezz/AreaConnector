@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, UserCheck, Users, Home, Megaphone,
   MessageSquare, Bell, Settings, LogOut, CreditCard,
-  Zap, Crown, Music, Lock, Shield, Scale, Radio,
+  Zap, Crown, Music, Lock, Shield, Scale, Radio, Gift,
 } from 'lucide-react';
 import { usePlan } from '../../hooks/usePlan';
 import NotificationBell from '../ui/NotificationBell';
@@ -43,7 +43,7 @@ const NAV = [
 export default function Sidebar({ mobile = false, onClose }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { planName, planColor, status, can } = usePlan();
+  const { planName, planColor, status, isComp, can } = usePlan();
   const estateName =
     user?.estateId && typeof user.estateId === 'object'
       ? user.estateId.name
@@ -88,11 +88,19 @@ export default function Sidebar({ mobile = false, onClose }) {
         </div>
 
         {/* Plan badge */}
-        <div className="flex items-center gap-2 mt-3">
+        <div className="flex items-center gap-2 mt-3 flex-wrap">
           <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full"
             style={{ background: planColor + '18', color: planColor, border: `1px solid ${planColor}30` }}>
             {planName}
           </span>
+          {isComp && (
+            <span
+              title="This plan is a free gift from AreaConnect — all its features are unlocked."
+              className="text-[10px] flex items-center gap-0.5 font-bold px-1.5 py-0.5 rounded-full"
+              style={{ background: '#FEF3C7', color: '#B45309', border: '1px solid #FDE68A', letterSpacing: '0.04em' }}>
+              <Gift size={9} /> GIFT
+            </span>
+          )}
           {status === 'trial' && (
             <span className="text-xs flex items-center gap-0.5 font-medium" style={{ color: '#D97706' }}>
               <Zap size={10} />Trial

@@ -38,10 +38,19 @@ export function usePlan() {
       .finally(() => setLoading(false));
   }, []);
 
-  const features = sub?.planId?.features || {};
-  const planName = sub?.planId?.name || 'Free';
-  const planColor = sub?.planId?.color || '#6B7280';
-  const status = sub?.status || 'trial';
+  // When the backend reports an active comp (promo / VIP / beta gift), the
+  // sub carries `effectivePlan` — the plan the manager should feel like
+  // they're on for feature-gating purposes — alongside their real billed
+  // `planId`. Prefer effectivePlan when it's there so comp features unlock
+  // immediately in the sidebar, in PlanGate, and anywhere else that reads
+  // off this hook.
+  const isComp     = !!sub?.isComp;
+  const activePlan = sub?.effectivePlan || sub?.planId || null;
+
+  const features  = activePlan?.features || {};
+  const planName  = activePlan?.name || 'Free';
+  const planColor = activePlan?.color || '#6B7280';
+  const status    = sub?.status || 'trial';
 
   const BLOCKED = ['suspended', 'expired', 'cancelled'];
   const isBlocked = BLOCKED.includes(status);
@@ -54,5 +63,5 @@ export function usePlan() {
     return features[featureKey] !== 'none';
   };
 
-  return { sub, loading, features, planName, planColor, status, isBlocked, can };
+  return { sub, loading, features, planName, planColor, status, isBlocked, isComp, activePlan, can };
 }
