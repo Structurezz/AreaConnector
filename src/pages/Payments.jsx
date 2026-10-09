@@ -216,8 +216,8 @@ export default function ManagerPayments() {
     e.preventDefault();
     setSaving(true);
     try {
-      await api.post('/payments/wallet/withdraw', { amount: parseFloat(withdrawAmount) });
-      toast.success('Withdrawal initiated successfully!');
+      const { data } = await api.post('/payments/wallet/withdraw', { amount: parseFloat(withdrawAmount) });
+      toast.success(data?.data?.message || 'Withdrawal request submitted — admin will process it shortly.');
       setShowWithdraw(false);
       setWithdrawAmount('');
       loadWallet();
@@ -778,14 +778,14 @@ export default function ManagerPayments() {
 
           <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-xs flex items-start gap-2">
             <AlertCircle size={12} className="mt-0.5 shrink-0" />
-            Funds will be sent to your bank account via Paystack. This may take a few minutes.
+            Your request is reviewed by the admin before funds are released to your bank. You'll receive an email once it's processed — usually within one business day.
           </div>
 
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={() => setShowWithdraw(false)} className="btn-outline flex-1">Cancel</button>
             <button type="submit" disabled={saving || !withdrawAmount || parseFloat(withdrawAmount) < 100}
               className="flex-1 flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white font-semibold py-2.5 rounded-xl transition-all disabled:opacity-40">
-              {saving ? <><RefreshCw size={13} className="animate-spin" /> Processing...</> : <><SendHorizonal size={14} /> Withdraw ₦{parseFloat(withdrawAmount || 0).toLocaleString()}</>}
+              {saving ? <><RefreshCw size={13} className="animate-spin" /> Submitting...</> : <><SendHorizonal size={14} /> Request ₦{parseFloat(withdrawAmount || 0).toLocaleString()}</>}
             </button>
           </div>
         </form>
