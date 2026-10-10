@@ -22,6 +22,7 @@ import Chat from './pages/Chat';
 import Alerts from './pages/Alerts';
 import Payments from './pages/Payments';
 import Settings from './pages/Settings';
+import PasswordRequests from './pages/PasswordRequests';
 import Upgrade from './pages/Upgrade';
 import LoungeManager from './pages/LoungeManager';
 import DJConsole from './pages/DJConsole';
@@ -85,6 +86,7 @@ function AppRoutes() {
       <Route path="/payments" element={<RequireManager><PlanGate feature="paymentSystem" featureName="Payments"><Payments /></PlanGate></RequireManager>} />
       <Route path="/alerts" element={<RequireManager><PlanGate feature="securityPortal" featureName="Security & Alerts"><Alerts /></PlanGate></RequireManager>} />
       <Route path="/settings" element={<RequireManager allowWhenBlocked><Settings /></RequireManager>} />
+      <Route path="/settings/password-requests" element={<RequireManager><PasswordRequests /></RequireManager>} />
       <Route path="/upgrade" element={<RequireManager allowWhenBlocked><Upgrade /></RequireManager>} />
       <Route path="/lounge" element={<RequireManager><PlanGate feature="residentLounge" featureName="Lounge & Events"><LoungeManager /></PlanGate></RequireManager>} />
       <Route path="/lounge/dj" element={<RequireManager><PlanGate feature="residentLounge" featureName="Lounge & Events"><DJConsole /></PlanGate></RequireManager>} />

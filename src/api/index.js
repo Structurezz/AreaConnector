@@ -9,6 +9,13 @@ export const authAPI = {
   refresh: () => api.post('/auth/refresh'),
   updateProfile: (data) => api.patch('/auth/me', data),
   switchEstate: (estateId) => api.post('/auth/switch-estate', { estateId }),
+
+  // Password management
+  changePassword: (data) => api.post('/auth/change-password', data),
+  // Estate manager — view + act on resident/security reset requests
+  listPasswordResets:   (params) => api.get('/auth/password-resets', { params }),
+  approvePasswordReset: (id)     => api.post(`/auth/password-resets/${id}/approve`),
+  denyPasswordReset:    (id, data) => api.post(`/auth/password-resets/${id}/deny`, data),
 };
 
 // Estates

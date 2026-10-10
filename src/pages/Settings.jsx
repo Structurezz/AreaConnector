@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { estateAPI } from '../api';
+import { estateAPI, authAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 import Spinner from '../components/ui/Spinner';
 import ProfileCard from '../components/ProfileCard';
-import { Settings2, Save, ScrollText, Upload, FileText, Trash2, Download, Sparkles, MapPin, Building2, CheckCircle2 } from 'lucide-react';
+import { Settings2, Save, ScrollText, Upload, FileText, Trash2, Download, Sparkles, MapPin, Building2, CheckCircle2, KeyRound, Lock, ShieldCheck, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
+import { Link, useNavigate } from 'react-router-dom';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -17,7 +18,8 @@ function formatBytes(bytes) {
 }
 
 export default function ManagerSettings() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [estate, setEstate] = useState(null);
   const [settings, setSettings] = useState({
     requireVisitorApproval: false,
@@ -26,6 +28,28 @@ export default function ManagerSettings() {
   });
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Change password
+  const [pw, setPw] = useState({ current: '', next: '', confirm: '' });
+  const [showPw, setShowPw] = useState(false);
+  const [pwSaving, setPwSaving] = useState(false);
+  const mustReset = user?.mustChangePassword;
+
+  const submitPw = async () => {
+    if (!pw.next || pw.next.length < 6) { toast.error('New password must be at least 6 characters'); return; }
+    if (pw.next !== pw.confirm)         { toast.error('Passwords don\'t match'); return; }
+    if (!mustReset && !pw.current)       { toast.error('Enter your current password'); return; }
+    setPwSaving(true);
+    try {
+      await authAPI.changePassword({ currentPassword: pw.current, newPassword: pw.next });
+      toast.success('Password changed — please sign in again');
+      setPw({ current: '', next: '', confirm: '' });
+      try { await logout?.(); } catch {}
+      navigate('/login', { replace: true });
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Could not change password');
+    } finally { setPwSaving(false); }
+  };
 
   // Editable estate info (name + address)
   const [infoDraft, setInfoDraft] = useState({ name: '', address: '' });
@@ -372,6 +396,75 @@ export default function ManagerSettings() {
           </div>
         </div>
       </div>
+
+      {/* ── Change Password ─────────────────────────────────────────── */}
+      <div className="glass-card p-6">
+        <h2 className="text-base font-semibold mb-4 flex items-center gap-2" style={{ color: '#0F172A' }}>
+          <KeyRound size={18} style={{ color: '#6366F1' }} /> Password
+        </h2>
+        {mustReset && (
+          <div className="rounded-xl p-3 mb-3 flex items-start gap-2"
+               style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)' }}>
+            <ShieldCheck size={16} style={{ color: '#D97706', flexShrink: 0, marginTop: 1 }} />
+            <div style={{ fontSize: 12, color: '#92400E', lineHeight: 1.55 }}>
+              <strong>Temporary password detected.</strong> Set a new password to continue.
+            </div>
+          </div>
+        )}
+        <div className="space-y-2.5">
+          {!mustReset && (
+            <input type={showPw ? 'text' : 'password'}
+              className="w-full rounded-xl px-3.5 py-2.5 text-sm outline-none"
+              style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#0F172A' }}
+              placeholder="Current password"
+              value={pw.current}
+              onChange={e => setPw({ ...pw, current: e.target.value })}
+            />
+          )}
+          <input type={showPw ? 'text' : 'password'}
+            className="w-full rounded-xl px-3.5 py-2.5 text-sm outline-none"
+            style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#0F172A' }}
+            placeholder="New password (min. 6 characters)"
+            value={pw.next}
+            onChange={e => setPw({ ...pw, next: e.target.value })}
+          />
+          <input type={showPw ? 'text' : 'password'}
+            className="w-full rounded-xl px-3.5 py-2.5 text-sm outline-none"
+            style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#0F172A' }}
+            placeholder="Confirm new password"
+            value={pw.confirm}
+            onChange={e => setPw({ ...pw, confirm: e.target.value })}
+          />
+          <label className="flex items-center gap-2 text-xs" style={{ color: '#64748B' }}>
+            <input type="checkbox" checked={showPw} onChange={e => setShowPw(e.target.checked)} />
+            Show passwords
+          </label>
+          <button
+            onClick={submitPw}
+            disabled={pwSaving}
+            className="btn-primary gap-2 w-full justify-center"
+          >
+            <Lock size={16} /> {pwSaving ? 'Changing…' : 'Change password'}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Password reset requests ────────────────────────────────── */}
+      <Link to="/settings/password-requests"
+        className="glass-card p-4 flex items-center gap-3 transition-all hover:border-brand"
+        style={{ textDecoration: 'none' }}>
+        <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+             style={{ background: 'linear-gradient(135deg,#6366F1,#4F46E5)', color: '#fff' }}>
+          <KeyRound size={18} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-bold text-sm" style={{ color: '#0F172A' }}>Password reset requests</div>
+          <div className="text-xs mt-0.5" style={{ color: '#64748B' }}>
+            Approve or deny password resets from your residents and security staff.
+          </div>
+        </div>
+        <ChevronRight size={16} style={{ color: '#94A3B8' }} />
+      </Link>
     </div>
   );
 }
