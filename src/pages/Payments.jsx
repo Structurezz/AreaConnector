@@ -183,6 +183,33 @@ export default function ManagerPayments() {
     } catch { toast.error('Failed'); }
   };
 
+  // Force-sync a stuck pending payment against Paystack. Hits the gateway
+  // directly and flips the payment to paid if Paystack says it was captured —
+  // unblocks the "paid but not reflecting" case.
+  const [reconciling, setReconciling] = useState(null);
+  const handleReconcile = async (payment) => {
+    if (!payment.paystackReference) {
+      toast.error('No Paystack reference on this payment');
+      return;
+    }
+    setReconciling(payment._id);
+    try {
+      const { data } = await api.post(`/payments/reconcile/${payment.paystackReference}`);
+      if (data.alreadyPaid) {
+        toast.success('Already paid — refreshing');
+      } else {
+        toast.success(`Reconciled ₦${Number(payment.amount).toLocaleString()} — Paystack confirmed`);
+      }
+      if (selectedSchedule) openCollection(selectedSchedule);
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'Reconcile failed';
+      const gateway = err?.response?.data?.gateway;
+      toast.error(gateway ? `${msg} · ${gateway}` : msg);
+    } finally {
+      setReconciling(null);
+    }
+  };
+
   // Step 1 — verify account name only
   const handleVerifyAccount = async () => {
     if (bankForm.accountNumber.length !== 10 || !bankForm.bankCode) return;
@@ -382,6 +409,13 @@ export default function ManagerPayments() {
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-md capitalize ${STATUS_STYLE[p.status]}`}>
                           {p.status}
                         </span>
+                        {p.paystackReference && p.status === 'pending' && (
+                          <div className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                               style={{ background: '#FEF3C7', color: '#B45309', border: '1px solid #FDE68A' }}
+                               title="Resident initiated a Paystack checkout — but confirmation never completed. Click Reconcile to sync with Paystack.">
+                            <Clock size={9}/> Awaiting Paystack
+                          </div>
+                        )}
                       </td>
                       <td className="px-5 py-3.5 hidden md:table-cell text-slate-400 text-xs">
                         {p.paidAt ? format(new Date(p.paidAt), 'MMM d, yyyy') : '—'}
@@ -391,6 +425,18 @@ export default function ManagerPayments() {
                       </td>
                       <td className="px-5 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {p.status !== 'paid' && p.status !== 'waived' && p.paystackReference && (
+                            <button onClick={() => handleReconcile(p)}
+                              disabled={reconciling === p._id}
+                              title="Force-sync this reference against Paystack. Use when a resident paid but the status is still pending."
+                              className="text-xs font-semibold px-2 py-1 rounded transition-colors disabled:opacity-50 inline-flex items-center gap-1"
+                              style={{ color: '#B45309', background: '#FEF3C7' }}>
+                              {reconciling === p._id
+                                ? <RefreshCw size={11} className="animate-spin" />
+                                : <RefreshCw size={11} />}
+                              Reconcile
+                            </button>
+                          )}
                           {p.status !== 'paid' && p.status !== 'waived' && (<>
                             <button onClick={() => { setShowManual(p); setManualForm({ method: 'cash', notes: '', paidAt: '' }); }}
                               className="text-xs text-slate-400 hover:text-emerald-600 transition-colors px-2 py-1 rounded hover:bg-emerald-50">
