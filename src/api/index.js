@@ -186,6 +186,9 @@ export const paymentAPI = {
   waive: (paymentId, data) => api.patch(`/payments/${paymentId}/waive`, data),
   // Force-sync a stuck Paystack reference against the gateway.
   reconcile: (reference) => api.post(`/payments/reconcile/${reference}`),
+  // Paystack ledger — direct gateway view, surfaces unmatched captures
+  paystackLedger: (params) => api.get('/payments/paystack/recent', { params }),
+  paystackAttach: (data)   => api.post('/payments/paystack/attach', data),
   // Wallet
   getWallet: () => api.get('/payments/wallet'),
   getBanks: () => api.get('/payments/wallet/banks'),

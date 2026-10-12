@@ -77,6 +77,14 @@ export default function ManagerPayments() {
   const [walletLoading, setWalletLoading] = useState(false);
   const [banks, setBanks] = useState([]);
 
+  // Paystack ledger state
+  const [ledger, setLedger] = useState([]);
+  const [ledgerLoading, setLedgerLoading] = useState(false);
+  const [attaching, setAttaching] = useState(false);
+  const [attachFor, setAttachFor] = useState(null); // Paystack row user wants to attach
+  const [attachForm, setAttachForm] = useState({ residentId: '', scheduleId: '' });
+  const [residents, setResidents] = useState([]);
+
   // Modals
   const [showCreate, setShowCreate] = useState(false);
   const [showManual, setShowManual] = useState(null);
@@ -131,7 +139,51 @@ export default function ManagerPayments() {
 
   useEffect(() => {
     if (tab === 'wallet' && !wallet) loadWallet();
+    if (tab === 'paystack') loadLedger();
   }, [tab]);
+
+  const loadLedger = async () => {
+    setLedgerLoading(true);
+    try {
+      const { data } = await api.get('/payments/paystack/recent', { params: { limit: 100 } });
+      setLedger(data.data || []);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to load Paystack ledger');
+    } finally { setLedgerLoading(false); }
+  };
+
+  const openAttachModal = async (tx) => {
+    setAttachFor(tx);
+    setAttachForm({ residentId: '', scheduleId: '' });
+    // Lazy-load residents the first time we need them
+    if (!residents.length) {
+      try {
+        const { data } = await api.get('/residents');
+        setResidents(data.data || []);
+      } catch { /* ignore */ }
+    }
+  };
+
+  const submitAttach = async () => {
+    if (!attachForm.residentId || !attachForm.scheduleId) {
+      toast.error('Pick a resident and a schedule');
+      return;
+    }
+    setAttaching(true);
+    try {
+      await api.post('/payments/paystack/attach', {
+        reference: attachFor.reference,
+        residentId: attachForm.residentId,
+        scheduleId: attachForm.scheduleId,
+      });
+      toast.success(`Attached ₦${attachFor.amount.toLocaleString()} — payment recorded`);
+      setAttachFor(null);
+      loadLedger();
+      loadData();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Attach failed');
+    } finally { setAttaching(false); }
+  };
 
   const openCollection = async (schedule) => {
     setSelectedSchedule(schedule);
@@ -290,11 +342,12 @@ export default function ManagerPayments() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-slate-200">
+      <div className="flex gap-1 border-b border-slate-200 overflow-x-auto">
         {[
-          { id: 'overview',   label: 'Schedules' },
-          { id: 'collection', label: 'Collection', disabled: !selectedSchedule },
-          { id: 'wallet',     label: 'Wallet' },
+          { id: 'overview',    label: 'Schedules' },
+          { id: 'collection',  label: 'Collection', disabled: !selectedSchedule },
+          { id: 'paystack',    label: 'Paystack ledger' },
+          { id: 'wallet',      label: 'Wallet' },
         ].map(({ id, label, disabled }) => (
           <button key={id} onClick={() => !disabled && setTab(id)}
             disabled={disabled}
@@ -466,6 +519,167 @@ export default function ManagerPayments() {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Paystack ledger tab ── */}
+      {tab === 'paystack' && (
+        <div className="space-y-4">
+          <div className="glass-card p-4 flex items-start gap-3" style={{ background: 'linear-gradient(135deg,#FEF3C7,#FFFBEB)', border: '1px solid #FDE68A' }}>
+            <AlertCircle size={18} style={{ color: '#B45309', flexShrink: 0, marginTop: 2 }}/>
+            <div>
+              <div className="text-sm font-bold" style={{ color: '#92400E' }}>Live view of your Paystack captures</div>
+              <div className="text-xs mt-1" style={{ color: '#78350F' }}>
+                Every successful charge on your Paystack account appears here. If a row shows <strong>Not linked</strong>, click <strong>Attach</strong> to tie it to a resident + schedule — the payment will be recorded and the wallet credited.
+              </div>
+            </div>
+            <button onClick={loadLedger}
+              className="ml-auto text-xs font-semibold px-3 py-1.5 rounded-lg flex-shrink-0 inline-flex items-center gap-1"
+              style={{ background: '#B45309', color: '#fff' }}>
+              <RefreshCw size={11} className={ledgerLoading ? 'animate-spin' : ''}/> Refresh
+            </button>
+          </div>
+
+          <div className="glass-card overflow-hidden">
+            {ledgerLoading ? (
+              <div className="flex justify-center py-16"><Spinner size={28}/></div>
+            ) : ledger.length === 0 ? (
+              <div className="py-16 text-center text-sm" style={{ color: '#94A3B8' }}>
+                No Paystack transactions yet
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm min-w-[800px]">
+                  <thead>
+                    <tr style={{ background: '#F8FAFC' }}>
+                      <th className="text-left px-5 py-3 text-xs font-bold uppercase tracking-wider" style={{ color: '#94A3B8' }}>When</th>
+                      <th className="text-left px-5 py-3 text-xs font-bold uppercase tracking-wider" style={{ color: '#94A3B8' }}>Customer</th>
+                      <th className="text-left px-5 py-3 text-xs font-bold uppercase tracking-wider" style={{ color: '#94A3B8' }}>Reference</th>
+                      <th className="text-right px-5 py-3 text-xs font-bold uppercase tracking-wider" style={{ color: '#94A3B8' }}>Amount</th>
+                      <th className="text-left px-5 py-3 text-xs font-bold uppercase tracking-wider" style={{ color: '#94A3B8' }}>Status</th>
+                      <th className="text-right px-5 py-3 text-xs font-bold uppercase tracking-wider" style={{ color: '#94A3B8' }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ledger.map(tx => (
+                      <tr key={tx.reference} style={{ borderTop: '1px solid #F1F5F9' }}>
+                        <td className="px-5 py-3 text-xs" style={{ color: '#64748B' }}>
+                          {tx.paidAt ? format(new Date(tx.paidAt), 'MMM d, HH:mm') : tx.createdAt ? format(new Date(tx.createdAt), 'MMM d, HH:mm') : '—'}
+                        </td>
+                        <td className="px-5 py-3">
+                          <div className="text-sm font-medium" style={{ color: '#0F172A' }}>{tx.customer?.name || '—'}</div>
+                          <div className="text-xs" style={{ color: '#94A3B8' }}>{tx.customer?.email || ''}</div>
+                        </td>
+                        <td className="px-5 py-3 font-mono text-xs" style={{ color: '#64748B' }}>{tx.reference}</td>
+                        <td className="px-5 py-3 text-right font-bold" style={{ color: '#059669' }}>
+                          ₦{Number(tx.amount || 0).toLocaleString()}
+                        </td>
+                        <td className="px-5 py-3">
+                          {tx.matched ? (
+                            tx.payment?.status === 'paid' ? (
+                              <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                                    style={{ background: '#ECFDF5', color: '#047857', border: '1px solid #A7F3D0' }}>
+                                ✓ Linked · paid
+                              </span>
+                            ) : (
+                              <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                                    style={{ background: '#FEF3C7', color: '#92400E', border: '1px solid #FDE68A' }}>
+                                Linked · {tx.payment?.status}
+                              </span>
+                            )
+                          ) : (
+                            <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                                  style={{ background: '#FEE2E2', color: '#B91C1C', border: '1px solid #FECACA' }}>
+                              Not linked
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-5 py-3 text-right">
+                          {tx.matched ? (
+                            tx.payment?.status === 'paid' ? (
+                              <span className="text-xs" style={{ color: '#94A3B8' }}>Done</span>
+                            ) : (
+                              <button onClick={() => handleReconcile(tx.payment)}
+                                className="text-xs font-bold px-3 py-1 rounded-lg inline-flex items-center gap-1"
+                                style={{ background: '#FEF3C7', color: '#B45309' }}>
+                                <RefreshCw size={11}/> Reconcile
+                              </button>
+                            )
+                          ) : (
+                            <button onClick={() => openAttachModal(tx)}
+                              className="text-xs font-bold px-3 py-1 rounded-lg"
+                              style={{ background: '#059669', color: '#fff' }}>
+                              Attach
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Attach Paystack transaction modal */}
+      {attachFor && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="glass-card w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-bold" style={{ color: '#0F172A' }}>Attach Paystack transaction</h3>
+                <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
+                  Link ₦{attachFor.amount.toLocaleString()} to a resident + schedule
+                </p>
+              </div>
+              <button onClick={() => setAttachFor(null)} style={{ color: '#94A3B8', background: 'none', border: 'none', cursor: 'pointer' }}>
+                <X size={18}/>
+              </button>
+            </div>
+            <div className="rounded-xl p-3 mb-4 text-xs" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+              <div><strong style={{ color: '#0F172A' }}>Reference</strong>: <span className="font-mono" style={{ color: '#64748B' }}>{attachFor.reference}</span></div>
+              <div><strong style={{ color: '#0F172A' }}>Customer</strong>: {attachFor.customer?.email || '—'}</div>
+              <div><strong style={{ color: '#0F172A' }}>Paid</strong>: {attachFor.paidAt ? format(new Date(attachFor.paidAt), 'MMM d, yyyy HH:mm') : '—'}</div>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold mb-1 block" style={{ color: '#475569' }}>Resident</label>
+                <select className="input-field w-full" value={attachForm.residentId}
+                  onChange={e => setAttachForm(f => ({ ...f, residentId: e.target.value }))}>
+                  <option value="">Select resident…</option>
+                  {residents.map(r => (
+                    <option key={r._id} value={r._id}>
+                      {r.name} · {r.email}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold mb-1 block" style={{ color: '#475569' }}>Payment schedule</label>
+                <select className="input-field w-full" value={attachForm.scheduleId}
+                  onChange={e => setAttachForm(f => ({ ...f, scheduleId: e.target.value }))}>
+                  <option value="">Select schedule…</option>
+                  {schedules.map(s => (
+                    <option key={s._id} value={s._id}>
+                      {s.title} · ₦{Number(s.amount).toLocaleString()} · {s.frequency}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-3 pt-4">
+              <button onClick={() => setAttachFor(null)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
+                style={{ background: '#F1F5F9', color: '#475569' }}>Cancel</button>
+              <button onClick={submitAttach} disabled={attaching}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50"
+                style={{ background: 'linear-gradient(135deg,#10B981,#059669)', color: '#fff' }}>
+                {attaching ? 'Attaching…' : `Attach ₦${attachFor.amount.toLocaleString()}`}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
