@@ -254,9 +254,33 @@ export default function ManagerPayments() {
       }
       if (selectedSchedule) openCollection(selectedSchedule);
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Reconcile failed';
-      const gateway = err?.response?.data?.gateway;
-      toast.error(gateway ? `${msg} · ${gateway}` : msg);
+      // Paystack returned a non-success status for this reference. The real
+      // ₦500 almost certainly has a different reference — point them at the
+      // ledger tab where every Paystack capture is listed by its real ref.
+      const paystackStatus = err?.response?.data?.message || '';
+      const gateway = err?.response?.data?.gateway || '';
+      toast(
+        (t) => (
+          <div style={{ maxWidth: 320 }}>
+            <div style={{ fontWeight: 700, color: '#B91C1C', marginBottom: 4 }}>
+              Reconcile failed — this reference isn't a captured payment
+            </div>
+            <div style={{ fontSize: 12, color: '#475569', marginBottom: 6 }}>
+              {paystackStatus}{gateway ? ` · ${gateway}` : ''}
+            </div>
+            <div style={{ fontSize: 12, color: '#475569', marginBottom: 8 }}>
+              The ₦{Number(payment.amount || 0).toLocaleString()} on your Paystack dashboard likely has a <strong>different reference</strong>. Open the Paystack ledger to see every real capture and <strong>Attach</strong> it to this payment.
+            </div>
+            <button
+              onClick={() => { toast.dismiss(t.id); setTab('paystack'); }}
+              style={{ background: '#059669', color: '#fff', fontWeight: 700, fontSize: 12, padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer' }}
+            >
+              Open Paystack ledger →
+            </button>
+          </div>
+        ),
+        { duration: 12000, style: { maxWidth: 360 } }
+      );
     } finally {
       setReconciling(null);
     }
