@@ -356,21 +356,6 @@ export default function ManagerPayments() {
 
   return (
     <div className="space-y-5 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-base sm:text-lg font-bold text-slate-900">Payments</h1>
-          <p className="text-slate-400 text-xs hidden sm:block">Your estate wallet, dues and withdrawals</p>
-        </div>
-        <button
-          onClick={() => { loadData(); loadWallet(); if (tab === 'paystack') loadLedger(); }}
-          aria-label="Refresh"
-          className="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors"
-        >
-          <RefreshCw size={17} className={walletLoading ? 'animate-spin' : ''} />
-        </button>
-      </div>
-
       {/* Desktop: online-banking layout — account column on the left,
           transactions on the right. Phones stack everything in one column. */}
       <div className="space-y-5 xl:space-y-0 xl:grid xl:grid-cols-[minmax(360px,420px)_1fr] xl:gap-6 xl:items-start">
@@ -389,6 +374,13 @@ export default function ManagerPayments() {
             <button onClick={toggleHide} aria-label={hideBalance ? 'Show balance' : 'Hide balance'}
               className="ml-1 w-7 h-7 rounded-full flex items-center justify-center hover:bg-white/10">
               {hideBalance ? <EyeOff size={15} /> : <Eye size={15} />}
+            </button>
+            <button
+              onClick={() => { loadData(); loadWallet(); if (tab === 'paystack') loadLedger(); }}
+              aria-label="Refresh"
+              className="ml-auto -mr-1 w-8 h-8 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 transition-colors"
+            >
+              <RefreshCw size={15} className={walletLoading ? 'animate-spin' : ''} />
             </button>
           </div>
 
