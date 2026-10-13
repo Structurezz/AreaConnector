@@ -5,12 +5,53 @@ import EmptyState from '../components/ui/EmptyState';
 import Modal from '../components/ui/Modal';
 import {
   Home, Plus, Trash2, Users, X, ChevronLeft, UserPlus, UserMinus,
-  Search, CheckCircle2, AlertCircle, Wallet, Building2, Store, Briefcase,
+  Search, CheckCircle2, AlertCircle, Wallet, Clock, Building2, Store, Briefcase,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const TYPE_ICONS = { apartment: Building2, house: Home, shop: Store, office: Briefcase };
 const NGN = (n) => `₦${(n || 0).toLocaleString()}`;
+// ₦1.25m / ₦480k — for tight stat chips.
+const NGN_SHORT = (n) => {
+  const v = n || 0;
+  if (v >= 1e6) return `₦${(v / 1e6).toFixed(v >= 1e7 ? 0 : 2).replace(/\.?0+$/, '')}m`;
+  if (v >= 1e3) return `₦${(v / 1e3).toFixed(v >= 1e5 ? 0 : 1).replace(/\.0$/, '')}k`;
+  return `₦${v}`;
+};
+const shortDate = (d) => new Date(d).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' });
+
+// What a unit's dues actually look like, from its residents' real bills
+// (server: utils/unitDues). `u.dues` is always present from the API.
+function duesView(u) {
+  const d = u.dues || { status: 'no_bills' };
+  const owedTotal = d.outstanding > d.overdueAmount ? ` · ${NGN(d.outstanding)} owed in total` : '';
+  switch (d.status) {
+    case 'overdue': return {
+      tone: 'red', Icon: AlertCircle,
+      label: `${NGN(d.overdueAmount)} overdue`,
+      detail: `${d.overdueCount} bill${d.overdueCount > 1 ? 's' : ''} past due${owedTotal}`,
+    };
+    case 'owing': return {
+      tone: 'amber', Icon: Clock,
+      label: `${NGN(d.outstanding)} owing`,
+      detail: d.nextDue ? `Next: ${d.nextDue.title}, due ${shortDate(d.nextDue.dueDate)}` : `${d.owingCount} unpaid bill${d.owingCount > 1 ? 's' : ''}`,
+    };
+    case 'clear': return {
+      tone: 'green', Icon: CheckCircle2,
+      label: 'All bills paid',
+      detail: d.lastPaidAt ? `Last paid ${shortDate(d.lastPaidAt)} · ${NGN(d.paidThisYear)} this year` : `${d.paidCount} bill${d.paidCount === 1 ? '' : 's'} paid`,
+    };
+    case 'exempt': return { tone: 'slate', Icon: Wallet, label: 'Exempt from dues', detail: 'Marked exempt by management' };
+    case 'no_residents': return { tone: 'slate', Icon: Wallet, label: 'No residents to bill', detail: 'Assign residents to start billing' };
+    default: return { tone: 'slate', Icon: Wallet, label: 'No bills issued yet', detail: 'Create a payment schedule to bill residents' };
+  }
+}
+const TONE = {
+  red:   { fg: '#DC2626', strong: '#B91C1C', bg: 'rgba(239,68,68,0.06)',  bd: 'rgba(239,68,68,0.20)',  chip: 'rgba(239,68,68,0.14)' },
+  amber: { fg: '#D97706', strong: '#B45309', bg: 'rgba(245,158,11,0.07)', bd: 'rgba(245,158,11,0.25)', chip: 'rgba(245,158,11,0.16)' },
+  green: { fg: '#10B981', strong: '#059669', bg: 'rgba(16,185,129,0.06)', bd: 'rgba(16,185,129,0.20)', chip: 'rgba(16,185,129,0.14)' },
+  slate: { fg: '#94A3B8', strong: '#64748B', bg: 'rgba(148,163,184,0.08)', bd: 'rgba(148,163,184,0.25)', chip: 'rgba(148,163,184,0.16)' },
+};
 
 function Avatar({ resident, size = 28, ring = true }) {
   const cls = `rounded-full flex-shrink-0 object-cover ${ring ? 'ring-2 ring-white' : ''}`;
@@ -71,7 +112,8 @@ function UnitCard({ u, onOpen }) {
   const count = occupants.length;
   const max = u.maxOccupants || 7;
   const isFull = count >= max;
-  const paid = u.duesStatus === 'paid';
+  const dues = duesView(u);
+  const tone = TONE[dues.tone];
   const TypeIcon = TYPE_ICONS[u.type] || Building2;
 
   return (
@@ -153,21 +195,12 @@ function UnitCard({ u, onOpen }) {
       )}
 
       {/* Dues footer */}
-      <div className="relative flex items-center gap-1.5 pt-3 text-xs font-semibold"
-        style={{ borderTop: '1px solid rgba(15,23,42,0.05)' }}>
-        {paid ? (
-          <>
-            <CheckCircle2 size={12} style={{ color: '#10B981' }} />
-            <span style={{ color: '#059669' }}>Dues paid</span>
-          </>
-        ) : (
-          <>
-            <AlertCircle size={12} style={{ color: '#EF4444' }} />
-            <span style={{ color: '#DC2626' }}>
-              {u.amountOwed > 0 ? `${NGN(u.amountOwed)} owed` : 'Dues unpaid'}
-            </span>
-          </>
-        )}
+      <div className="relative pt-3 min-w-0" style={{ borderTop: '1px solid rgba(15,23,42,0.05)' }}>
+        <div className="flex items-center gap-1.5 text-xs font-semibold">
+          <dues.Icon size={12} style={{ color: tone.fg, flexShrink: 0 }} />
+          <span className="truncate" style={{ color: tone.strong }}>{dues.label}</span>
+        </div>
+        <div className="text-[11px] mt-0.5 truncate" style={{ color: '#94A3B8' }}>{dues.detail}</div>
       </div>
     </button>
   );
@@ -189,7 +222,9 @@ function UnitDrawer({ unit, allResidents, onAddResident, onRemoveResident, onDel
   const occupantIds = new Set(occupants.map(r => r._id));
   const available = (allResidents || []).filter(r => !occupantIds.has(r._id));
   const TypeIcon = TYPE_ICONS[u.type] || Building2;
-  const paid = u.duesStatus === 'paid';
+  const dues = duesView(u);
+  const tone = TONE[dues.tone];
+  const d = u.dues || {};
 
   const handleAdd = async () => {
     if (!addResidentId) return;
@@ -292,23 +327,37 @@ function UnitDrawer({ unit, allResidents, onAddResident, onRemoveResident, onDel
             </div>
 
             {/* Dues card */}
-            <div className="rounded-2xl p-4 flex items-center gap-3"
-              style={{
-                background: paid ? 'rgba(16,185,129,0.06)' : 'rgba(239,68,68,0.06)',
-                border: paid ? '1px solid rgba(16,185,129,0.20)' : '1px solid rgba(239,68,68,0.20)',
-              }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ background: paid ? 'rgba(16,185,129,0.14)' : 'rgba(239,68,68,0.14)' }}>
-                <Wallet size={16} style={{ color: paid ? '#059669' : '#DC2626' }} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: paid ? '#059669' : '#DC2626' }}>
-                  Dues
+            <div className="rounded-2xl overflow-hidden" style={{ background: tone.bg, border: `1px solid ${tone.bd}` }}>
+              <div className="p-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: tone.chip }}>
+                  <dues.Icon size={16} style={{ color: tone.strong }} />
                 </div>
-                <div className="text-sm font-bold capitalize" style={{ color: '#0F172A' }}>
-                  {paid ? 'All paid' : (u.amountOwed > 0 ? NGN(u.amountOwed) + ' outstanding' : 'Unpaid')}
+                <div className="flex-1 min-w-0">
+                  <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: tone.strong }}>Dues</div>
+                  <div className="text-sm font-bold" style={{ color: '#0F172A' }}>{dues.label}</div>
+                  <div className="text-[11px]" style={{ color: '#64748B' }}>{dues.detail}</div>
                 </div>
               </div>
+              {d.billsIssued > 0 && (
+                <dl className="grid grid-cols-2 gap-px text-xs" style={{ background: tone.bd, borderTop: `1px solid ${tone.bd}` }}>
+                  {[
+                    ['Outstanding', NGN(d.outstanding)],
+                    ['Overdue', d.overdueCount ? `${NGN(d.overdueAmount)} · ${d.overdueCount} bill${d.overdueCount > 1 ? 's' : ''}` : 'None'],
+                    [`Paid in ${new Date().getFullYear()}`, NGN(d.paidThisYear)],
+                    ['Last payment', d.lastPaidAt ? new Date(d.lastPaidAt).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'],
+                  ].map(([k, v]) => (
+                    <div key={k} className="bg-white px-3 py-2.5">
+                      <dt style={{ color: '#94A3B8' }}>{k}</dt>
+                      <dd className="font-semibold mt-0.5" style={{ color: '#0F172A' }}>{v}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+              {d.nextDue && (
+                <div className="px-4 py-2.5 text-[11px] bg-white" style={{ color: '#475569', borderTop: `1px solid ${tone.bd}` }}>
+                  Next bill: <strong>{d.nextDue.title}</strong> · {NGN(d.nextDue.amount)} due {new Date(d.nextDue.dueDate).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' })}
+                </div>
+              )}
             </div>
 
             {/* Add resident */}
@@ -498,7 +547,7 @@ export default function Units() {
     for (const u of units) {
       const count = (u.residentIds || []).filter(r => r?._id).length;
       if (count > 0) occupied++; else vacant++;
-      if (u.duesStatus !== 'paid' && u.amountOwed > 0) owed += u.amountOwed;
+      if (u.dues && u.dues.status !== 'exempt') owed += u.dues.outstanding || 0;
     }
     return { total: units.length, occupied, vacant, owed };
   }, [units]);
@@ -509,7 +558,7 @@ export default function Units() {
       const count = (u.residentIds || []).filter(r => r?._id).length;
       if (filter === 'occupied' && count === 0) return false;
       if (filter === 'vacant'   && count > 0)  return false;
-      if (filter === 'dues'     && u.duesStatus === 'paid') return false;
+      if (filter === 'dues'     && !['overdue', 'owing'].includes(u.dues?.status)) return false;
       if (!q) return true;
       const hay = [
         u.unitNumber,
@@ -539,7 +588,7 @@ export default function Units() {
     { key: 'all',      label: 'All',      count: stats.total },
     { key: 'occupied', label: 'Occupied', count: stats.occupied },
     { key: 'vacant',   label: 'Vacant',   count: stats.vacant },
-    { key: 'dues',     label: 'Dues owed' },
+    { key: 'dues',     label: 'Owing' },
   ];
 
   return (
@@ -565,7 +614,7 @@ export default function Units() {
           <StatChip label="Total"    value={stats.total}    tone="default" />
           <StatChip label="Occupied" value={stats.occupied} tone="green"   />
           <StatChip label="Vacant"   value={stats.vacant}   tone="amber"   />
-          <StatChip label="Owed"     value={stats.owed > 0 ? NGN(stats.owed).replace(/,\d{3}(?=,)/g, 'k') : NGN(0)} tone={stats.owed > 0 ? 'red' : 'default'} />
+          <StatChip label="Owed"     value={NGN_SHORT(stats.owed)} tone={stats.owed > 0 ? 'red' : 'default'} />
         </div>
       )}
 
