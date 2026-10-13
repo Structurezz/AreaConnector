@@ -11,6 +11,7 @@ import { djAPI, loungeAPI } from '../api';
 import { useLiveAudio } from '../hooks/useLiveAudio';
 import { Fader }      from '../components/MixerDeck';
 import AudiencePanel  from '../components/AudiencePanel';
+import Portal from '../components/ui/Portal';
 
 const BRAND       = '#10B981';
 const BRAND_DARK  = '#059669';
@@ -470,7 +471,8 @@ export default function DJConsole() {
 
       {/* Save mixtape modal */}
       {showSave && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16 }}>
+        <Portal>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 16 }}>
           <div style={{ background: '#fff', borderRadius: 18, padding: 22, width: '100%', maxWidth: 440, border: '1px solid #E2E8F0' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
               <div style={{ width: 40, height: 40, borderRadius: 12, background: `${BRAND}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -506,6 +508,7 @@ export default function DJConsole() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       <style>{`

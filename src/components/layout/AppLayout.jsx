@@ -31,8 +31,8 @@ export default function AppLayout({ children }) {
 
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}>
-          <div className="absolute inset-0" style={{ background: 'rgba(15,23,42,0.4)', backdropFilter: 'blur(4px)' }} />
+        <div className="fixed inset-0 z-[100] lg:hidden" onClick={() => setSidebarOpen(false)}>
+          <div className="overlay-backdrop" aria-hidden="true" />
           <div className="absolute left-0 top-0 bottom-0 z-50 animate-slide-in">
             <Sidebar mobile onClose={() => setSidebarOpen(false)} />
           </div>

@@ -11,19 +11,21 @@ import {
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import Pagination from '../components/ui/Pagination';
+import Portal, { useScrollLock } from '../components/ui/Portal';
 
 const PAGE_SIZE = 15;
 
 function GuardDrawer({ guard, onToggle, onRemove, onClose }) {
   const [confirmRemove, setConfirmRemove] = useState(false);
+  useScrollLock(!!guard);
 
   if (!guard) return null;
   const g = guard;
 
   return (
-    <>
-      <div className="fixed inset-0 z-40" onClick={onClose} />
-      <div className="fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto z-50 flex flex-col bg-white shadow-2xl overflow-hidden sm:w-96">
+    <Portal>
+      <div className="fixed inset-0 z-[100] overlay-scrim" onClick={onClose} aria-hidden="true" />
+      <div role="dialog" aria-modal="true" className="fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto z-[100] flex flex-col bg-white shadow-2xl overflow-hidden sm:w-96 animate-slide-in-right">
 
         {/* Header */}
         <div className="flex items-center gap-3 px-4 py-4 sm:px-5"
@@ -134,7 +136,7 @@ function GuardDrawer({ guard, onToggle, onRemove, onClose }) {
           )}
         </div>
       </div>
-    </>
+    </Portal>
   );
 }
 

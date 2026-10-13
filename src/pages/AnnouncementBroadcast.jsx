@@ -11,6 +11,7 @@ import { djAPI, loungeAPI } from '../api';
 import { useLiveAudio } from '../hooks/useLiveAudio';
 import { Fader }      from '../components/MixerDeck';
 import AudiencePanel  from '../components/AudiencePanel';
+import Portal from '../components/ui/Portal';
 
 const RED      = '#EF4444';
 const RED_DARK = '#DC2626';
@@ -184,7 +185,8 @@ export default function AnnouncementBroadcast() {
 
         {/* Track picker modal */}
         {showPicker && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.65)', zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <Portal>
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.65)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
             <div style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 480, maxHeight: '80vh', display: 'flex', flexDirection: 'column', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
               <div style={{ padding: '14px 18px', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ fontSize: 14, fontWeight: 800, color: '#0F172A' }}>Pick a background track</div>
@@ -207,6 +209,7 @@ export default function AnnouncementBroadcast() {
               </div>
             </div>
           </div>
+          </Portal>
         )}
       </div>
     );

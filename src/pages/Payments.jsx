@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axios';
 import Spinner from '../components/ui/Spinner';
-import Modal from '../components/ui/Modal';
 import InvoiceModal from '../components/ui/InvoiceModal';
+import BottomSheet from '../components/payments/BottomSheet';
+import SidePanel from '../components/payments/SidePanel';
+import WithdrawSheet, { Row } from '../components/payments/WithdrawSheet';
+import BankSheet from '../components/payments/BankSheet';
 import {
   Wallet, Plus, TrendingUp, Clock, AlertCircle, CheckCircle2,
-  ChevronRight, X, CreditCard, Banknote, Building,
-  ChevronLeft, ShieldCheck, Wrench, Gift, FileText,
-  ArrowDownCircle, ArrowUpCircle, RefreshCw, BadgeCheck,
-  CircleDollarSign, Landmark, SendHorizonal, History, Receipt,
+  ChevronRight, ChevronLeft, ShieldCheck, Wrench, Gift, FileText,
+  ArrowDownCircle, ArrowUpRight, ArrowDownLeft, RefreshCw,
+  CircleDollarSign, Landmark, Receipt, Eye, EyeOff, CreditCard, XCircle, Copy,
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, isToday, isYesterday } from 'date-fns';
 import toast from 'react-hot-toast';
 
 const TYPE_META = {
@@ -28,24 +30,30 @@ const STATUS_STYLE = {
   waived:  'bg-slate-100 text-slate-400',
 };
 
-const WITHDRAWAL_STYLE = {
-  pending: 'bg-amber-50 text-amber-600',
-  success: 'bg-emerald-50 text-emerald-600',
-  failed:  'bg-red-50 text-red-600',
+const WITHDRAWAL_META = {
+  pending: { label: 'Processing', pill: 'bg-amber-50 text-amber-600',     icon: Clock,        iconWrap: 'bg-amber-50 text-amber-600' },
+  success: { label: 'Successful', pill: 'bg-emerald-50 text-emerald-600', icon: ArrowUpRight, iconWrap: 'bg-slate-100 text-slate-700' },
+  failed:  { label: 'Failed',     pill: 'bg-red-50 text-red-600',         icon: XCircle,      iconWrap: 'bg-red-50 text-red-500' },
 };
 
-function StatCard({ icon: Icon, label, value, sub, color = 'text-emerald-600' }) {
-  return (
-    <div className="glass-card p-5">
-      <div className="flex items-start justify-between mb-3">
-        <span className="text-slate-500 text-sm">{label}</span>
-        <div className={`p-2 rounded-lg bg-slate-100 ${color}`}><Icon size={15} /></div>
-      </div>
-      <div className={`text-2xl font-bold ${color}`}>{value}</div>
-      {sub && <div className="text-slate-400 text-xs mt-1">{sub}</div>}
-    </div>
-  );
+const naira = (n) => `₦${Number(n || 0).toLocaleString('en-NG')}`;
+const maskAcct = (n = '') => (n && n.length > 4 ? `•••• ${n.slice(-4)}` : n || '');
+const dayLabel = (d) => isToday(d) ? 'Today' : isYesterday(d) ? 'Yesterday' : format(d, 'EEE, MMM d, yyyy');
+
+// Group a date-sorted list into [{ label, items }] for statement-style lists.
+function groupByDay(items, getDate) {
+  const groups = [];
+  items.forEach((item) => {
+    const raw = getDate(item);
+    const label = raw ? dayLabel(new Date(raw)) : 'Earlier';
+    const last = groups[groups.length - 1];
+    if (last && last.label === label) last.items.push(item);
+    else groups.push({ label, items: [item] });
+  });
+  return groups;
 }
+
+const HIDE_KEY = 'em_hide_balance';
 
 function ProgressBar({ paid, total }) {
   const pct = total ? Math.round((paid / total) * 100) : 0;
@@ -61,35 +69,86 @@ function ProgressBar({ paid, total }) {
   );
 }
 
+function QuickAction({ icon: Icon, label, onClick, primary, badge }) {
+  return (
+    <button onClick={onClick} className="group flex flex-col items-center gap-2 min-w-0">
+      <span className={`relative w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center transition-all group-active:scale-95 ${
+        primary
+          ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 group-hover:bg-emerald-600'
+          : 'bg-white text-slate-700 border border-slate-200 group-hover:border-emerald-300 group-hover:text-emerald-600'
+      }`}>
+        <Icon size={22} strokeWidth={2.2} />
+        {badge && <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-amber-400 ring-2 ring-white" />}
+      </span>
+      <span className="text-xs font-semibold text-slate-600 text-center leading-tight">{label}</span>
+    </button>
+  );
+}
+
+function StatChip({ icon: Icon, label, value, tone, className = '' }) {
+  return (
+    <div className={`glass-card px-4 py-3.5 min-w-[150px] snap-start shrink-0 lg:min-w-0 ${className}`}>
+      <div className="flex items-center gap-2 mb-1.5">
+        <span className={`w-7 h-7 rounded-lg flex items-center justify-center ${tone}`}><Icon size={14} /></span>
+        <span className="text-xs text-slate-500 truncate">{label}</span>
+      </div>
+      <div className="text-lg font-bold text-slate-900 truncate">{value}</div>
+    </div>
+  );
+}
+
+function SectionHeader({ title, action }) {
+  return (
+    <div className="flex items-center justify-between px-1 pt-1">
+      <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">{title}</h3>
+      {action}
+    </div>
+  );
+}
+
+function EmptyState({ icon: Icon, title, body, action }) {
+  return (
+    <div className="glass-card py-14 px-6 text-center">
+      <div className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3"><Icon size={26} /></div>
+      <p className="text-slate-700 font-semibold mb-1">{title}</p>
+      {body && <p className="text-slate-400 text-sm mb-5 max-w-xs mx-auto">{body}</p>}
+      {action}
+    </div>
+  );
+}
+
 export default function ManagerPayments() {
   const [stats, setStats] = useState(null);
   const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState('overview');
+  const [tab, setTab] = useState('bills'); // bills | withdrawals | paystack
 
-  // Collection state
+  // Collection (drill-down inside the Bills tab)
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [collectionPayments, setCollectionPayments] = useState([]);
   const [collectionLoading, setCollectionLoading] = useState(false);
 
-  // Wallet state
+  // Wallet
   const [wallet, setWallet] = useState(null);
-  const [walletLoading, setWalletLoading] = useState(false);
-  const [banks, setBanks] = useState([]);
+  const [walletLoading, setWalletLoading] = useState(true);
+  const [hideBalance, setHideBalance] = useState(() => localStorage.getItem(HIDE_KEY) === '1');
 
-  // Paystack ledger state
+  // Paystack ledger
   const [ledger, setLedger] = useState([]);
   const [ledgerLoading, setLedgerLoading] = useState(false);
+  const [ledgerLoaded, setLedgerLoaded] = useState(false);
   const [attaching, setAttaching] = useState(false);
-  const [attachFor, setAttachFor] = useState(null); // Paystack row user wants to attach
+  const [attachFor, setAttachFor] = useState(null);
   const [attachForm, setAttachForm] = useState({ residentId: '', scheduleId: '' });
   const [residents, setResidents] = useState([]);
 
-  // Modals
+  // Sheets
   const [showCreate, setShowCreate] = useState(false);
   const [showManual, setShowManual] = useState(null);
   const [showWithdraw, setShowWithdraw] = useState(false);
-  const [showBankSetup, setShowBankSetup] = useState(false);
+  const [showBank, setShowBank] = useState(false);
+  const [withdrawAfterBank, setWithdrawAfterBank] = useState(false);
+  const [withdrawalDetail, setWithdrawalDetail] = useState(null);
 
   // Forms
   const [manualForm, setManualForm] = useState({ method: 'cash', notes: '', paidAt: '' });
@@ -98,15 +157,9 @@ export default function ManagerPayments() {
     amount: '', frequency: 'monthly', dueDate: '',
   });
   const [invoicePaymentId, setInvoicePaymentId] = useState(null);
-  const [bankForm, setBankForm] = useState({ bankCode: '', accountNumber: '' });
-  const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [resolvedAccount, setResolvedAccount] = useState(null);
-  const [resolving, setResolving] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [confirmingBank, setConfirmingBank] = useState(false);
 
   const loadData = async () => {
-    setLoading(true);
     try {
       const [statsRes, schedRes] = await Promise.all([
         api.get('/payments/stats'),
@@ -127,35 +180,42 @@ export default function ManagerPayments() {
     finally { setWalletLoading(false); }
   };
 
-  const loadBanks = async () => {
-    if (banks.length) return;
-    try {
-      const { data } = await api.get('/payments/wallet/banks');
-      setBanks(data.data || []);
-    } catch { toast.error('Failed to fetch banks'); }
-  };
-
-  useEffect(() => { loadData(); }, []);
-
-  useEffect(() => {
-    if (tab === 'wallet' && !wallet) loadWallet();
-    if (tab === 'paystack') loadLedger();
-  }, [tab]);
-
   const loadLedger = async () => {
     setLedgerLoading(true);
     try {
       const { data } = await api.get('/payments/paystack/recent', { params: { limit: 100 } });
       setLedger(data.data || []);
+      setLedgerLoaded(true);
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Failed to load Paystack ledger');
     } finally { setLedgerLoading(false); }
   };
 
+  useEffect(() => { loadData(); loadWallet(); }, []);
+  useEffect(() => { if (tab === 'paystack' && !ledgerLoaded) loadLedger(); }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggleHide = () => {
+    setHideBalance(h => { localStorage.setItem(HIDE_KEY, h ? '0' : '1'); return !h; });
+  };
+
+  const hasBank = !!wallet?.bank?.recipientCode;
+  const bankName = wallet?.bank?.name || wallet?.bank?.bankName;
+
+  const startWithdraw = () => {
+    if (!wallet) return;
+    if (!hasBank) { setWithdrawAfterBank(true); setShowBank(true); return; }
+    setShowWithdraw(true);
+  };
+
+  const onBankSaved = async () => {
+    setShowBank(false);
+    await loadWallet();
+    if (withdrawAfterBank) { setWithdrawAfterBank(false); setShowWithdraw(true); }
+  };
+
   const openAttachModal = async (tx) => {
     setAttachFor(tx);
     setAttachForm({ residentId: '', scheduleId: '' });
-    // Lazy-load residents the first time we need them
     if (!residents.length) {
       try {
         const { data } = await api.get('/residents');
@@ -180,6 +240,7 @@ export default function ManagerPayments() {
       setAttachFor(null);
       loadLedger();
       loadData();
+      loadWallet();
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Attach failed');
     } finally { setAttaching(false); }
@@ -187,7 +248,7 @@ export default function ManagerPayments() {
 
   const openCollection = async (schedule) => {
     setSelectedSchedule(schedule);
-    setTab('collection');
+    setTab('bills');
     setCollectionLoading(true);
     try {
       const { data } = await api.get(`/payments/schedules/${schedule._id}/payments`);
@@ -220,7 +281,7 @@ export default function ManagerPayments() {
       setManualForm({ method: 'cash', notes: '', paidAt: '' });
       if (selectedSchedule) openCollection(selectedSchedule);
       loadData();
-      if (tab === 'wallet') loadWallet();
+      loadWallet();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed');
     } finally { setSaving(false); }
@@ -253,9 +314,10 @@ export default function ManagerPayments() {
         toast.success(`Reconciled ₦${Number(payment.amount).toLocaleString()} — Paystack confirmed`);
       }
       if (selectedSchedule) openCollection(selectedSchedule);
+      loadWallet();
     } catch (err) {
       // Paystack returned a non-success status for this reference. The real
-      // ₦500 almost certainly has a different reference — point them at the
+      // capture almost certainly has a different reference — point them at the
       // ledger tab where every Paystack capture is listed by its real ref.
       const paystackStatus = err?.response?.data?.message || '';
       const gateway = err?.response?.data?.gateway || '';
@@ -272,7 +334,7 @@ export default function ManagerPayments() {
               The ₦{Number(payment.amount || 0).toLocaleString()} on your Paystack dashboard likely has a <strong>different reference</strong>. Open the Paystack ledger to see every real capture and <strong>Attach</strong> it to this payment.
             </div>
             <button
-              onClick={() => { toast.dismiss(t.id); setTab('paystack'); }}
+              onClick={() => { toast.dismiss(t.id); setSelectedSchedule(null); setTab('paystack'); }}
               style={{ background: '#059669', color: '#fff', fontWeight: 700, fontSize: 12, padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer' }}
             >
               Open Paystack ledger →
@@ -286,794 +348,547 @@ export default function ManagerPayments() {
     }
   };
 
-  // Step 1 — verify account name only
-  const handleVerifyAccount = async () => {
-    if (bankForm.accountNumber.length !== 10 || !bankForm.bankCode) return;
-    setResolving(true);
-    setResolvedAccount(null);
-    try {
-      const { data } = await api.post('/payments/wallet/resolve', bankForm);
-      setResolvedAccount(data.data);
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Could not verify account');
-    } finally { setResolving(false); }
-  };
-
-  // Step 2 — save after user confirms the name
-  const handleConfirmSave = async () => {
-    if (!resolvedAccount) return;
-    setConfirmingBank(true);
-    try {
-      await api.post('/payments/wallet/bank', bankForm);
-      toast.success('Bank account saved!');
-      setShowBankSetup(false);
-      setBankForm({ bankCode: '', accountNumber: '' });
-      setResolvedAccount(null);
-      loadWallet();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Could not save bank account');
-    } finally { setConfirmingBank(false); }
-  };
-
-  const handleWithdraw = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      const { data } = await api.post('/payments/wallet/withdraw', { amount: parseFloat(withdrawAmount) });
-      toast.success(data?.data?.message || 'Withdrawal initiated — funds will arrive in your bank shortly.');
-      setShowWithdraw(false);
-      setWithdrawAmount('');
-      loadWallet();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Withdrawal failed');
-    } finally { setSaving(false); }
-  };
-
   if (loading) return <div className="flex justify-center py-24"><Spinner size={28} /></div>;
 
+  const shown = (n) => (hideBalance ? '₦ ••••••' : naira(n));
+  const withdrawals = wallet?.withdrawals || [];
+  const unlinkedCount = ledger.filter(tx => !tx.matched).length;
+
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-5 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-slate-900">Payments</h1>
-          <p className="text-slate-400 text-sm">Manage dues, levies, contributions and your wallet</p>
+          <p className="text-slate-400 text-sm hidden sm:block">Your estate wallet, dues and withdrawals</p>
         </div>
-        <div className="flex items-center gap-2">
+        <button
+          onClick={() => { loadData(); loadWallet(); if (tab === 'paystack') loadLedger(); }}
+          aria-label="Refresh"
+          className="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors"
+        >
+          <RefreshCw size={17} className={walletLoading ? 'animate-spin' : ''} />
+        </button>
+      </div>
+
+      {/* Desktop: online-banking layout — account column on the left,
+          transactions on the right. Phones stack everything in one column. */}
+      <div className="space-y-5 xl:space-y-0 xl:grid xl:grid-cols-[minmax(360px,420px)_1fr] xl:gap-6 xl:items-start">
+      <aside className="space-y-5 xl:sticky xl:top-0">
+      {/* ── Balance card ── */}
+      <div
+        className="relative overflow-hidden rounded-3xl p-5 sm:p-7 text-white"
+        style={{ background: 'linear-gradient(135deg, #064E3B 0%, #047857 55%, #10B981 100%)', boxShadow: '0 16px 40px rgba(4,120,87,0.28)' }}
+      >
+        <div className="absolute -top-16 -right-10 w-56 h-56 rounded-full bg-white/10 pointer-events-none" />
+        <div className="absolute -bottom-20 right-16 w-44 h-44 rounded-full bg-white/5 pointer-events-none" />
+
+        <div className="relative">
+          <div className="flex items-center gap-2 text-emerald-100/90 text-sm">
+            <Wallet size={15} /> Available balance
+            <button onClick={toggleHide} aria-label={hideBalance ? 'Show balance' : 'Hide balance'}
+              className="ml-1 w-7 h-7 rounded-full flex items-center justify-center hover:bg-white/10">
+              {hideBalance ? <EyeOff size={15} /> : <Eye size={15} />}
+            </button>
+          </div>
+
+          <div className="mt-1.5 text-[2.5rem] sm:text-5xl font-black tracking-tight leading-none">
+            {walletLoading && !wallet ? <span className="inline-block w-40 h-10 rounded-lg bg-white/15 animate-pulse" /> : shown(wallet?.balance)}
+          </div>
+
           {wallet && (
-            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
-              <Wallet size={14} className="text-emerald-600" />
-              <span className="text-emerald-600 text-sm font-semibold">
-                ₦{(wallet.balance || 0).toLocaleString()}
-              </span>
+            <div className="flex flex-wrap gap-x-5 gap-y-1 mt-3 text-xs text-emerald-50/80">
+              <span className="inline-flex items-center gap-1"><ArrowDownLeft size={13} /> In {shown(wallet.collected)}</span>
+              <span className="inline-flex items-center gap-1"><ArrowUpRight size={13} /> Out {shown(wallet.withdrawn)}</span>
             </div>
           )}
-          <button onClick={() => setShowCreate(true)} className="btn-primary gap-2">
-            <Plus size={15} /> New Schedule
+
+          {/* Payout account strip */}
+          <button
+            onClick={() => setShowBank(true)}
+            className="mt-5 w-full flex items-center gap-3 rounded-2xl bg-white/10 hover:bg-white/15 backdrop-blur px-3.5 py-3 text-left transition-colors"
+          >
+            <span className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center shrink-0"><Landmark size={17} /></span>
+            {hasBank ? (
+              <span className="flex-1 min-w-0">
+                <span className="block text-sm font-semibold truncate">{wallet.bank.accountName}</span>
+                <span className="block text-xs text-emerald-50/75 truncate">{bankName} · {maskAcct(wallet.bank.accountNumber)}</span>
+              </span>
+            ) : (
+              <span className="flex-1 min-w-0">
+                <span className="block text-sm font-semibold">Add a bank account</span>
+                <span className="block text-xs text-emerald-50/75">Needed before you can withdraw</span>
+              </span>
+            )}
+            <ChevronRight size={16} className="text-emerald-50/70 shrink-0" />
           </button>
         </div>
       </div>
 
-      {/* Stats */}
+      {/* ── Quick actions ── */}
+      <div className="grid grid-cols-4 gap-2 sm:gap-4 sm:max-w-lg xl:max-w-none xl:glass-card xl:p-4 xl:gap-2">
+        <QuickAction icon={ArrowUpRight} label="Withdraw" primary onClick={startWithdraw} />
+        <QuickAction icon={Landmark} label={hasBank ? 'Bank account' : 'Add bank'} onClick={() => setShowBank(true)} badge={wallet && !hasBank} />
+        <QuickAction icon={Plus} label="New bill" onClick={() => setShowCreate(true)} />
+        <QuickAction icon={CreditCard} label="Paystack" onClick={() => { setSelectedSchedule(null); setTab('paystack'); }} />
+      </div>
+
+      {/* ── Stats ── */}
       {stats && (
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-          <StatCard icon={TrendingUp}         label="Total Collected"   value={`₦${(stats.totalCollected||0).toLocaleString()}`}  color="text-emerald-600" />
-          <StatCard icon={CircleDollarSign}   label="This Month"        value={`₦${(stats.thisMonth||0).toLocaleString()}`}        color="text-emerald-600" />
-          <StatCard icon={Clock}              label="Pending"           value={stats.pending}          sub="payments"   color="text-amber-600" />
-          <StatCard icon={AlertCircle}        label="Overdue"           value={stats.overdue}          sub="payments"   color="text-red-600" />
-          <StatCard icon={FileText}           label="Active Schedules"  value={stats.activeSchedules}  sub="schedules"  color="text-blue-600" />
+        <div className="-mx-4 px-4 md:mx-0 md:px-0 flex lg:grid lg:grid-cols-5 xl:grid-cols-2 gap-3 overflow-x-auto lg:overflow-visible no-scrollbar snap-x snap-mandatory">
+          <StatChip icon={CircleDollarSign} label="This month"      value={naira(stats.thisMonth)}      tone="bg-emerald-50 text-emerald-600" />
+          <StatChip icon={TrendingUp}       label="Total collected" value={naira(stats.totalCollected)} tone="bg-emerald-50 text-emerald-600" />
+          <StatChip icon={Clock}            label="Pending"         value={stats.pending}               tone="bg-amber-50 text-amber-600" />
+          <StatChip icon={AlertCircle}      label="Overdue"         value={stats.overdue}               tone="bg-red-50 text-red-600" />
+          <StatChip icon={FileText}         label="Active bills"    value={stats.activeSchedules}       tone="bg-blue-50 text-blue-600" className="xl:col-span-2" />
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-slate-200 overflow-x-auto">
+      </aside>
+
+      <section className="space-y-5 min-w-0">
+      {/* ── Segmented tabs ── */}
+      <div className="flex p-1 rounded-2xl bg-slate-100 sticky top-0 z-10">
         {[
-          { id: 'overview',    label: 'Schedules' },
-          { id: 'collection',  label: 'Collection', disabled: !selectedSchedule },
-          { id: 'paystack',    label: 'Paystack ledger' },
-          { id: 'wallet',      label: 'Wallet' },
-        ].map(({ id, label, disabled }) => (
-          <button key={id} onClick={() => !disabled && setTab(id)}
-            disabled={disabled}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-all ${
-              tab === id
-                ? 'border-emerald-600 text-emerald-600'
-                : 'border-transparent text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:cursor-default'
+          { id: 'bills',       label: 'Bills' },
+          { id: 'withdrawals', label: 'Withdrawals' },
+          { id: 'paystack',    label: 'Paystack' },
+        ].map(({ id, label }) => (
+          <button key={id}
+            onClick={() => { setTab(id); if (id !== 'bills') setSelectedSchedule(null); }}
+            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+              tab === id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}>
             {label}
-            {id === 'wallet' && wallet && (
-              <span className="ml-1.5 text-xs bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded-full">
-                ₦{(wallet.balance || 0).toLocaleString()}
-              </span>
+            {id === 'paystack' && unlinkedCount > 0 && (
+              <span className="ml-1.5 text-[10px] font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full align-middle">{unlinkedCount}</span>
             )}
           </button>
         ))}
       </div>
 
-      {/* ── Schedules tab ── */}
-      {tab === 'overview' && (
+      {/* ── Bills: list ── */}
+      {tab === 'bills' && !selectedSchedule && (
         schedules.length === 0 ? (
-          <div className="glass-card p-16 text-center">
-            <Wallet size={40} className="text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-400 font-medium mb-1">No payment schedules yet</p>
-            <p className="text-slate-400 text-sm mb-5">Create your first schedule to start collecting dues</p>
-            <button onClick={() => setShowCreate(true)} className="btn-primary gap-2">
-              <Plus size={15} /> Create Schedule
-            </button>
-          </div>
+          <EmptyState icon={FileText} title="No bills yet"
+            body="Create a bill (dues, levy or contribution) and every resident gets an invoice to pay."
+            action={<button onClick={() => setShowCreate(true)} className="btn-primary gap-2"><Plus size={15} /> Create bill</button>} />
         ) : (
-          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-2 2xl:grid-cols-3 gap-3">
             {schedules.map((s) => {
               const meta = TYPE_META[s.type] || TYPE_META.other;
               const Icon = meta.icon;
               return (
-                <div key={s._id} className="glass-card p-5 hover:border-emerald-200 transition-all">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className={`p-2 rounded-lg ${meta.bg} ${meta.color}`}><Icon size={16} /></div>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-md ${s.isActive ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
-                      {s.isActive ? 'Active' : 'Inactive'}
-                    </span>
+                <button key={s._id} onClick={() => openCollection(s)}
+                  className="glass-card p-4 text-left hover:border-emerald-200 transition-all active:scale-[0.99]">
+                  <div className="flex items-start gap-3">
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${meta.bg} ${meta.color}`}><Icon size={19} /></div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-semibold text-slate-900 text-sm leading-tight truncate">{s.title}</h3>
+                        <span className="text-base font-bold text-slate-900 shrink-0">{naira(s.amount)}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 mt-1">
+                        <span className="text-xs text-slate-400 truncate">
+                          {meta.label} · {s.frequency.replace('_', ' ')} · Due {format(new Date(s.dueDate), 'MMM d')}
+                        </span>
+                        {!s.isActive && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-400 shrink-0">Inactive</span>}
+                      </div>
+                    </div>
                   </div>
-                  <h3 className="font-semibold text-slate-900 text-sm mb-1 leading-tight">{s.title}</h3>
-                  <div className="text-xs text-slate-400 mb-0.5">{meta.label} · {s.frequency.replace('_', ' ')}</div>
-                  <div className="text-xl font-bold text-emerald-600 mb-0.5">₦{s.amount.toLocaleString()}</div>
-                  <div className="text-xs text-slate-400">Due {format(new Date(s.dueDate), 'MMM d, yyyy')}</div>
                   {s.stats && <ProgressBar paid={s.stats.paid} total={s.stats.total} />}
                   {s.stats && (
-                    <div className="flex gap-3 mt-2 text-xs text-slate-400">
-                      <span className="text-emerald-600">✓ {s.stats.paid} paid</span>
-                      <span className="text-amber-600">⏳ {s.stats.pending} pending</span>
-                      {s.stats.overdue > 0 && <span className="text-red-600">⚠ {s.stats.overdue} overdue</span>}
+                    <div className="flex items-center gap-3 mt-2 text-xs">
+                      <span className="text-emerald-600 font-medium">{s.stats.paid} paid</span>
+                      <span className="text-amber-600 font-medium">{s.stats.pending} pending</span>
+                      {s.stats.overdue > 0 && <span className="text-red-600 font-medium">{s.stats.overdue} overdue</span>}
+                      <ChevronRight size={14} className="ml-auto text-slate-300" />
                     </div>
                   )}
-                  <button onClick={() => openCollection(s)}
-                    className="mt-4 w-full text-sm text-slate-500 hover:text-emerald-600 flex items-center justify-center gap-1.5 py-2 rounded-lg hover:bg-emerald-50 border border-slate-200 hover:border-emerald-200 transition-all">
-                    View Collection <ChevronRight size={14} />
-                  </button>
-                </div>
+                </button>
               );
             })}
           </div>
         )
       )}
 
-      {/* ── Collection tab ── */}
-      {tab === 'collection' && selectedSchedule && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setTab('overview')} className="text-slate-400 hover:text-slate-700 transition-colors">
-              <ChevronLeft size={18} />
+      {/* ── Bills: collection drill-down ── */}
+      {tab === 'bills' && selectedSchedule && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <button onClick={() => setSelectedSchedule(null)} aria-label="Back to bills"
+              className="w-9 h-9 -ml-1 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100">
+              <ChevronLeft size={20} />
             </button>
-            <div>
-              <h2 className="font-semibold text-slate-900">{selectedSchedule.title}</h2>
-              <p className="text-slate-400 text-sm">
-                ₦{selectedSchedule.amount.toLocaleString()} · Due {format(new Date(selectedSchedule.dueDate), 'MMM d, yyyy')}
+            <div className="min-w-0">
+              <h2 className="font-semibold text-slate-900 truncate">{selectedSchedule.title}</h2>
+              <p className="text-slate-400 text-xs">
+                {naira(selectedSchedule.amount)} · Due {format(new Date(selectedSchedule.dueDate), 'MMM d, yyyy')}
               </p>
             </div>
           </div>
 
           {collectionLoading ? (
             <div className="flex justify-center py-12"><Spinner /></div>
+          ) : collectionPayments.length === 0 ? (
+            <EmptyState icon={FileText} title="No residents on this bill" />
           ) : (
-            <div className="glass-card overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200">
-                    <th className="text-left text-slate-400 font-medium px-5 py-3">Resident</th>
-                    <th className="text-left text-slate-400 font-medium px-5 py-3 hidden sm:table-cell">Amount</th>
-                    <th className="text-left text-slate-400 font-medium px-5 py-3">Status</th>
-                    <th className="text-left text-slate-400 font-medium px-5 py-3 hidden md:table-cell">Paid At</th>
-                    <th className="text-left text-slate-400 font-medium px-5 py-3 hidden md:table-cell">Method</th>
-                    <th className="text-right text-slate-400 font-medium px-5 py-3">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {collectionPayments.map((p) => (
-                    <tr key={p._id} style={{ transition: 'background 0.15s' }} onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 text-xs font-bold flex-shrink-0">
-                            {p.residentId?.name?.[0]}
-                          </div>
-                          <div>
-                            <div className="text-slate-900 font-medium text-sm">{p.residentId?.name}</div>
-                            <div className="text-slate-400 text-xs">{p.residentId?.email}</div>
-                          </div>
+            <div className="glass-card divide-y divide-slate-100 overflow-hidden">
+              {collectionPayments.map((p) => {
+                const open = p.status !== 'paid' && p.status !== 'waived';
+                return (
+                  <div key={p._id} className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 text-sm font-bold shrink-0">
+                        {p.residentId?.name?.[0] || '?'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-slate-900 font-medium text-sm truncate">{p.residentId?.name || 'Resident'}</div>
+                        <div className="text-slate-400 text-xs truncate">
+                          {p.paidAt ? `Paid ${format(new Date(p.paidAt), 'MMM d, yyyy')}${p.method ? ` · ${p.method.replace('_', ' ')}` : ''}` : p.residentId?.email}
                         </div>
-                      </td>
-                      <td className="px-5 py-3.5 hidden sm:table-cell text-slate-900 font-medium">₦{p.amount.toLocaleString()}</td>
-                      <td className="px-5 py-3.5">
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-md capitalize ${STATUS_STYLE[p.status]}`}>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-sm font-bold text-slate-900">{naira(p.amount)}</div>
+                        <span className={`inline-block mt-0.5 text-[11px] font-semibold px-2 py-0.5 rounded-full capitalize ${STATUS_STYLE[p.status]}`}>
                           {p.status}
                         </span>
-                        {p.paystackReference && p.status === 'pending' && (
-                          <div className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                               style={{ background: '#FEF3C7', color: '#B45309', border: '1px solid #FDE68A' }}
-                               title="Resident initiated a Paystack checkout — but confirmation never completed. Click Reconcile to sync with Paystack.">
-                            <Clock size={9}/> Awaiting Paystack
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-5 py-3.5 hidden md:table-cell text-slate-400 text-xs">
-                        {p.paidAt ? format(new Date(p.paidAt), 'MMM d, yyyy') : '—'}
-                      </td>
-                      <td className="px-5 py-3.5 hidden md:table-cell text-slate-400 text-xs capitalize">
-                        {p.method || '—'}
-                      </td>
-                      <td className="px-5 py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {p.status !== 'paid' && p.status !== 'waived' && p.paystackReference && (
-                            <button onClick={() => handleReconcile(p)}
-                              disabled={reconciling === p._id}
-                              title="Force-sync this reference against Paystack. Use when a resident paid but the status is still pending."
-                              className="text-xs font-semibold px-2 py-1 rounded transition-colors disabled:opacity-50 inline-flex items-center gap-1"
-                              style={{ color: '#B45309', background: '#FEF3C7' }}>
-                              {reconciling === p._id
-                                ? <RefreshCw size={11} className="animate-spin" />
-                                : <RefreshCw size={11} />}
-                              Reconcile
-                            </button>
-                          )}
-                          {p.status !== 'paid' && p.status !== 'waived' && (<>
-                            <button onClick={() => { setShowManual(p); setManualForm({ method: 'cash', notes: '', paidAt: '' }); }}
-                              className="text-xs text-slate-400 hover:text-emerald-600 transition-colors px-2 py-1 rounded hover:bg-emerald-50">
-                              Mark Paid
-                            </button>
-                            <button onClick={() => handleWaive(p)}
-                              className="text-xs text-slate-400 hover:text-slate-600 transition-colors px-2 py-1 rounded hover:bg-slate-100">
-                              Waive
-                            </button>
-                          </>)}
-                          <button
-                            onClick={() => setInvoicePaymentId(p._id)}
-                            title={p.status === 'paid' ? 'View Receipt' : 'View Invoice'}
-                            className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded transition-colors"
-                            style={{ color: '#6366F1', background: 'transparent' }}
-                            onMouseEnter={e => { e.currentTarget.style.background = '#EEF2FF'; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-                          >
-                            <Receipt size={13} />
-                            {p.status === 'paid' ? 'Receipt' : 'Invoice'}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                    </div>
+
+                    {p.paystackReference && p.status === 'pending' && (
+                      <div className="mt-2 ml-[52px] inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                        <Clock size={10} /> Awaiting Paystack confirmation
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-2 mt-3 ml-[52px]">
+                      {open && p.paystackReference && (
+                        <button onClick={() => handleReconcile(p)} disabled={reconciling === p._id}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 disabled:opacity-50">
+                          <RefreshCw size={12} className={reconciling === p._id ? 'animate-spin' : ''} /> Reconcile
+                        </button>
+                      )}
+                      {open && (<>
+                        <button onClick={() => { setShowManual(p); setManualForm({ method: 'cash', notes: '', paidAt: '' }); }}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700">
+                          <CheckCircle2 size={12} /> Mark paid
+                        </button>
+                        <button onClick={() => handleWaive(p)}
+                          className="text-xs font-semibold px-3 py-1.5 rounded-full bg-slate-100 text-slate-500">
+                          Waive
+                        </button>
+                      </>)}
+                      <button onClick={() => setInvoicePaymentId(p._id)}
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-600">
+                        <Receipt size={12} /> {p.status === 'paid' ? 'Receipt' : 'Invoice'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
       )}
 
-      {/* ── Paystack ledger tab ── */}
-      {tab === 'paystack' && (
-        <div className="space-y-4">
-          <div className="glass-card p-4 flex items-start gap-3" style={{ background: 'linear-gradient(135deg,#FEF3C7,#FFFBEB)', border: '1px solid #FDE68A' }}>
-            <AlertCircle size={18} style={{ color: '#B45309', flexShrink: 0, marginTop: 2 }}/>
-            <div>
-              <div className="text-sm font-bold" style={{ color: '#92400E' }}>Live view of your Paystack captures</div>
-              <div className="text-xs mt-1" style={{ color: '#78350F' }}>
-                Every successful charge on your Paystack account appears here. If a row shows <strong>Not linked</strong>, click <strong>Attach</strong> to tie it to a resident + schedule — the payment will be recorded and the wallet credited.
-              </div>
-            </div>
-            <button onClick={loadLedger}
-              className="ml-auto text-xs font-semibold px-3 py-1.5 rounded-lg flex-shrink-0 inline-flex items-center gap-1"
-              style={{ background: '#B45309', color: '#fff' }}>
-              <RefreshCw size={11} className={ledgerLoading ? 'animate-spin' : ''}/> Refresh
-            </button>
+      {/* ── Withdrawals: statement ── */}
+      {tab === 'withdrawals' && (
+        walletLoading && !wallet ? (
+          <div className="flex justify-center py-16"><Spinner size={26} /></div>
+        ) : !wallet ? (
+          <div className="flex justify-center py-12">
+            <button onClick={loadWallet} className="btn-outline gap-2"><RefreshCw size={14} /> Retry</button>
           </div>
-
-          <div className="glass-card overflow-hidden">
-            {ledgerLoading ? (
-              <div className="flex justify-center py-16"><Spinner size={28}/></div>
-            ) : ledger.length === 0 ? (
-              <div className="py-16 text-center text-sm" style={{ color: '#94A3B8' }}>
-                No Paystack transactions yet
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm min-w-[800px]">
-                  <thead>
-                    <tr style={{ background: '#F8FAFC' }}>
-                      <th className="text-left px-5 py-3 text-xs font-bold uppercase tracking-wider" style={{ color: '#94A3B8' }}>When</th>
-                      <th className="text-left px-5 py-3 text-xs font-bold uppercase tracking-wider" style={{ color: '#94A3B8' }}>Customer</th>
-                      <th className="text-left px-5 py-3 text-xs font-bold uppercase tracking-wider" style={{ color: '#94A3B8' }}>Reference</th>
-                      <th className="text-right px-5 py-3 text-xs font-bold uppercase tracking-wider" style={{ color: '#94A3B8' }}>Amount</th>
-                      <th className="text-left px-5 py-3 text-xs font-bold uppercase tracking-wider" style={{ color: '#94A3B8' }}>Status</th>
-                      <th className="text-right px-5 py-3 text-xs font-bold uppercase tracking-wider" style={{ color: '#94A3B8' }}>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {ledger.map(tx => (
-                      <tr key={tx.reference} style={{ borderTop: '1px solid #F1F5F9' }}>
-                        <td className="px-5 py-3 text-xs" style={{ color: '#64748B' }}>
-                          {tx.paidAt ? format(new Date(tx.paidAt), 'MMM d, HH:mm') : tx.createdAt ? format(new Date(tx.createdAt), 'MMM d, HH:mm') : '—'}
-                        </td>
-                        <td className="px-5 py-3">
-                          <div className="text-sm font-medium" style={{ color: '#0F172A' }}>{tx.customer?.name || '—'}</div>
-                          <div className="text-xs" style={{ color: '#94A3B8' }}>{tx.customer?.email || ''}</div>
-                        </td>
-                        <td className="px-5 py-3 font-mono text-xs" style={{ color: '#64748B' }}>{tx.reference}</td>
-                        <td className="px-5 py-3 text-right font-bold" style={{ color: '#059669' }}>
-                          ₦{Number(tx.amount || 0).toLocaleString()}
-                        </td>
-                        <td className="px-5 py-3">
-                          {tx.matched ? (
-                            tx.payment?.status === 'paid' ? (
-                              <span className="text-xs font-bold px-2 py-0.5 rounded-full"
-                                    style={{ background: '#ECFDF5', color: '#047857', border: '1px solid #A7F3D0' }}>
-                                ✓ Linked · paid
-                              </span>
-                            ) : (
-                              <span className="text-xs font-bold px-2 py-0.5 rounded-full"
-                                    style={{ background: '#FEF3C7', color: '#92400E', border: '1px solid #FDE68A' }}>
-                                Linked · {tx.payment?.status}
-                              </span>
-                            )
-                          ) : (
-                            <span className="text-xs font-bold px-2 py-0.5 rounded-full"
-                                  style={{ background: '#FEE2E2', color: '#B91C1C', border: '1px solid #FECACA' }}>
-                              Not linked
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-5 py-3 text-right">
-                          {tx.matched ? (
-                            tx.payment?.status === 'paid' ? (
-                              <span className="text-xs" style={{ color: '#94A3B8' }}>Done</span>
-                            ) : (
-                              <button onClick={() => handleReconcile(tx.payment)}
-                                className="text-xs font-bold px-3 py-1 rounded-lg inline-flex items-center gap-1"
-                                style={{ background: '#FEF3C7', color: '#B45309' }}>
-                                <RefreshCw size={11}/> Reconcile
-                              </button>
-                            )
-                          ) : (
-                            <button onClick={() => openAttachModal(tx)}
-                              className="text-xs font-bold px-3 py-1 rounded-lg"
-                              style={{ background: '#059669', color: '#fff' }}>
-                              Attach
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Attach Paystack transaction modal */}
-      {attachFor && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="glass-card w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-bold" style={{ color: '#0F172A' }}>Attach Paystack transaction</h3>
-                <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
-                  Link ₦{attachFor.amount.toLocaleString()} to a resident + schedule
-                </p>
-              </div>
-              <button onClick={() => setAttachFor(null)} style={{ color: '#94A3B8', background: 'none', border: 'none', cursor: 'pointer' }}>
-                <X size={18}/>
-              </button>
-            </div>
-            <div className="rounded-xl p-3 mb-4 text-xs" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-              <div><strong style={{ color: '#0F172A' }}>Reference</strong>: <span className="font-mono" style={{ color: '#64748B' }}>{attachFor.reference}</span></div>
-              <div><strong style={{ color: '#0F172A' }}>Customer</strong>: {attachFor.customer?.email || '—'}</div>
-              <div><strong style={{ color: '#0F172A' }}>Paid</strong>: {attachFor.paidAt ? format(new Date(attachFor.paidAt), 'MMM d, yyyy HH:mm') : '—'}</div>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-semibold mb-1 block" style={{ color: '#475569' }}>Resident</label>
-                <select className="input-field w-full" value={attachForm.residentId}
-                  onChange={e => setAttachForm(f => ({ ...f, residentId: e.target.value }))}>
-                  <option value="">Select resident…</option>
-                  {residents.map(r => (
-                    <option key={r._id} value={r._id}>
-                      {r.name} · {r.email}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-semibold mb-1 block" style={{ color: '#475569' }}>Payment schedule</label>
-                <select className="input-field w-full" value={attachForm.scheduleId}
-                  onChange={e => setAttachForm(f => ({ ...f, scheduleId: e.target.value }))}>
-                  <option value="">Select schedule…</option>
-                  {schedules.map(s => (
-                    <option key={s._id} value={s._id}>
-                      {s.title} · ₦{Number(s.amount).toLocaleString()} · {s.frequency}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="flex gap-3 pt-4">
-              <button onClick={() => setAttachFor(null)}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
-                style={{ background: '#F1F5F9', color: '#475569' }}>Cancel</button>
-              <button onClick={submitAttach} disabled={attaching}
-                className="flex-1 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50"
-                style={{ background: 'linear-gradient(135deg,#10B981,#059669)', color: '#fff' }}>
-                {attaching ? 'Attaching…' : `Attach ₦${attachFor.amount.toLocaleString()}`}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Wallet tab ── */}
-      {tab === 'wallet' && (
-        <div className="space-y-5">
-          {walletLoading ? (
-            <div className="flex justify-center py-24"><Spinner size={28} /></div>
-          ) : wallet ? (
-            <>
-              {/* Balance card */}
-              <div className="glass-card p-6" style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.06) 0%, #F8FAFC 100%)', borderColor: '#D1FAE5' }}>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-slate-500 text-sm mb-1 flex items-center gap-1.5">
-                      <Wallet size={14} /> Wallet Balance
-                    </p>
-                    <div className="text-4xl font-bold text-slate-900 mt-1">
-                      ₦{(wallet.balance || 0).toLocaleString()}
-                    </div>
-                    <div className="flex items-center gap-4 mt-2">
-                      <span className="text-slate-400 text-xs">
-                        Collected: <span className="text-emerald-600">₦{(wallet.collected || 0).toLocaleString()}</span>
-                      </span>
-                      {wallet.withdrawn > 0 && (
-                        <span className="text-slate-400 text-xs">
-                          Withdrawn: <span className="text-amber-600">₦{wallet.withdrawn.toLocaleString()}</span>
+        ) : withdrawals.length === 0 ? (
+          <EmptyState icon={ArrowUpRight} title="No withdrawals yet"
+            body="Money you move from your estate wallet to your bank will show up here."
+            action={<button onClick={startWithdraw} className="btn-primary gap-2"><ArrowUpRight size={15} /> Make a withdrawal</button>} />
+        ) : (
+          <div className="space-y-4">
+            {groupByDay(withdrawals, w => w.createdAt).map(group => (
+              <div key={group.label} className="space-y-2">
+                <SectionHeader title={group.label} />
+                <div className="glass-card divide-y divide-slate-100 overflow-hidden">
+                  {group.items.map(w => {
+                    const meta = WITHDRAWAL_META[w.status] || WITHDRAWAL_META.pending;
+                    const Icon = meta.icon;
+                    return (
+                      <button key={w._id} onClick={() => setWithdrawalDetail(w)}
+                        className="w-full flex items-center gap-3 p-4 text-left hover:bg-slate-50 transition-colors">
+                        <span className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${meta.iconWrap}`}><Icon size={18} /></span>
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-sm font-semibold text-slate-900 truncate">To {w.bankName || 'bank'}</span>
+                          <span className="block text-xs text-slate-400 truncate">
+                            {maskAcct(w.accountNumber)} · {format(new Date(w.createdAt), 'h:mm a')}
+                          </span>
                         </span>
-                      )}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => {
-                      if (!wallet.bank?.recipientCode) {
-                        setShowBankSetup(true);
-                        loadBanks();
-                      } else {
-                        setShowWithdraw(true);
-                      }
-                    }}
-                    className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-emerald-500/20"
-                  >
-                    <ArrowUpCircle size={16} /> Withdraw
-                  </button>
+                        <span className="text-right shrink-0">
+                          <span className={`block text-sm font-bold ${w.status === 'failed' ? 'text-slate-400 line-through' : 'text-slate-900'}`}>
+                            −{naira(w.amount)}
+                          </span>
+                          <span className={`inline-block mt-0.5 text-[11px] font-semibold px-2 py-0.5 rounded-full ${meta.pill}`}>{meta.label}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
-
-                {wallet.balance > 0 && !wallet.bank?.recipientCode && (
-                  <div className="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-xs flex items-center gap-2">
-                    <AlertCircle size={13} />
-                    Add a bank account to withdraw your balance.
-                    <button onClick={() => { setShowBankSetup(true); loadBanks(); }}
-                      className="underline ml-auto shrink-0">Set up now</button>
-                  </div>
-                )}
               </div>
+            ))}
+          </div>
+        )
+      )}
 
-              {/* Bank account */}
-              <div className="glass-card p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2 text-slate-900 font-medium text-sm">
-                    <Landmark size={15} className="text-slate-400" /> Bank Account
-                  </div>
-                  <button
-                    onClick={() => { setShowBankSetup(true); loadBanks(); }}
-                    className="text-xs text-slate-400 hover:text-emerald-600 transition-colors"
-                  >
-                    {wallet.bank?.recipientCode ? 'Update' : 'Add account'}
-                  </button>
-                </div>
-
-                {wallet.bank?.recipientCode ? (
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
-                      <Building size={18} className="text-emerald-600" />
-                    </div>
-                    <div>
-                      <div className="text-slate-900 font-medium text-sm">{wallet.bank.accountName}</div>
-                      <div className="text-slate-400 text-xs">{wallet.bank.bankName} · {wallet.bank.accountNumber}</div>
-                    </div>
-                    <BadgeCheck size={16} className="text-emerald-500 ml-auto" />
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center py-6 gap-2">
-                    <Landmark size={32} className="text-slate-300" />
-                    <p className="text-slate-400 text-sm">No bank account added yet</p>
-                    <button
-                      onClick={() => { setShowBankSetup(true); loadBanks(); }}
-                      className="mt-1 text-sm text-emerald-600 hover:text-emerald-500 transition-colors flex items-center gap-1"
-                    >
-                      <Plus size={14} /> Add bank account
-                    </button>
-                  </div>
-                )}
+      {/* ── Paystack ledger ── */}
+      {tab === 'paystack' && (
+        <div className="space-y-3">
+          <div className="rounded-2xl p-4 flex items-start gap-3 bg-amber-50 border border-amber-200">
+            <AlertCircle size={18} className="text-amber-700 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-bold text-amber-900">Live Paystack payments</div>
+              <div className="text-xs mt-1 text-amber-800 leading-relaxed">
+                Every successful charge appears here. Tap <strong>Attach</strong> on a <strong>Not linked</strong> payment to match it to a resident and bill — it's then recorded and added to your wallet.
               </div>
+            </div>
+          </div>
 
-              {/* Withdrawal history */}
-              <div className="glass-card overflow-hidden">
-                <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-200">
-                  <History size={15} className="text-slate-400" />
-                  <span className="text-slate-900 font-medium text-sm">Withdrawal History</span>
+          {ledgerLoading ? (
+            <div className="flex justify-center py-16"><Spinner size={26} /></div>
+          ) : ledger.length === 0 ? (
+            <EmptyState icon={CreditCard} title="No Paystack payments yet" />
+          ) : (
+            groupByDay(ledger, tx => tx.paidAt || tx.createdAt).map(group => (
+              <div key={group.label} className="space-y-2">
+                <SectionHeader title={group.label} />
+                <div className="glass-card divide-y divide-slate-100 overflow-hidden">
+                  {group.items.map(tx => (
+                    <div key={tx.reference} className="flex items-center gap-3 p-4">
+                      <span className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                        <ArrowDownLeft size={18} />
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-slate-900 truncate">{tx.customer?.name || tx.customer?.email || 'Customer'}</div>
+                        <div className="text-[11px] text-slate-400 font-mono truncate">{tx.reference}</div>
+                        <div className="mt-1">
+                          {tx.matched ? (
+                            tx.payment?.status === 'paid'
+                              ? <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">Linked · paid</span>
+                              : <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">Linked · {tx.payment?.status}</span>
+                          ) : (
+                            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-50 text-red-600">Not linked</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0 flex flex-col items-end gap-1.5">
+                        <span className="text-sm font-bold text-emerald-600">+{naira(tx.amount)}</span>
+                        {!tx.matched ? (
+                          <button onClick={() => openAttachModal(tx)}
+                            className="text-xs font-bold px-3 py-1.5 rounded-full bg-emerald-600 text-white">Attach</button>
+                        ) : tx.payment?.status !== 'paid' ? (
+                          <button onClick={() => handleReconcile(tx.payment)}
+                            className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-full bg-amber-50 text-amber-700">
+                            <RefreshCw size={11} /> Reconcile
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-slate-400">{tx.paidAt ? format(new Date(tx.paidAt), 'h:mm a') : ''}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                {wallet.withdrawals?.length === 0 ? (
-                  <div className="py-12 text-center text-slate-400 text-sm">No withdrawals yet</div>
-                ) : (
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-slate-200">
-                        <th className="text-left text-slate-400 font-medium px-5 py-3">Date</th>
-                        <th className="text-left text-slate-400 font-medium px-5 py-3">Bank</th>
-                        <th className="text-right text-slate-400 font-medium px-5 py-3">Amount</th>
-                        <th className="text-right text-slate-400 font-medium px-5 py-3">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {wallet.withdrawals.map((w) => (
-                        <tr key={w._id} style={{ transition: 'background 0.15s' }} onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                          <td className="px-5 py-3.5 text-slate-500 text-xs">
-                            {format(new Date(w.createdAt), 'MMM d, yyyy')}
-                          </td>
-                          <td className="px-5 py-3.5">
-                            <div className="text-slate-900 text-xs font-medium">{w.accountName}</div>
-                            <div className="text-slate-400 text-xs">{w.bankName} · {w.accountNumber}</div>
-                          </td>
-                          <td className="px-5 py-3.5 text-right text-slate-900 font-semibold text-sm">
-                            ₦{w.amount.toLocaleString()}
-                          </td>
-                          <td className="px-5 py-3.5 text-right">
-                            <span className={`text-xs font-medium px-2 py-0.5 rounded-md capitalize ${WITHDRAWAL_STYLE[w.status]}`}>
-                              {w.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      </section>
+      </div>
+
+      {/* ── Sheets ── */}
+      <WithdrawSheet
+        open={showWithdraw}
+        onClose={() => setShowWithdraw(false)}
+        wallet={wallet}
+        onChangeBank={() => { setShowWithdraw(false); setWithdrawAfterBank(true); setShowBank(true); }}
+        onWithdrawn={loadWallet}
+      />
+
+      <BankSheet
+        open={showBank}
+        onClose={() => { setShowBank(false); setWithdrawAfterBank(false); }}
+        onSaved={onBankSaved}
+        currentBank={wallet?.bank}
+      />
+
+      {/* Withdrawal detail */}
+      <BottomSheet open={!!withdrawalDetail} onClose={() => setWithdrawalDetail(null)} title="Withdrawal details"
+        footer={<button onClick={() => setWithdrawalDetail(null)} className="btn-outline w-full py-3">Close</button>}>
+        {withdrawalDetail && (() => {
+          const w = withdrawalDetail;
+          const meta = WITHDRAWAL_META[w.status] || WITHDRAWAL_META.pending;
+          return (
+            <>
+              <div className="text-center py-4">
+                <div className="text-4xl font-black text-slate-900 tracking-tight">{naira(w.amount)}</div>
+                <span className={`inline-block mt-2 text-xs font-semibold px-3 py-1 rounded-full ${meta.pill}`}>{meta.label}</span>
+              </div>
+              {w.status === 'failed' && w.failureReason && (
+                <div className="mb-3 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700">{w.failureReason} — the amount has been returned to your wallet.</div>
+              )}
+              {w.status === 'pending' && w.paystackStatus === 'otp' && (
+                <div className="mb-3 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800">Awaiting payout authorisation. You'll get an email once it's sent.</div>
+              )}
+              <div className="rounded-2xl bg-slate-50 divide-y divide-slate-100 text-sm">
+                <Row label="To" value={w.accountName || '—'} sub={`${w.bankName || ''} · ${maskAcct(w.accountNumber)}`} />
+                <Row label="Date" value={format(new Date(w.createdAt), 'MMM d, yyyy · h:mm a')} />
+                <Row label="Reference" value={
+                  <button onClick={() => { navigator.clipboard?.writeText(w.reference); toast.success('Reference copied'); }}
+                    className="inline-flex items-center gap-1.5 font-mono text-xs text-slate-700 hover:text-emerald-600 break-all">
+                    {w.reference} <Copy size={12} className="shrink-0" />
+                  </button>
+                } />
               </div>
             </>
-          ) : (
-            <div className="flex justify-center py-12">
-              <button onClick={loadWallet} className="btn-outline gap-2">
-                <RefreshCw size={14} /> Retry
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+          );
+        })()}
+      </BottomSheet>
 
-      {/* ── Create Schedule Modal ── */}
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Create Payment Schedule">
-        <form onSubmit={handleCreateSchedule} className="space-y-4">
-          <div>
-            <label className="text-sm text-slate-500 mb-1.5 block">Schedule Title *</label>
-            <input className="input-field" placeholder="e.g. Security Dues – June 2026"
-              value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
+      {/* Attach Paystack transaction */}
+      <BottomSheet open={!!attachFor} onClose={() => setAttachFor(null)} title="Attach payment"
+        subtitle={attachFor ? `Link ${naira(attachFor.amount)} to a resident and bill` : ''}
+        footer={
+          <div className="flex gap-3">
+            <button onClick={() => setAttachFor(null)} className="btn-outline flex-1 py-3">Cancel</button>
+            <button onClick={submitAttach} disabled={attaching} className="btn-primary flex-[2] py-3">
+              {attaching ? 'Attaching…' : `Attach ${attachFor ? naira(attachFor.amount) : ''}`}
+            </button>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+        }>
+        {attachFor && (
+          <div className="space-y-4">
+            <div className="rounded-2xl bg-slate-50 divide-y divide-slate-100 text-sm">
+              <Row label="Reference" value={<span className="font-mono text-xs break-all">{attachFor.reference}</span>} />
+              <Row label="Customer" value={attachFor.customer?.email || '—'} />
+              <Row label="Paid" value={attachFor.paidAt ? format(new Date(attachFor.paidAt), 'MMM d, yyyy · h:mm a') : '—'} />
+            </div>
             <div>
-              <label className="text-sm text-slate-500 mb-1.5 block">Type</label>
-              <select className="input-field" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
-                {Object.entries(TYPE_META).map(([val, { label }]) => (
-                  <option key={val} value={val}>{label}</option>
-                ))}
+              <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Resident</label>
+              <select className="input-field w-full py-3" value={attachForm.residentId}
+                onChange={e => setAttachForm(f => ({ ...f, residentId: e.target.value }))}>
+                <option value="">Select resident…</option>
+                {residents.map(r => <option key={r._id} value={r._id}>{r.name} · {r.email}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-sm text-slate-500 mb-1.5 block">Frequency</label>
-              <select className="input-field" value={form.frequency} onChange={(e) => setForm({ ...form, frequency: e.target.value })}>
-                <option value="one_time">One Time</option>
+              <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Bill</label>
+              <select className="input-field w-full py-3" value={attachForm.scheduleId}
+                onChange={e => setAttachForm(f => ({ ...f, scheduleId: e.target.value }))}>
+                <option value="">Select bill…</option>
+                {schedules.map(s => <option key={s._id} value={s._id}>{s.title} · {naira(s.amount)} · {s.frequency}</option>)}
+              </select>
+            </div>
+          </div>
+        )}
+      </BottomSheet>
+
+      {/* Create bill */}
+      <SidePanel open={showCreate} onClose={() => setShowCreate(false)} title="New bill"
+        subtitle="Every active resident gets a pending invoice">
+        <form id="create-bill" onSubmit={handleCreateSchedule} className="space-y-4">
+          <div>
+            <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Title *</label>
+            <input className="input-field py-3" placeholder="e.g. Security Dues – June 2026"
+              value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Type</label>
+            <div className="grid grid-cols-3 gap-2">
+              {Object.entries(TYPE_META).map(([val, { label, icon: Icon, color, bg }]) => (
+                <button key={val} type="button" onClick={() => setForm({ ...form, type: val })}
+                  className={`flex flex-col items-center gap-1.5 p-2.5 rounded-xl border text-[11px] font-semibold transition-all ${
+                    form.type === val ? 'border-emerald-400 bg-emerald-50/60 text-slate-900' : 'border-slate-200 text-slate-500'
+                  }`}>
+                  <span className={`w-8 h-8 rounded-lg flex items-center justify-center ${bg} ${color}`}><Icon size={15} /></span>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Amount (₦) *</label>
+              <input type="number" inputMode="numeric" className="input-field py-3" placeholder="5000"
+                value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required min="1" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Frequency</label>
+              <select className="input-field py-3" value={form.frequency} onChange={(e) => setForm({ ...form, frequency: e.target.value })}>
+                <option value="one_time">One time</option>
                 <option value="monthly">Monthly</option>
                 <option value="quarterly">Quarterly</option>
                 <option value="annual">Annual</option>
               </select>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-sm text-slate-500 mb-1.5 block">Amount (₦) *</label>
-              <input type="number" className="input-field" placeholder="5000"
-                value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required min="1" />
-            </div>
-            <div>
-              <label className="text-sm text-slate-500 mb-1.5 block">Due Date *</label>
-              <input type="date" className="input-field"
-                value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} required />
-            </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Due date *</label>
+            <input type="date" className="input-field py-3"
+              value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} required />
           </div>
           <div>
-            <label className="text-sm text-slate-500 mb-1.5 block">Description (optional)</label>
+            <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Description (optional)</label>
             <textarea className="input-field" rows={2} placeholder="Additional details..."
               value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </div>
-          <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 text-xs">
-            Pending payment records will be automatically created for all active residents.
-          </div>
           <div className="flex gap-3 pt-1">
-            <button type="button" onClick={() => setShowCreate(false)} className="btn-outline flex-1">Cancel</button>
-            <button type="submit" disabled={saving} className="btn-primary flex-1">
-              {saving ? 'Creating...' : 'Create Schedule'}
+            <button type="button" onClick={() => setShowCreate(false)} className="btn-outline flex-1 py-3">Cancel</button>
+            <button type="submit" disabled={saving} className="btn-primary flex-[2] py-3">
+              {saving ? 'Creating…' : 'Create bill'}
             </button>
           </div>
         </form>
-      </Modal>
+      </SidePanel>
 
-      {/* ── Record Manual Payment Modal ── */}
-      <Modal open={!!showManual} onClose={() => setShowManual(null)} title={`Record Payment — ${showManual?.residentId?.name}`}>
+      {/* Record manual payment */}
+      <BottomSheet open={!!showManual} onClose={() => setShowManual(null)} title="Record payment"
+        subtitle={showManual?.residentId?.name}>
         <form onSubmit={handleMarkPaid} className="space-y-4">
-          <div className="glass-card p-4 flex items-center justify-between">
-            <span className="text-slate-500 text-sm">Amount</span>
-            <span className="text-xl font-bold text-emerald-600">₦{showManual?.amount?.toLocaleString()}</span>
-          </div>
-          <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs flex items-center gap-2">
-            <Wallet size={12} /> This amount will be credited to your wallet.
+          <div className="text-center py-3">
+            <div className="text-3xl font-black text-slate-900">{naira(showManual?.amount)}</div>
+            <p className="text-xs text-emerald-600 mt-1 inline-flex items-center gap-1"><Wallet size={12} /> Will be added to your wallet</p>
           </div>
           <div>
-            <label className="text-sm text-slate-500 mb-1.5 block">Payment Method</label>
-            <select className="input-field" value={manualForm.method}
-              onChange={(e) => setManualForm({ ...manualForm, method: e.target.value })}>
-              <option value="cash">Cash</option>
-              <option value="bank_transfer">Bank Transfer</option>
-              <option value="manual">Other / Manual</option>
-            </select>
+            <label className="text-xs font-semibold text-slate-500 mb-1.5 block">How was it paid?</label>
+            <div className="grid grid-cols-3 gap-2">
+              {[['cash', 'Cash'], ['bank_transfer', 'Transfer'], ['manual', 'Other']].map(([val, label]) => (
+                <button key={val} type="button" onClick={() => setManualForm({ ...manualForm, method: val })}
+                  className={`py-2.5 rounded-xl border text-sm font-semibold transition-all ${
+                    manualForm.method === val ? 'border-emerald-400 bg-emerald-50 text-emerald-700' : 'border-slate-200 text-slate-500'
+                  }`}>
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
           <div>
-            <label className="text-sm text-slate-500 mb-1.5 block">Date Paid</label>
-            <input type="date" className="input-field" value={manualForm.paidAt}
+            <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Date paid</label>
+            <input type="date" className="input-field py-3" value={manualForm.paidAt}
               onChange={(e) => setManualForm({ ...manualForm, paidAt: e.target.value })} />
           </div>
           <div>
-            <label className="text-sm text-slate-500 mb-1.5 block">Notes (optional)</label>
-            <input className="input-field" placeholder="e.g. Receipt #123, teller no..."
+            <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Notes (optional)</label>
+            <input className="input-field py-3" placeholder="e.g. Receipt #123, teller no..."
               value={manualForm.notes} onChange={(e) => setManualForm({ ...manualForm, notes: e.target.value })} />
           </div>
           <div className="flex gap-3 pt-1">
-            <button type="button" onClick={() => setShowManual(null)} className="btn-outline flex-1">Cancel</button>
-            <button type="submit" disabled={saving} className="btn-primary flex-1">
-              {saving ? 'Recording...' : 'Confirm Payment'}
+            <button type="button" onClick={() => setShowManual(null)} className="btn-outline flex-1 py-3">Cancel</button>
+            <button type="submit" disabled={saving} className="btn-primary flex-[2] py-3">
+              {saving ? 'Recording…' : 'Confirm payment'}
             </button>
           </div>
         </form>
-      </Modal>
-
-      {/* ── Bank Account Setup Modal ── */}
-      <Modal open={showBankSetup} onClose={() => { setShowBankSetup(false); setBankForm({ bankCode: '', accountNumber: '' }); setResolvedAccount(null); }} title="Bank Account">
-        <div className="space-y-4">
-          <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-xs flex items-start gap-2">
-            <Landmark size={13} className="mt-0.5 shrink-0" />
-            Enter your Nigerian bank account to receive withdrawals via Paystack.
-          </div>
-
-          <div>
-            <label className="text-sm text-slate-500 mb-1.5 block">Bank</label>
-            <select className="input-field" value={bankForm.bankCode}
-              onChange={(e) => { setBankForm({ ...bankForm, bankCode: e.target.value }); setResolvedAccount(null); }}>
-              <option value="">Select a bank...</option>
-              {banks.map((b) => (
-                <option key={b.code} value={b.code}>{b.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="text-sm text-slate-500 mb-1.5 block">Account Number</label>
-            <input className="input-field" placeholder="10-digit account number" maxLength={10}
-              value={bankForm.accountNumber}
-              onChange={(e) => { setBankForm({ ...bankForm, accountNumber: e.target.value.replace(/\D/g, '') }); setResolvedAccount(null); }} />
-          </div>
-
-          {/* Resolved account name preview */}
-          {resolvedAccount && (
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
-              <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold text-emerald-800">{resolvedAccount.accountName}</div>
-                <div className="text-xs text-emerald-600">Account name confirmed</div>
-              </div>
-            </div>
-          )}
-
-          <div className="flex gap-3 pt-1">
-            <button type="button" onClick={() => setShowBankSetup(false)} className="btn-outline flex-1">Cancel</button>
-
-            {!resolvedAccount ? (
-              <button
-                onClick={handleVerifyAccount}
-                disabled={resolving || bankForm.accountNumber.length !== 10 || !bankForm.bankCode}
-                className="btn-primary flex-1 gap-2"
-              >
-                {resolving
-                  ? <><RefreshCw size={13} className="animate-spin" /> Verifying…</>
-                  : <><BadgeCheck size={14} /> Verify Account</>
-                }
-              </button>
-            ) : (
-              <button
-                onClick={handleConfirmSave}
-                disabled={confirmingBank}
-                className="btn-primary flex-1 gap-2"
-              >
-                {confirmingBank
-                  ? <><RefreshCw size={13} className="animate-spin" /> Saving…</>
-                  : <><CheckCircle2 size={14} /> Confirm &amp; Save</>
-                }
-              </button>
-            )}
-          </div>
-        </div>
-      </Modal>
-
-      {/* ── Withdraw Modal ── */}
-      <Modal open={showWithdraw} onClose={() => { setShowWithdraw(false); setWithdrawAmount(''); }} title="Withdraw Funds">
-        <form onSubmit={handleWithdraw} className="space-y-4">
-          {wallet?.bank?.recipientCode && (
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 border border-slate-200">
-              <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
-                <Building size={16} className="text-emerald-600" />
-              </div>
-              <div>
-                <div className="text-slate-900 text-sm font-medium">{wallet.bank.accountName}</div>
-                <div className="text-slate-400 text-xs">{wallet.bank.bankName} · {wallet.bank.accountNumber}</div>
-              </div>
-            </div>
-          )}
-
-          <div className="glass-card p-4">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-slate-500 text-xs">Available Balance</span>
-              <span className="text-emerald-600 text-sm font-bold">₦{(wallet?.balance || 0).toLocaleString()}</span>
-            </div>
-            <div className="h-px bg-slate-200 my-3" />
-            <label className="text-sm text-slate-500 mb-1.5 block">Withdrawal Amount (₦)</label>
-            <input
-              type="number"
-              className="input-field text-lg font-bold"
-              placeholder="Enter amount"
-              value={withdrawAmount}
-              onChange={(e) => setWithdrawAmount(e.target.value)}
-              min="100"
-              max={wallet?.balance || 0}
-              required
-            />
-            <div className="flex gap-2 mt-2">
-              {[wallet?.balance * 0.25, wallet?.balance * 0.5, wallet?.balance].map((amt, i) => {
-                const labels = ['25%', '50%', 'All'];
-                if (!amt) return null;
-                return (
-                  <button key={i} type="button"
-                    onClick={() => setWithdrawAmount(Math.floor(amt).toString())}
-                    className="flex-1 text-xs text-slate-400 hover:text-emerald-600 border border-slate-200 hover:border-emerald-200 rounded-lg py-1.5 transition-all">
-                    {labels[i]}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-xs flex items-start gap-2">
-            <AlertCircle size={12} className="mt-0.5 shrink-0" />
-            Funds are sent straight to your saved bank account. Most transfers arrive within minutes, and you'll get an email receipt.
-          </div>
-
-          <div className="flex gap-3 pt-1">
-            <button type="button" onClick={() => setShowWithdraw(false)} className="btn-outline flex-1">Cancel</button>
-            <button type="submit" disabled={saving || !withdrawAmount || parseFloat(withdrawAmount) < 100}
-              className="flex-1 flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white font-semibold py-2.5 rounded-xl transition-all disabled:opacity-40">
-              {saving ? <><RefreshCw size={13} className="animate-spin" /> Processing...</> : <><SendHorizonal size={14} /> Withdraw ₦{parseFloat(withdrawAmount || 0).toLocaleString()}</>}
-            </button>
-          </div>
-        </form>
-      </Modal>
+      </BottomSheet>
 
       <InvoiceModal
         paymentId={invoicePaymentId}

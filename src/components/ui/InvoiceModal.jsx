@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, Printer, Download, CheckCircle2, Clock, XCircle, MinusCircle } from 'lucide-react';
 import { paymentAPI } from '../../api';
 import toast from 'react-hot-toast';
+import { Z_INDEX } from './Portal';
 
 const fmt = (n) => `₦${Number(n || 0).toLocaleString('en-NG', { minimumFractionDigits: 2 })}`;
 
@@ -318,8 +319,8 @@ export default function InvoiceModal({ paymentId, onClose }) {
     <div
       onClick={onClose}
       style={{
-        position: 'fixed', inset: 0, zIndex: 9999,
-        background: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(4px)',
+        position: 'fixed', inset: 0, zIndex: Z_INDEX.drawer,
+        background: 'rgba(15,23,42,0.48)', backdropFilter: 'blur(3px)',
         display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
         padding: '24px 16px', overflowY: 'auto',
       }}

@@ -8,6 +8,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { courtAPI } from '../api';
 import toast from 'react-hot-toast';
+import Portal from '../components/ui/Portal';
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
@@ -1643,9 +1644,10 @@ function CaseDetail({ caseId, onBack, user, isManager }) {
 
       {/* ── Judge's Bench modal ── */}
       {isManager && showBench && (
+        <Portal>
         <div
           onClick={(e) => { if (e.target === e.currentTarget) setShowBench(false); }}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 200,
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 100,
                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, backdropFilter: 'blur(4px)' }}>
           <div style={{ background: '#fff', borderRadius: 18, padding: 24, maxWidth: 560, width: '100%',
                         maxHeight: '90vh', overflow: 'auto', boxShadow: '0 25px 50px rgba(0,0,0,0.25)' }}>
@@ -1757,6 +1759,7 @@ function CaseDetail({ caseId, onBack, user, isManager }) {
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   );

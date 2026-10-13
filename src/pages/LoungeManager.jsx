@@ -12,6 +12,7 @@ import { eventAPI, pollAPI, loungeAPI, postAPI, djAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import DJLive from '../components/DJLive';
+import Portal from '../components/ui/Portal';
 
 // ── Helpers ────────────────────────────────────────────────────────
 const SERVER_URL = (import.meta.env.VITE_API_URL || 'https://areaconnectapi-production.up.railway.app/api').replace('/api', '');
@@ -529,7 +530,8 @@ function ActivitiesTab() {
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <Portal>
+        <div className="fixed inset-0 z-[100] overlay-scrim flex items-center justify-center p-4">
           <div className="w-full max-w-md rounded-2xl p-6 bg-white shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold" style={{ color:'#0F172A' }}>New Activity</h2>
@@ -578,6 +580,7 @@ function ActivitiesTab() {
             </form>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   );
@@ -688,7 +691,8 @@ function EventsTab() {
       )}
 
       {showForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <Portal>
+        <div className="fixed inset-0 z-[100] overlay-scrim flex items-center justify-center p-4">
           <div className="w-full max-w-md rounded-2xl p-6 bg-white shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-bold" style={{ color:'#0F172A' }}>New Event</h2>
@@ -730,6 +734,7 @@ function EventsTab() {
             </form>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   );
@@ -818,7 +823,8 @@ function PollsTab() {
       )}
 
       {showForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <Portal>
+        <div className="fixed inset-0 z-[100] overlay-scrim flex items-center justify-center p-4">
           <div className="w-full max-w-md rounded-2xl p-6 bg-white shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-bold" style={{color:'#0F172A'}}>New Poll</h2>
@@ -846,6 +852,7 @@ function PollsTab() {
             </form>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   );

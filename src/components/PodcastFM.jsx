@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Radio, Calendar, Play, Pause, X, Volume2 } from 'lucide-react';
 import { podcastAPI } from '../api';
+import Portal from './ui/Portal';
 
 const VIOLET      = '#8B5CF6';
 const VIOLET_DARK = '#6D28D9';
@@ -32,7 +33,8 @@ function EpisodePlayer({ episode, onClose }) {
   const dur = episode.durationSec || 0;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'linear-gradient(180deg, #0F172A, #1E1B4B)', display: 'flex', flexDirection: 'column', color: '#fff' }}>
+    <Portal>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'linear-gradient(180deg, #0F172A, #1E1B4B)', display: 'flex', flexDirection: 'column', color: '#fff' }}>
       <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', color: '#C4B5FD', textTransform: 'uppercase' }}>AreaConnect FM</div>
         <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 10, padding: 8, color: '#fff', cursor: 'pointer' }}><X size={16}/></button>
@@ -70,6 +72,7 @@ function EpisodePlayer({ episode, onClose }) {
         </div>
       </div>
     </div>
+    </Portal>
   );
 }
 

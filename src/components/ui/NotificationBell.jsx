@@ -123,7 +123,7 @@ export default function NotificationBell() {
           width: Math.min(340, window.innerWidth - 24),
           background: '#fff', borderRadius: 16,
           boxShadow: '0 16px 48px rgba(15,23,42,0.18)',
-          border: '1px solid #E2E8F0', zIndex: 1000, overflow: 'hidden',
+          border: '1px solid #E2E8F0', zIndex: 90, overflow: 'hidden', // just under overlays (see ui/Portal Z_INDEX)
         }}>
           {/* Header */}
           <div style={{

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
+import Portal, { useScrollLock } from '../components/ui/Portal';
 
 const ACCENT      = '#10B981';
 const ACCENT_DARK = '#059669';
@@ -604,18 +605,15 @@ function CreatePassForm({ onClose, onSuccess }) {
 /*  Create Pass Drawer (desktop only — mobile uses /visitors/new) */
 /* ─────────────────────────────────────────────────────── */
 function CreatePassDrawer({ open, onClose, onSuccess }) {
-  useEffect(() => {
-    if (open) document.body.style.overflow = 'hidden';
-    else document.body.style.overflow = '';
-    return () => { document.body.style.overflow = ''; };
-  }, [open]);
+  useScrollLock(open);
 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex" onClick={onClose}>
-      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
-      <div className="absolute right-0 top-0 bottom-0 w-[480px] flex flex-col bg-white animate-slide-in-right"
+    <Portal>
+    <div className="fixed inset-0 z-[100] flex" onClick={onClose}>
+      <div className="overlay-backdrop" aria-hidden="true" />
+      <div className="absolute right-0 top-0 bottom-0 w-full sm:w-[480px] flex flex-col bg-white animate-slide-in-right"
         style={{ boxShadow: '-16px 0 48px rgba(15,23,42,0.12)', borderLeft: '1px solid #E2E8F0' }}
         onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 py-5 flex-shrink-0"
@@ -634,6 +632,7 @@ function CreatePassDrawer({ open, onClose, onSuccess }) {
         </div>
       </div>
     </div>
+    </Portal>
   );
 }
 

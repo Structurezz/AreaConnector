@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Siren, X, Radio, Shield, UserRound, Briefcase, Home, Phone } from 'lucide-react';
 import { useNotifications } from '../../context/NotificationContext';
+import Portal from './Portal';
 
 const ROLE_CFG = {
   security:       { label: 'Security Guard',  Icon: Shield,    bg: '#EFF6FF', color: '#1D4ED8', border: '#BFDBFE' },
@@ -41,8 +42,9 @@ export default function AlertModal() {
         : 'linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)';
 
   return (
+    <Portal>
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 9999,
+      position: 'fixed', inset: 0, zIndex: 300,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: 16, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)',
       animation: 'em-fadeIn 0.2s ease',
@@ -119,5 +121,6 @@ export default function AlertModal() {
         </div>
       </div>
     </div>
+    </Portal>
   );
 }

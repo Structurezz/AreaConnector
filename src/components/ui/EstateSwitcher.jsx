@@ -4,6 +4,7 @@ import { ChevronDown, X, Plus, Check, Building2, Loader2, ArrowRight } from 'luc
 import { useAuth } from '../../context/AuthContext';
 import { estateAPI } from '../../api';
 import toast from 'react-hot-toast';
+import { Z_INDEX } from './Portal';
 
 export default function EstateSwitcher({ compact = false }) {
   const { user, estate, switchEstate } = useAuth();
@@ -97,9 +98,9 @@ export default function EstateSwitcher({ compact = false }) {
     <div
       onClick={closeModal}
       style={{
-        position: 'fixed', inset: 0, zIndex: 9999,
-        background: 'rgba(15,23,42,0.55)',
-        backdropFilter: 'blur(4px)',
+        position: 'fixed', inset: 0, zIndex: Z_INDEX.drawer,
+        background: 'rgba(15,23,42,0.48)',
+        backdropFilter: 'blur(3px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '16px',
       }}
