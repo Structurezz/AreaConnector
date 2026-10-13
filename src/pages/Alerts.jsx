@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { alertAPI } from '../api';
+import { upsertAlert } from '../utils/alertEvents';
 import Badge, { alertTypeBadge, alertStatusBadge } from '../components/ui/Badge';
 import Spinner from '../components/ui/Spinner';
 import EmptyState from '../components/ui/EmptyState';
@@ -68,12 +69,17 @@ export default function ManagerAlerts() {
 
   useEffect(() => {
     if (!subscribe) return;
+    // Keep the list in sync with live events. New alerts are announced by
+    // the global siren popup (NotificationContext), so no extra toast here.
     const unsub = subscribe('new_alert', (alert) => {
-      setAlerts((prev) => [alert, ...prev]);
-      toast.error(`🚨 New ${alert.type} alert from ${alert.residentId?.name}!`);
+      setAlerts((prev) => {
+        const next = upsertAlert(prev, alert);
+        // Drop rows that no longer match the active status filter.
+        return statusFilter ? next.filter((a) => a.status === statusFilter) : next;
+      });
     });
     return unsub;
-  }, [subscribe]);
+  }, [subscribe, statusFilter]);
 
   const handleAck = async (id) => {
     try {
