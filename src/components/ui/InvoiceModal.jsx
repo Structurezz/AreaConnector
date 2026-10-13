@@ -301,7 +301,15 @@ export default function InvoiceModal({ paymentId, onClose }) {
 </html>`);
     win.document.close();
     win.focus();
-    setTimeout(() => { win.print(); win.close(); }, 500);
+    // Wait for every image (hero + logo) to finish loading before printing,
+    // otherwise the PDF is captured with blank image slots.
+    const imgs = Array.from(win.document.images);
+    Promise.all(imgs.map(img => img.complete
+      ? Promise.resolve()
+      : new Promise(res => { img.onload = res; img.onerror = res; })
+    )).then(() => {
+      setTimeout(() => { win.print(); win.close(); }, 100);
+    });
   };
 
   if (!paymentId) return null;
