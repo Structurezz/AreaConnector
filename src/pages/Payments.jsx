@@ -359,8 +359,8 @@ export default function ManagerPayments() {
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold text-slate-900">Payments</h1>
-          <p className="text-slate-400 text-sm hidden sm:block">Your estate wallet, dues and withdrawals</p>
+          <h1 className="text-lg sm:text-xl font-bold text-slate-900">Payments</h1>
+          <p className="text-slate-400 text-xs hidden sm:block">Your estate wallet, dues and withdrawals</p>
         </div>
         <button
           onClick={() => { loadData(); loadWallet(); if (tab === 'paystack') loadLedger(); }}
