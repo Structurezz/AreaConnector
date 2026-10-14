@@ -1,6 +1,7 @@
 import SeoTracker from './components/SeoTracker';
 import { CallProvider } from './context/CallContext';
 import CallOverlay from './components/calls/CallOverlay';
+import Calls from './pages/Calls';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
@@ -95,6 +96,7 @@ function AppRoutes() {
       <Route path="/lounge/dj" element={<RequireManager><PlanGate feature="residentLounge" featureName="Lounge & Events"><DJConsole /></PlanGate></RequireManager>} />
       <Route path="/podcasts" element={<RequireManager><PlanGate feature="residentLounge" featureName="Podcast"><Podcasts /></PlanGate></RequireManager>} />
       <Route path="/guards" element={<RequireManager><Guards /></RequireManager>} />
+      <Route path="/calls" element={<RequireManager><Calls /></RequireManager>} />
       <Route path="/guards/:id" element={<RequireManager><GuardDetail /></RequireManager>} />
       <Route path="/courtroom" element={<RequireManager><Courtroom /></RequireManager>} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />

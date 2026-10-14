@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import {
-  Menu, X,
+  Menu, X, PhoneCall,
   LayoutDashboard, UserCheck, Users, Home, Megaphone, Bell, Settings,
 } from 'lucide-react';
 import Sidebar from './Sidebar';
@@ -63,6 +63,10 @@ export default function AppLayout({ children }) {
             <EstateSwitcher compact />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <NavLink to="/calls" aria-label="Calls" className="p-2 rounded-xl transition-all"
+              style={({ isActive }) => ({ color: isActive ? '#059669' : '#64748B', background: isActive ? '#ECFDF5' : 'transparent' })}>
+              <PhoneCall size={20} />
+            </NavLink>
             <NotificationBell />
             <button
               onClick={() => setSidebarOpen(true)}

@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, UserCheck, Users, Home, Megaphone,
   MessageSquare, Bell, Settings, LogOut, CreditCard,
-  Zap, Crown, Music, Lock, Shield, Scale, Radio, Gift,
+  Zap, Crown, Music, Lock, Shield, Scale, Radio, Gift, PhoneCall,
 } from 'lucide-react';
 import { usePlan } from '../../hooks/usePlan';
 import NotificationBell from '../ui/NotificationBell';
@@ -20,6 +20,7 @@ const NAV = [
       { to: '/announcements', icon: Megaphone,       label: 'Announcements',   feature: 'announcements' },
       { to: '/payments',      icon: CreditCard,      label: 'Payments',        feature: 'paymentSystem' },
       { to: '/guards',        icon: Shield,          label: 'Guards' },
+      { to: '/calls',         icon: PhoneCall,       label: 'Calls' },
     ],
   },
   {
@@ -84,6 +85,11 @@ export default function Sidebar({ mobile = false, onClose }) {
               <EstateSwitcher />
             </div>
           </Link>
+          <NavLink to="/calls" aria-label="Calls" onClick={onClose}
+            className="p-2 rounded-xl transition-all hover:bg-slate-100"
+            style={({ isActive }) => ({ color: isActive ? '#059669' : '#64748B' })}>
+            <PhoneCall size={19} />
+          </NavLink>
           <NotificationBell />
         </div>
 
