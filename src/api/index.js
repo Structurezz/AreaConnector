@@ -241,4 +241,6 @@ export const callAPI = {
   decline:  (id) => api.post(`/calls/${id}/decline`),
   cancel:   (id) => api.post(`/calls/${id}/cancel`),
   end:      (id) => api.post(`/calls/${id}/end`),
+  // Check up on a resident: in-app notification + email with your profile
+  buzz:     (toUserId, kind, message) => api.post('/calls/buzz', { toUserId, kind, message }),
 };

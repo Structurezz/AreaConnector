@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { format, isToday, isYesterday } from 'date-fns';
-import { Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, Search, RefreshCw, ShieldCheck } from 'lucide-react';
+import { Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, Search, RefreshCw, ShieldCheck, Hand } from 'lucide-react';
+import BottomSheet from '../components/payments/BottomSheet';
 import { callAPI } from '../api';
 import { useCall } from '../context/CallContext';
 
@@ -10,6 +11,12 @@ import { useCall } from '../context/CallContext';
 
 const dayLabel = (d) => (isToday(d) ? 'Today' : isYesterday(d) ? 'Yesterday' : format(d, 'EEE, MMM d'));
 const mmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+const BUZZES = [
+  { kind: 'checkin',         emoji: '👋', label: 'Check in' },
+  { kind: 'greeting',        emoji: '😊', label: 'Say hello' },
+  { kind: 'thinking_of_you', emoji: '💛', label: 'Thinking of you' },
+];
+
 const ROLE_LABEL = { security: 'Security', estate_manager: 'Estate Manager', super_admin: 'Estate Manager', resident: 'Resident' };
 
 function Avatar({ person, size = 44 }) {
@@ -34,6 +41,23 @@ export default function Calls() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('residents');
   const [q, setQ] = useState('');
+  // Check-in buzz
+  const [buzzFor, setBuzzFor] = useState(null);
+  const [buzzKind, setBuzzKind] = useState('checkin');
+  const [buzzNote, setBuzzNote] = useState('');
+  const [sending, setSending] = useState(false);
+
+  const openBuzz = (p) => { setBuzzFor(p); setBuzzKind('checkin'); setBuzzNote(''); };
+  const sendBuzz = async () => {
+    setSending(true);
+    try {
+      const { data } = await callAPI.buzz(buzzFor._id, buzzKind, buzzNote);
+      toast.success(data.message || 'Sent');
+      setBuzzFor(null);
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Could not send');
+    } finally { setSending(false); }
+  };
 
   const load = useCallback(async () => {
     try {
@@ -111,6 +135,12 @@ export default function Calls() {
                       {p.role === 'resident' ? (p.unit || 'Resident') : ROLE_LABEL[p.role]}{p.online ? ' · online' : ''}
                     </div>
                   </div>
+                  {p.role === 'resident' && (
+                    <button onClick={() => openBuzz(p)} aria-label={`Check up on ${p.name}`} title="Check up on them"
+                      className="w-10 h-10 rounded-full flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-100">
+                      <Hand size={17} />
+                    </button>
+                  )}
                   <button onClick={() => startCall(p)} disabled={!!call} aria-label={`Call ${p.name}`}
                     className="w-10 h-10 rounded-full flex items-center justify-center bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-40">
                     <Phone size={17} />
@@ -154,6 +184,36 @@ export default function Calls() {
           })}
         </div>
       )}
+      {/* ── Check up on a resident ── */}
+      <BottomSheet open={!!buzzFor} onClose={() => !sending && setBuzzFor(null)} title={buzzFor ? `Check up on ${buzzFor.name.split(' ')[0]}` : ''}
+        subtitle="They'll get a notification and an email from you as Estate Manager"
+        footer={<button onClick={sendBuzz} disabled={sending} className="btn-primary w-full py-3.5 text-base gap-2">
+          {sending ? 'Sending…' : <><Hand size={17} /> Send</>}
+        </button>}>
+        {buzzFor && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50">
+              <Avatar person={buzzFor} size={48} />
+              <div className="min-w-0">
+                <div className="font-semibold text-slate-900 truncate">{buzzFor.name}</div>
+                <div className="text-xs text-slate-400">{buzzFor.unit || 'Resident'}</div>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {BUZZES.map((b) => (
+                <button key={b.kind} type="button" onClick={() => setBuzzKind(b.kind)}
+                  className={`p-3 rounded-2xl border text-center transition-all ${buzzKind === b.kind ? 'border-emerald-400 bg-emerald-50' : 'border-slate-200'}`}>
+                  <div className="text-2xl">{b.emoji}</div>
+                  <div className="text-xs font-semibold text-slate-800 mt-1">{b.label}</div>
+                </button>
+              ))}
+            </div>
+            <textarea value={buzzNote} onChange={(e) => setBuzzNote(e.target.value.slice(0, 200))} rows={2}
+              placeholder="Add a short note (optional) — e.g. Hope you're settling in well" className="input-field resize-none" />
+            <p className="text-[11px] text-slate-400">One check-in per resident every 2 hours.</p>
+          </div>
+        )}
+      </BottomSheet>
     </div>
   );
 }
