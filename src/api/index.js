@@ -244,3 +244,8 @@ export const callAPI = {
   // Check up on a resident: in-app notification + email with your profile
   buzz:     (toUserId, kind, message) => api.post('/calls/buzz', { toUserId, kind, message }),
 };
+
+// Personal safety: residents sharing live location with staff
+export const safetyAPI = {
+  activeLocations: () => api.get('/safety/location/active'),
+};

@@ -12,6 +12,7 @@ import EstateSwitcher from '../ui/EstateSwitcher';
 import { NotificationProvider } from '../../context/NotificationContext';
 import PodcastLivePill from '../PodcastLivePill';
 import LiveNotificationModal from '../LiveNotificationModal';
+import LiveLocations from '../safety/LiveLocations';
 
 const BOTTOM_NAV = [
   { to: '/dashboard',   icon: LayoutDashboard, label: 'Home' },
@@ -85,6 +86,8 @@ export default function AppLayout({ children }) {
           style={{ background: 'var(--bg)' }}>
           {children}
         </main>
+        {/* Residents sharing live location for their safety */}
+        <LiveLocations />
       </div>
 
       {/* Floating "AreaConnect FM is LIVE" pill */}
