@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
 import {
@@ -142,11 +142,32 @@ function Chips({ value, onChange, options }) {
   );
 }
 
-function SectionHead({ title, hint }) {
+function SectionHead({ title, hint, busy }) {
   return (
     <div className="px-0.5">
-      <h2 className="text-base font-bold text-slate-900">{title}</h2>
+      <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">{title}{busy && <RefreshCw size={13} className="animate-spin text-emerald-500" />}</h2>
       <p className="text-xs text-slate-500">{hint}</p>
+    </div>
+  );
+}
+
+// Placeholder cards shown inside the tab body on first load.
+function Skeleton({ rows = 3, compact }) {
+  return (
+    <div className={compact ? 'glass-card divide-y divide-slate-100 overflow-hidden' : 'grid lg:grid-cols-2 gap-3'}>
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className={`${compact ? 'p-4' : 'glass-card p-4'} animate-pulse`}>
+          <div className="flex gap-3">
+            <div className={`${compact ? 'w-11 h-11 rounded-full' : 'w-[60px] h-[60px] rounded-xl'} bg-slate-200 shrink-0`} />
+            <div className="flex-1 space-y-2 py-1">
+              <div className="h-3 w-20 rounded bg-slate-200" />
+              <div className="h-4 w-3/4 rounded bg-slate-200" />
+              <div className="h-3 w-1/2 rounded bg-slate-100" />
+            </div>
+          </div>
+          {!compact && <div className="grid grid-cols-3 gap-2 mt-4"><div className="h-10 rounded-xl bg-slate-100" /><div className="h-10 rounded-xl bg-slate-100" /><div className="h-10 rounded-xl bg-slate-100" /></div>}
+        </div>
+      ))}
     </div>
   );
 }
@@ -192,31 +213,40 @@ export default function Marketplace() {
   const { startCall } = useCall() || {};
   const [tab, setTab] = useState('queue');
   const [stats, setStats] = useState(null);
-  const [queue, setQueue] = useState([]);
+  const [queue, setQueue] = useState(null); // null = not loaded yet
   const [medians, setMedians] = useState({});
-  const [all, setAll] = useState([]);
+  const [all, setAll] = useState(null); // null = not loaded yet
   const [allStatus, setAllStatus] = useState('active');
   const [sellerFilter, setSellerFilter] = useState(null); // { _id, name }
   const [q, setQ] = useState('');
-  const [reports, setReports] = useState([]);
+  const [reports, setReports] = useState(null); // null = not loaded yet
   const [reportStatus, setReportStatus] = useState('open');
-  const [sellers, setSellers] = useState([]);
+  const [sellers, setSellers] = useState(null); // null = not loaded yet
   const [sellerOpen, setSellerOpen] = useState(null);
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [ask, setAsk] = useState(null);
 
   const loadStats = () => marketAdminAPI.stats().then(({ data }) => setStats(data.data)).catch(() => {});
+  // Only the latest request may update the screen (fast tab/filter switches).
+  const reqId = useRef(0);
   const load = useCallback(async () => {
+    const id = ++reqId.current;
+    const fresh = () => id === reqId.current;
     setLoading(true);
     try {
-      if (tab === 'queue') { const { data } = await marketAdminAPI.listings({ status: 'pending_approval' }); setQueue(data.data); setMedians(data.medians || {}); }
-      if (tab === 'listings') { const { data } = await marketAdminAPI.listings({ status: allStatus, q: q || undefined, sellerId: sellerFilter?._id }); setAll(data.data); setMedians(data.medians || {}); }
-      if (tab === 'reports') { const { data } = await marketAdminAPI.reports(reportStatus); setReports(data.data); }
-      if (tab === 'sellers') { const { data } = await marketAdminAPI.sellers(); setSellers(data.data); }
-      if (tab === 'rules') { const { data } = await marketAdminAPI.settings(); setSettings({ ...data.data, medians: data.medians }); }
-    } catch (e) { toast.error(e.response?.data?.message || 'Couldn\'t load'); }
-    finally { setLoading(false); }
+      if (tab === 'queue') { const { data } = await marketAdminAPI.listings({ status: 'pending_approval' }); if (!fresh()) return; setQueue(data.data); setMedians(data.medians || {}); }
+      if (tab === 'listings') { const { data } = await marketAdminAPI.listings({ status: allStatus, q: q || undefined, sellerId: sellerFilter?._id }); if (!fresh()) return; setAll(data.data); setMedians(data.medians || {}); }
+      if (tab === 'reports') { const { data } = await marketAdminAPI.reports(reportStatus); if (fresh()) setReports(data.data); }
+      if (tab === 'sellers') { const { data } = await marketAdminAPI.sellers(); if (fresh()) setSellers(data.data); }
+      if (tab === 'rules') { const { data } = await marketAdminAPI.settings(); if (fresh()) setSettings({ ...data.data, medians: data.medians }); }
+    } catch (e) {
+      if (!fresh()) return;
+      toast.error(e.response?.data?.message || 'Couldn\'t load');
+      // Don't leave skeletons up forever after a failed first load.
+      ({ queue: setQueue, listings: setAll, reports: setReports, sellers: setSellers })[tab]?.((v) => v ?? []);
+    }
+    finally { if (fresh()) setLoading(false); }
   }, [tab, allStatus, q, reportStatus, sellerFilter]);
 
   useEffect(() => { loadStats(); }, []);
@@ -302,15 +332,14 @@ export default function Marketplace() {
         </nav>
       </div>
 
-      <SectionHead title={current.label} hint={current.hint} />
+      <SectionHead title={current.label} hint={current.hint} busy={loading} />
 
-      {loading && tab !== 'rules' && <div className="py-12 flex justify-center"><RefreshCw size={22} className="animate-spin text-emerald-500" /></div>}
 
-      {!loading && tab === 'queue' && (queue.length === 0 ? (
+      {tab === 'queue' && (queue === null ? <Skeleton /> : queue.length === 0 ? (
         <AllClear title="All caught up" body="Listings held for price checks, reports or approval show up here."
           next={stats?.openReports ? { label: `Review ${stats.openReports} open report${stats.openReports > 1 ? 's' : ''}`, onClick: () => go('reports') } : null} />
       ) : (
-        <div className="grid lg:grid-cols-2 gap-3">
+        <div className={`grid lg:grid-cols-2 gap-3 transition-opacity ${loading ? 'opacity-60' : ''}`}>
           {queue.map((l) => (
             <ListingRow key={l._id} l={l} median={medians[l.category]} actions={<>
               <Btn tone="green" onClick={() => approve(l)}><Check size={16} /> Approve</Btn>
@@ -333,8 +362,8 @@ export default function Marketplace() {
               {sellerFilter.name}'s listings <X size={14} />
             </button>
           )}
-          {!loading && (all.length === 0 ? <AllClear icon={ShoppingBag} title="No listings" body="Nothing matches this filter." /> : (
-            <div className="grid lg:grid-cols-2 gap-3">
+          {all === null ? <Skeleton /> : (all.length === 0 ? <AllClear icon={ShoppingBag} title="No listings" body="Nothing matches this filter." /> : (
+            <div className={`grid lg:grid-cols-2 gap-3 transition-opacity ${loading ? 'opacity-60' : ''}`}>
               {all.map((l) => (
                 <ListingRow key={l._id} l={l} median={medians[l.category]} actions={
                   ['active', 'sold'].includes(l.status) ? <Btn tone="red" onClick={() => remove(l)}><Trash2 size={15} /> Take down</Btn>
@@ -350,10 +379,10 @@ export default function Marketplace() {
       {tab === 'reports' && (
         <div className="space-y-3">
           <Chips value={reportStatus} onChange={setReportStatus} options={[['open', 'Open'], ['upheld', 'Upheld'], ['dismissed', 'Dismissed'], ['all', 'All']]} />
-          {!loading && (reports.length === 0 ? (
+          {reports === null ? <Skeleton /> : (reports.length === 0 ? (
             <AllClear icon={Flag} title={reportStatus === 'open' ? 'No open reports' : 'No reports'} body="Residents can report scams, price gouging and misleading listings." />
           ) : (
-            <div className="grid lg:grid-cols-2 gap-3">
+            <div className={`grid lg:grid-cols-2 gap-3 transition-opacity ${loading ? 'opacity-60' : ''}`}>
               {reports.map((r) => (
                 <div key={r._id} className="glass-card p-3.5 sm:p-4">
                   <div className="flex gap-3">
@@ -386,8 +415,8 @@ export default function Marketplace() {
         </div>
       )}
 
-      {!loading && tab === 'sellers' && (sellers.length === 0 ? <AllClear icon={Users} title="No sellers yet" body="Residents who list items appear here." /> : (
-        <div className="glass-card divide-y divide-slate-100 overflow-hidden">
+      {tab === 'sellers' && (sellers === null ? <Skeleton rows={4} compact /> : sellers.length === 0 ? <AllClear icon={Users} title="No sellers yet" body="Residents who list items appear here." /> : (
+        <div className={`glass-card divide-y divide-slate-100 overflow-hidden transition-opacity ${loading ? 'opacity-60' : ''}`}>
           {sellers.map((s) => (
             <button key={s._id} onClick={() => setSellerOpen(s)} className="w-full p-3.5 sm:p-4 flex items-center gap-3 text-left hover:bg-slate-50 active:bg-slate-50">
               <div className="w-11 h-11 rounded-full bg-emerald-50 text-emerald-700 font-bold flex items-center justify-center shrink-0 overflow-hidden">
@@ -430,7 +459,7 @@ function Rules({ settings, onSaved }) {
   const [saving, setSaving] = useState(false);
   useEffect(() => { if (settings) setF(toForm(settings)); }, [settings]);
   const dirty = useMemo(() => f && settings && JSON.stringify(f) !== JSON.stringify(toForm(settings)), [f, settings]);
-  if (!f) return <div className="py-12 flex justify-center"><RefreshCw size={22} className="animate-spin text-emerald-500" /></div>;
+  if (!f) return <Skeleton rows={2} />;
   const set = (k, v) => setF((x) => ({ ...x, [k]: v }));
 
   const save = async () => {
