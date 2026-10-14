@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, UserCheck, Users, Home, Megaphone,
   MessageSquare, Bell, Settings, LogOut, CreditCard,
-  Zap, Crown, Music, Lock, Shield, Scale, Radio, Gift, PhoneCall,
+  Zap, Crown, Music, Lock, Shield, Scale, Radio, Gift, PhoneCall, ShoppingBag,
 } from 'lucide-react';
 import { usePlan } from '../../hooks/usePlan';
 import NotificationBell from '../ui/NotificationBell';
@@ -27,6 +27,7 @@ const NAV = [
     section: 'Community',
     links: [
       { to: '/lounge',     icon: Music,         label: 'Lounge & Events', feature: 'residentLounge' },
+      { to: '/marketplace', icon: ShoppingBag,  label: 'Marketplace',     feature: 'marketplace' },
       { to: '/podcasts',   icon: Radio,         label: 'Podcast',         feature: 'residentLounge' },
       { to: '/chat',       icon: MessageSquare, label: 'Community Chat',  feature: 'communityChat' },
       { to: '/alerts',     icon: Bell,          label: 'Alerts',          feature: 'securityPortal' },

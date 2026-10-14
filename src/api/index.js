@@ -249,3 +249,20 @@ export const callAPI = {
 export const safetyAPI = {
   activeLocations: () => api.get('/safety/location/active'),
 };
+
+// Marketplace control: moderation, consumer protection, price rules
+export const marketAdminAPI = {
+  stats:     () => api.get('/marketplace/admin/stats'),
+  listings:  (params) => api.get('/marketplace/admin/listings', { params }),
+  approve:   (id) => api.post(`/marketplace/admin/listings/${id}/approve`),
+  reject:    (id, reason) => api.post(`/marketplace/admin/listings/${id}/reject`, { reason }),
+  remove:    (id, reason) => api.post(`/marketplace/admin/listings/${id}/remove`, { reason }),
+  restore:   (id) => api.post(`/marketplace/admin/listings/${id}/restore`),
+  reports:   (status = 'open') => api.get('/marketplace/admin/reports', { params: { status } }),
+  resolve:   (id, data) => api.post(`/marketplace/admin/reports/${id}/resolve`, data),
+  sellers:   () => api.get('/marketplace/admin/sellers'),
+  suspend:   (id, reason, days) => api.post(`/marketplace/admin/sellers/${id}/suspend`, { reason, days }),
+  unsuspend: (id) => api.post(`/marketplace/admin/sellers/${id}/unsuspend`),
+  settings:  () => api.get('/marketplace/admin/settings'),
+  saveSettings: (data) => api.put('/marketplace/admin/settings', data),
+};
