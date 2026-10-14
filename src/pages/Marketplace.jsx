@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
 import {
-  ShoppingBag, RefreshCw, ShieldCheck, Check, X, Flag, Users, Settings2, ListChecks, Search,
+  ShoppingBag, RefreshCw, ShieldCheck, Receipt, Lock, Check, X, Flag, Users, Settings2, ListChecks, Search,
   Ban, RotateCcw, Trash2, Star, AlertTriangle, TrendingUp, Phone, ChevronRight, CheckCircle2, Eye,
 } from 'lucide-react';
 import BottomSheet from '../components/payments/BottomSheet';
@@ -204,6 +204,7 @@ function SellerSheet({ seller: s, onClose, onCall, onListings, onSuspend, onLift
 const TABS = [
   { id: 'queue',    label: 'Review queue',  short: 'Review',   icon: ListChecks, hint: 'Listings waiting for your decision' },
   { id: 'reports',  label: 'Reports',       short: 'Reports',  icon: Flag,       hint: 'What residents flagged as unfair or unsafe' },
+  { id: 'orders',   label: 'Orders',        short: 'Orders',   icon: Receipt,    hint: 'Payments held in escrow and buyer disputes' },
   { id: 'listings', label: 'Listings',      short: 'Listings', icon: ShoppingBag, hint: 'Everything on your estate\'s marketplace' },
   { id: 'sellers',  label: 'Sellers',       short: 'Sellers',  icon: Users,      hint: 'Ratings, reports and suspensions' },
   { id: 'rules',    label: 'Price & rules', short: 'Rules',    icon: Settings2,  hint: 'Price caps and protection settings' },
@@ -221,6 +222,8 @@ export default function Marketplace() {
   const [q, setQ] = useState('');
   const [reports, setReports] = useState(null); // null = not loaded yet
   const [reportStatus, setReportStatus] = useState('open');
+  const [orders, setOrders] = useState(null);
+  const [orderStatus, setOrderStatus] = useState('disputed');
   const [sellers, setSellers] = useState(null); // null = not loaded yet
   const [sellerOpen, setSellerOpen] = useState(null);
   const [settings, setSettings] = useState(null);
@@ -238,16 +241,17 @@ export default function Marketplace() {
       if (tab === 'queue') { const { data } = await marketAdminAPI.listings({ status: 'pending_approval' }); if (!fresh()) return; setQueue(data.data); setMedians(data.medians || {}); }
       if (tab === 'listings') { const { data } = await marketAdminAPI.listings({ status: allStatus, q: q || undefined, sellerId: sellerFilter?._id }); if (!fresh()) return; setAll(data.data); setMedians(data.medians || {}); }
       if (tab === 'reports') { const { data } = await marketAdminAPI.reports(reportStatus); if (fresh()) setReports(data.data); }
+      if (tab === 'orders') { const { data } = await marketAdminAPI.orders(orderStatus); if (fresh()) setOrders(data.data); }
       if (tab === 'sellers') { const { data } = await marketAdminAPI.sellers(); if (fresh()) setSellers(data.data); }
       if (tab === 'rules') { const { data } = await marketAdminAPI.settings(); if (fresh()) setSettings({ ...data.data, medians: data.medians }); }
     } catch (e) {
       if (!fresh()) return;
       toast.error(e.response?.data?.message || 'Couldn\'t load');
       // Don't leave skeletons up forever after a failed first load.
-      ({ queue: setQueue, listings: setAll, reports: setReports, sellers: setSellers })[tab]?.((v) => v ?? []);
+      ({ queue: setQueue, listings: setAll, reports: setReports, sellers: setSellers, orders: setOrders })[tab]?.((v) => v ?? []);
     }
     finally { if (fresh()) setLoading(false); }
-  }, [tab, allStatus, q, reportStatus, sellerFilter]);
+  }, [tab, allStatus, q, reportStatus, sellerFilter, orderStatus]);
 
   useEffect(() => { loadStats(); }, []);
   useEffect(() => { const t = setTimeout(load, tab === 'listings' ? 250 : 0); return () => clearTimeout(t); }, [load, tab]);
@@ -277,13 +281,20 @@ export default function Marketplace() {
     else run(action === 'dismiss' ? 'Reviewed — no action needed' : 'Warning issued').catch(() => {});
   };
 
-  const badges = { queue: stats?.pending, reports: stats?.openReports };
+  const badges = { queue: stats?.pending, reports: stats?.openReports, orders: stats?.disputes };
+  const settleDispute = (o, action) => setAsk({
+    title: action === 'refund' ? 'Refund the buyer' : 'Pay the seller',
+    subtitle: action === 'refund' ? `${naira(o.amount)} goes back to ${o.buyerId?.name || 'the buyer'}` : `${naira(o.sellerAmount)} is released to ${o.sellerId?.name || 'the seller'}`,
+    cta: action === 'refund' ? 'Refund buyer' : 'Release payment', danger: action === 'refund',
+    quick: action === 'refund' ? ['Item not delivered', 'Item not as described', 'Seller unresponsive'] : ['Delivery confirmed by estate', 'Item matched the listing', 'Buyer\'s claim not supported'],
+    run: (note) => act(() => marketAdminAPI.resolveOrder(o._id, action, note), action === 'refund' ? 'Buyer refunded' : 'Seller paid'),
+  });
   const current = TABS.find((t) => t.id === tab);
   const TILES = stats ? [
     { k: 'To review', v: stats.pending, onClick: () => go('queue'), alert: stats.pending > 0 },
     { k: 'Open reports', v: stats.openReports, onClick: () => go('reports'), alert: stats.openReports > 0 },
     { k: 'Live listings', v: stats.active, onClick: () => go('listings', 'active') },
-    { k: 'Sold value', v: `₦${Number(stats.soldValue || 0).toLocaleString('en-NG')}`, onClick: () => go('listings', 'sold') },
+    { k: stats.disputes ? 'Disputes' : 'Sold value', v: stats.disputes || `₦${Number(stats.soldValue || 0).toLocaleString('en-NG')}`, onClick: () => { setOrderStatus(stats.disputes ? 'disputed' : 'completed'); go('orders'); }, alert: stats.disputes > 0 },
   ] : [];
 
   return (
@@ -315,7 +326,7 @@ export default function Marketplace() {
 
       {/* Sticky section switcher: icon grid on phones, labelled pills on larger screens */}
       <div className="sticky -top-4 md:-top-6 lg:-top-8 z-20 -mx-4 px-4 md:mx-0 md:px-0 py-2 bg-[#F8FAFC]/95 backdrop-blur">
-        <nav className="grid grid-cols-5 gap-1 p-1 rounded-2xl bg-white border border-slate-200 shadow-sm">
+        <nav className="grid grid-cols-6 gap-1 p-1 rounded-2xl bg-white border border-slate-200 shadow-sm">
           {TABS.map(({ id, label, short, icon: Icon }) => {
             const active = tab === id;
             return (
@@ -373,6 +384,47 @@ export default function Marketplace() {
               ))}
             </div>
           ))}
+        </div>
+      )}
+
+      {tab === 'orders' && (
+        <div className="space-y-3">
+          <Chips value={orderStatus} onChange={setOrderStatus} options={[['disputed', 'Disputes'], ['paid', 'Awaiting delivery'], ['delivered', 'Delivered'], ['completed', 'Completed'], ['refunded', 'Refunded'], ['all', 'All']]} />
+          {orders === null ? <Skeleton /> : orders.length === 0 ? (
+            <AllClear icon={orderStatus === 'disputed' ? CheckCircle2 : Receipt} title={orderStatus === 'disputed' ? 'No disputes' : 'No orders'} body="Residents pay through the app; money is held until the buyer confirms delivery." />
+          ) : (
+            <div className={`grid lg:grid-cols-2 gap-3 transition-opacity ${loading ? 'opacity-60' : ''}`}>
+              {orders.map((o) => (
+                <div key={o._id} className="glass-card p-3.5 sm:p-4">
+                  <div className="flex gap-3">
+                    <Thumb l={{ images: o.image ? [o.image] : [], category: o.category }} size={56} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${o.status === 'disputed' ? 'bg-red-50 text-red-700' : o.status === 'completed' ? 'bg-emerald-50 text-emerald-700' : o.status === 'refunded' ? 'bg-slate-100 text-slate-600' : 'bg-amber-50 text-amber-700'}`}>{o.status === 'paid' ? 'Awaiting delivery' : o.status}</span>
+                        {['paid', 'delivered', 'disputed'].includes(o.status) && <span className="text-[10px] font-semibold text-slate-500 inline-flex items-center gap-0.5"><Lock size={10} /> in escrow</span>}
+                      </div>
+                      <p className="font-semibold text-slate-900 truncate mt-1">{o.title}{o.quantity > 1 ? ` × ${o.quantity}` : ''}</p>
+                      <p className="text-sm font-bold text-slate-700">{naira(o.amount)}</p>
+                      <p className="text-xs text-slate-500">{o.buyerId?.name || 'Buyer'} → {o.sellerId?.name || 'Seller'} · {ago(o.paidAt)}</p>
+                    </div>
+                  </div>
+                  {o.status === 'disputed' && (
+                    <p className="text-sm text-red-800 mt-3 rounded-xl bg-red-50 p-3"><b>{o.dispute?.reason}</b>{o.dispute?.note ? ` — “${o.dispute.note}”` : ''}</p>
+                  )}
+                  {o.dispute?.resolution && o.status !== 'disputed' && <p className="text-xs text-slate-500 mt-2">Decision: {o.dispute.resolution}{o.dispute.resolvedBy?.name ? ` — ${o.dispute.resolvedBy.name}` : ''}</p>}
+                  {o.refund?.status === 'failed' && <p className="text-xs text-red-600 mt-2">Refund failed at Paystack — AreaConnect support will retry it.</p>}
+                  {['paid', 'delivered', 'disputed'].includes(o.status) && (
+                    <div className="grid grid-cols-2 gap-2 mt-3 sm:flex sm:flex-wrap">
+                      <Btn tone="red" onClick={() => settleDispute(o, 'refund')}><RotateCcw size={15} /> Refund buyer</Btn>
+                      <Btn tone="green" onClick={() => settleDispute(o, 'release')}><Check size={15} /> Pay seller</Btn>
+                      {o.buyerId?._id && <Btn onClick={() => startCall?.(o.buyerId)}><Phone size={15} /> Buyer</Btn>}
+                      {o.sellerId?._id && <Btn onClick={() => startCall?.(o.sellerId)}><Phone size={15} /> Seller</Btn>}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

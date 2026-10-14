@@ -263,6 +263,8 @@ export const marketAdminAPI = {
   sellers:   () => api.get('/marketplace/admin/sellers'),
   suspend:   (id, reason, days) => api.post(`/marketplace/admin/sellers/${id}/suspend`, { reason, days }),
   unsuspend: (id) => api.post(`/marketplace/admin/sellers/${id}/unsuspend`),
+  orders:    (status) => api.get('/marketplace/admin/orders', { params: { status } }),
+  resolveOrder: (id, action, note) => api.post(`/marketplace/admin/orders/${id}/resolve`, { action, note }),
   settings:  () => api.get('/marketplace/admin/settings'),
   saveSettings: (data) => api.put('/marketplace/admin/settings', data),
 };
