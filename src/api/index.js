@@ -230,3 +230,15 @@ export const courtAPI = {
   managerVerdict:    (id, data) => api.post(`/court/${id}/manager-verdict`, data),
   overrideVerdict:   (id, data) => api.post(`/court/${id}/override-verdict`, data),
 };
+
+// Calls (staff receive free emergency calls from residents and can call back)
+export const callAPI = {
+  config:   () => api.get('/calls/config'),
+  directory: () => api.get('/calls/directory'),
+  history:  () => api.get('/calls/history'),
+  start:    (calleeId) => api.post('/calls', { calleeId }),
+  answer:   (id) => api.post(`/calls/${id}/answer`),
+  decline:  (id) => api.post(`/calls/${id}/decline`),
+  cancel:   (id) => api.post(`/calls/${id}/cancel`),
+  end:      (id) => api.post(`/calls/${id}/end`),
+};

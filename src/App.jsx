@@ -1,4 +1,6 @@
 import SeoTracker from './components/SeoTracker';
+import { CallProvider } from './context/CallContext';
+import CallOverlay from './components/calls/CallOverlay';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
@@ -107,11 +109,14 @@ export default function App() {
       <SeoTracker />
       <AuthProvider>
         <SocketProvider>
+          <CallProvider>
+          <CallOverlay />
           <AppRoutes />
           <Toaster position="top-right" toastOptions={{
             style: { background: '#1C1C20', color: '#E4E4E7', border: '1px solid #2E2E33', borderRadius: '8px', fontSize: '0.875rem' },
             success: { iconTheme: { primary: '#10B981', secondary: '#1C1C20' } },
           }} />
+          </CallProvider>
         </SocketProvider>
       </AuthProvider>
     </BrowserRouter>

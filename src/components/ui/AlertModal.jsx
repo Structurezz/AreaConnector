@@ -4,6 +4,7 @@ import { alertAPI } from '../../api';
 import { Siren, X, Radio, Shield, UserRound, Briefcase, Home, Phone, MapPin, ShieldAlert } from 'lucide-react';
 import { useNotifications } from '../../context/NotificationContext';
 import Portal from './Portal';
+import CallButton from '../calls/CallButton';
 
 const ROLE_CFG = {
   security:       { label: 'Security Guard',  Icon: Shield,    bg: '#EFF6FF', color: '#1D4ED8', border: '#BFDBFE' },
@@ -128,6 +129,12 @@ export default function AlertModal() {
             {activeAlert.body}
           </p>
 
+          {!isBroadcast && meta.raisedById && (
+            <div style={{ margin: '-6px 0 14px' }}>
+              <CallButton person={{ _id: meta.raisedById, name: meta.raisedByName, role: meta.raisedByRole, profilePhoto: meta.raisedByPhoto, unit: meta.raisedByUnit }}
+                label={`Call ${(meta.raisedByName || 'resident').split(' ')[0]} now (free)`} style={{ padding: '8px 14px', fontSize: 13 }} />
+            </div>
+          )}
           {(meta.location || meta.actionRequired || meta.contactNumber) && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, margin: '-6px 0 18px' }}>
               {meta.location && (

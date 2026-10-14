@@ -160,7 +160,7 @@ export function NotificationProvider({ children }) {
             alertId: alert._id, alertType: alert.type, severity: alert.severity,
             location: alert.location, actionRequired: alert.actionRequired, contactNumber: alert.contactNumber,
             raisedByRole: alert.raisedByRole || alert.residentId?.role || 'resident',
-            raisedByName: alert.residentId?.name, raisedByPhone: alert.residentId?.phone,
+            raisedById: alert.residentId?._id, raisedByName: alert.residentId?.name, raisedByPhone: alert.residentId?.phone, raisedByPhoto: alert.residentId?.profilePhoto,
             raisedByUnit: unitLabelOf(alert),
           },
         });
