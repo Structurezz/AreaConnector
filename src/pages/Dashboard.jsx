@@ -6,6 +6,7 @@ import {
   UsersRound, LogIn, Sparkles, ChevronRight,
 } from 'lucide-react';
 import { estateAPI, visitorAPI, alertAPI, announcementAPI } from '../api';
+import { VisitorRow } from '../components/visitors/MobileVisitors';
 import { useAuth } from '../context/AuthContext';
 import { visitorStatusBadge } from '../components/ui/Badge';
 import Badge from '../components/ui/Badge';
@@ -385,63 +386,8 @@ export default function ManagerDashboard() {
             <p className="text-sm" style={{ color: '#94A3B8' }}>No visitors registered yet</p>
           </div>
         ) : (
-          <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory"
-            style={{ scrollbarWidth: 'thin' }}>
-            {recentVisitors.slice(0, 8).map((v) => (
-              <Link key={v._id} to="/visitors"
-                className="snap-start flex-shrink-0 w-[220px] rounded-2xl p-3.5 transition-all group"
-                style={{
-                  background: '#FFFFFF',
-                  border: '1px solid rgba(15,23,42,0.06)',
-                  boxShadow: '0 1px 2px rgba(15,23,42,0.04)',
-                  textDecoration: 'none',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 24px rgba(15,23,42,0.10)'; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 1px 2px rgba(15,23,42,0.04)'; }}>
-                <div className="flex items-center gap-2.5 mb-2.5">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0"
-                    style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.14), rgba(16,185,129,0.05))', color: '#059669', border: '1px solid rgba(16,185,129,0.20)' }}>
-                    {v.visitorName[0]?.toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-bold truncate" style={{ color: '#0F172A', letterSpacing: '-0.01em' }}>
-                      {v.visitorName}
-                    </div>
-                    <div className="text-[10px] mt-0.5" style={{ color: '#94A3B8' }}>
-                      {format(new Date(v.expectedDate), 'MMM d · HH:mm')}
-                    </div>
-                  </div>
-                </div>
-                <div className="mb-2">
-                  <Badge variant={visitorStatusBadge(v.status)}>{v.status}</Badge>
-                </div>
-                <div className="text-[11px] truncate leading-relaxed" style={{ color: '#64748B' }}>
-                  <span style={{ color: '#94A3B8' }}>For</span>{' '}
-                  <span className="font-medium" style={{ color: '#334155' }}>
-                    {v.hostResidentId?.name || 'Unknown host'}
-                  </span>
-                </div>
-                {v.purpose && (
-                  <div className="text-[10px] mt-1 truncate uppercase tracking-wider font-semibold" style={{ color: '#CBD5E1' }}>
-                    {v.purpose}
-                  </div>
-                )}
-              </Link>
-            ))}
-            {/* Trailing "view all" tile */}
-            <Link to="/visitors"
-              className="snap-start flex-shrink-0 w-[140px] rounded-2xl flex flex-col items-center justify-center gap-2 transition-all"
-              style={{
-                background: 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.02))',
-                border: '1px dashed rgba(16,185,129,0.30)',
-                textDecoration: 'none',
-                color: '#059669',
-              }}
-              onMouseEnter={e => e.currentTarget.style.background = 'linear-gradient(135deg, rgba(16,185,129,0.14), rgba(16,185,129,0.04))'}
-              onMouseLeave={e => e.currentTarget.style.background = 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.02))'}>
-              <ArrowRight size={18} />
-              <span className="text-xs font-bold">View all</span>
-            </Link>
+          <div className="glass-card overflow-hidden">
+            {recentVisitors.slice(0, 6).map((v) => <VisitorRow key={v._id} v={v} accent="#059669" showHost to={`/visitors/${v._id}`} LinkComp={Link} />)}
           </div>
         )}
       </div>
