@@ -13,6 +13,7 @@ import { NotificationProvider } from '../../context/NotificationContext';
 import PodcastLivePill from '../PodcastLivePill';
 import LiveNotificationModal from '../LiveNotificationModal';
 import LiveLocations from '../safety/LiveLocations';
+import CallAlertsPrompt from '../calls/CallAlertsPrompt';
 
 const BOTTOM_NAV = [
   { to: '/dashboard',   icon: LayoutDashboard, label: 'Home' },
@@ -84,6 +85,7 @@ export default function AppLayout({ children }) {
         {/* Page content — pb-24 on mobile to clear bottom nav */}
         <main className="flex-1 overflow-y-auto p-4 pb-24 md:p-6 lg:p-8 lg:pb-8"
           style={{ background: 'var(--bg)' }}>
+          <CallAlertsPrompt appName="AreaConnector" />
           {children}
         </main>
         {/* Residents sharing live location for their safety */}
