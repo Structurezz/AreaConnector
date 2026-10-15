@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import Badge, { visitorStatusBadge } from '../components/ui/Badge';
 import Spinner from '../components/ui/Spinner';
 import Pagination from '../components/ui/Pagination';
+import { VisitorsHero, VisitorsFilters, VisitorCards, CardAction } from '../components/visitors/MobileVisitors';
 import Modal from '../components/ui/Modal';
 import EmptyState from '../components/ui/EmptyState';
 import {
@@ -13,7 +14,7 @@ import {
   Phone, Mail, Calendar, Clock, MapPin, User,
   Package, Wrench, Users, Home, MoreHorizontal,
   FileText, ChevronDown, ChevronUp,
-  Share2, CheckCircle, QrCode, StickyNote,
+  Share2, CheckCircle, QrCode, StickyNote, XCircle,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -246,7 +247,7 @@ function PassTimer({ visitor }) {
     return `${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
   };
 
-  if (['checked-out', 'blacklisted', 'expired'].includes(visitor.status)) return null;
+  if (['checked-out', 'blacklisted', 'expired', 'cancelled'].includes(visitor.status)) return null;
 
   if (visitor.status === 'checked-in') {
     const entryTime = visitor.entryTime ? new Date(visitor.entryTime) : null;
@@ -954,6 +955,8 @@ export default function ManagerVisitors() {
   const [showCreate,    setShowCreate]    = useState(false);
   const [passResult,    setPassResult]    = useState(null);
   const [selectedVisitor, setSelectedVisitor] = useState(null);
+  const [counts,        setCounts]        = useState(null);
+  const searchTimer = useRef(null);
 
   const openVisitor = (v) => {
     if (window.innerWidth < 640) navigate(`/visitors/${v._id}`);
@@ -963,22 +966,35 @@ export default function ManagerVisitors() {
   const load = async (p = page, q = search, status = statusFilter) => {
     setLoading(true);
     try {
+      const today = new Date(); today.setHours(0, 0, 0, 0);
       const { data } = await visitorAPI.getAll({
-        status: status || undefined,
+        ...(status === 'today' ? { date: today.toISOString() } : { status: status || undefined }),
         search: q || undefined,
         page: p,
         limit: PAGE_SIZE,
       });
       setVisitors(data.data);
       setPagination(data.pagination || { total: data.data.length, pages: 1 });
+      if (data.counts) setCounts(data.counts);
     } catch {
       toast.error('Failed to load visitors');
     } finally { setLoading(false); }
   };
 
   const handlePage         = (p) => { setPage(p); load(p, search, statusFilter); };
-  const handleSearch       = (q) => { setSearch(q); setPage(1); load(1, q, statusFilter); };
+  const handleSearch       = (q) => {
+    setSearch(q); setPage(1);
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => load(1, q, statusFilter), 300);
+  };
   const handleStatusChange = (s) => { setStatusFilter(s); setPage(1); load(1, search, s); };
+  const pickStatus = (s) => handleStatusChange(s === statusFilter ? '' : s);
+  const createPass = () => (window.innerWidth < 1024 ? navigate('/visitors/new') : setShowCreate(true));
+  const handleCancel = async (v) => {
+    if (!confirm(`Cancel ${v.visitorName}'s pass? The gate will refuse the code.`)) return;
+    try { await visitorAPI.cancel(v._id); toast.success('Pass cancelled'); load(); }
+    catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
+  };
 
   useEffect(() => { load(1, '', ''); }, []);
 
@@ -997,8 +1013,38 @@ export default function ManagerVisitors() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="animate-fade-in">
+      {/* ── Phone ── */}
+      <div className="md:hidden pb-6">
+        <VisitorsHero
+          title="Visitor log" subtitle="Everyone coming in and out of the estate"
+          gradient="linear-gradient(135deg,#064E3B 0%,#047857 55%,#10B981 100%)"
+          counts={counts} statusFilter={statusFilter} onPick={pickStatus}
+          cta="Create guest pass" onCta={createPass}
+        />
+        <VisitorsFilters search={search} onSearch={handleSearch} statusFilter={statusFilter} onStatus={pickStatus} counts={counts} accent={ACCENT} />
+        <VisitorCards
+          visitors={visitors} loading={loading} accent={ACCENT_DARK} showHost
+          onOpen={(v) => navigate(`/visitors/${v._id}`)}
+          emptyText={search ? `No visitors match "${search}"` : statusFilter ? 'No visitors here' : 'No visitors yet'}
+          emptyCta={!search && !statusFilter ? 'Create guest pass' : null} onEmptyCta={createPass}
+          renderActions={(v) => {
+            if (!['active', 'checked-in'].includes(v.status)) return null;
+            return (
+              <>
+                {v.status === 'active' && <CardAction tone="primary" accent={ACCENT} onClick={() => handleCheckIn(v._id)}><LogIn size={14} /> Check in</CardAction>}
+                {v.status === 'checked-in' && <CardAction tone="primary" accent="#2563EB" onClick={() => handleCheckOut(v._id)}><LogOut size={14} /> Check out</CardAction>}
+                {v.visitorPhone && <CardAction onClick={() => { window.location.href = `tel:${v.visitorPhone}`; }}><Phone size={14} style={{ color: ACCENT }} /> Call</CardAction>}
+                {v.status === 'active' && <CardAction tone="danger" onClick={() => handleCancel(v)}><XCircle size={14} /> Cancel</CardAction>}
+              </>
+            );
+          }}
+        />
+        {pagination.pages > 1 && <div className="mt-4"><Pagination page={page} pages={pagination.pages} total={pagination.total} limit={PAGE_SIZE} onPage={handlePage} /></div>}
+      </div>
 
+      {/* ── Tablet / desktop ── */}
+      <div className="hidden md:block space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
@@ -1112,6 +1158,7 @@ export default function ManagerVisitors() {
       </div>
 
       <Pagination page={page} pages={pagination.pages} total={pagination.total} limit={PAGE_SIZE} onPage={handlePage} />
+      </div>
 
       {/* Create Guest Pass Modal */}
       <CreatePassDrawer
