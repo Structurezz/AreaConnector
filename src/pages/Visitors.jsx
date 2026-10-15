@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import Badge, { visitorStatusBadge } from '../components/ui/Badge';
 import Spinner from '../components/ui/Spinner';
 import Pagination from '../components/ui/Pagination';
+import InviteForm from '../components/visitors/InviteForm';
 import { VisitorsHero, VisitorsFilters, VisitorCards, CardAction, VisitorsPager } from '../components/visitors/MobileVisitors';
 import Modal from '../components/ui/Modal';
 import EmptyState from '../components/ui/EmptyState';
@@ -629,7 +630,7 @@ function CreatePassDrawer({ open, onClose, onSuccess }) {
           </button>
         </div>
         <div className="flex-1 overflow-y-auto p-6">
-          <CreatePassForm onClose={onClose} onSuccess={onSuccess} />
+          <InviteForm onCancel={onClose} onCreated={onSuccess} />
         </div>
       </div>
     </div>
