@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import Badge, { visitorStatusBadge } from '../components/ui/Badge';
 import Spinner from '../components/ui/Spinner';
 import Pagination from '../components/ui/Pagination';
-import { VisitorsHero, VisitorsFilters, VisitorCards, CardAction } from '../components/visitors/MobileVisitors';
+import { VisitorsHero, VisitorsFilters, VisitorCards, CardAction, VisitorsPager } from '../components/visitors/MobileVisitors';
 import Modal from '../components/ui/Modal';
 import EmptyState from '../components/ui/EmptyState';
 import {
@@ -1040,7 +1040,7 @@ export default function ManagerVisitors() {
             );
           }}
         />
-        {pagination.pages > 1 && <div className="mt-4"><Pagination page={page} pages={pagination.pages} total={pagination.total} limit={PAGE_SIZE} onPage={handlePage} /></div>}
+        <VisitorsPager page={page} pages={pagination.pages} total={pagination.total} limit={PAGE_SIZE} onPage={handlePage} accent={ACCENT} />
       </div>
 
       {/* ── Tablet / desktop ── */}
