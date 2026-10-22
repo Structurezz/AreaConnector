@@ -1,405 +1,25 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Music, Calendar, BarChart2, Plus, Trash2, X,
   RefreshCw, Check, Lock, Users, Shuffle, ChevronDown,
   Pin, Eye, EyeOff, Zap, TrendingUp, Activity,
   MessageCircle, Trophy, ShoppingBag, Newspaper, Lightbulb,
-  Dumbbell, Handshake, PartyPopper, Heart, ImageIcon,
-  Send, ChevronRight, MoreHorizontal, Mic, Radio, Play, Headphones,
+  Dumbbell, Handshake, PartyPopper, Mic, Radio, Play, Headphones,
 } from 'lucide-react';
-import { eventAPI, pollAPI, loungeAPI, postAPI, djAPI } from '../api';
+import { eventAPI, pollAPI, loungeAPI, djAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import DJLive from '../components/DJLive';
 import Portal from '../components/ui/Portal';
+import Feed from '../components/lounge/Feed';
 
 // ── Helpers ────────────────────────────────────────────────────────
-const SERVER_URL = (import.meta.env.VITE_API_URL || 'https://areaconnectapi-production.up.railway.app/api').replace('/api', '');
-const imgUrl     = (path) => {
-  if (!path) return path;
-  // Absolute URL or inline data URL (profilePhoto is base64) — don't rewrite
-  if (path.startsWith('http') || path.startsWith('data:')) return path;
-  return `${SERVER_URL}${path}`;
-};
-
-function timeAgo(iso) {
-  const s = (Date.now() - new Date(iso)) / 1000;
-  if (s < 60)   return 'just now';
-  if (s < 3600) return `${Math.floor(s / 60)}m`;
-  if (s < 86400)return `${Math.floor(s / 3600)}h`;
-  if (s < 604800)return `${Math.floor(s / 86400)}d`;
-  return new Date(iso).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' });
-}
-
-function Avatar({ name, size = 36, src }) {
-  const initials = (name || '?').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
-  if (src) return <img src={imgUrl(src)} alt={name} className="rounded-full object-cover flex-shrink-0" style={{ width: size, height: size }} />;
-  const colors = ['#10B981','#6366F1','#EC4899','#F59E0B','#0EA5E9','#8B5CF6'];
-  const color  = colors[initials.charCodeAt(0) % colors.length];
-  return (
-    <div className="rounded-full flex items-center justify-center font-black flex-shrink-0 text-white"
-      style={{ width: size, height: size, background: color, fontSize: size * 0.35 }}>
-      {initials}
-    </div>
-  );
-}
-
 const inputStyle = {
   width: '100%', padding: '8px 12px', borderRadius: '12px',
   background: '#F8FAFC', border: '1px solid #E2E8F0',
   fontSize: '14px', color: '#0F172A', outline: 'none',
 };
-
-// ── Image grid ────────────────────────────────────────────────────
-function ImageGrid({ images }) {
-  if (!images?.length) return null;
-  const n = images.length;
-  return (
-    <div className={`grid gap-1 rounded-2xl overflow-hidden mt-3 ${n === 1 ? 'grid-cols-1' : n === 2 ? 'grid-cols-2' : n === 3 ? 'grid-cols-2' : 'grid-cols-2'}`}
-      style={{ maxHeight: n === 1 ? 400 : 300 }}>
-      {images.slice(0, 4).map((img, i) => (
-        <div key={i} className={`relative overflow-hidden bg-slate-100 ${n === 3 && i === 0 ? 'row-span-2' : ''}`}
-          style={{ height: n === 1 ? 400 : 150 }}>
-          <img src={imgUrl(img)} alt="" className="w-full h-full object-cover" />
-          {n > 4 && i === 3 && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <span className="text-white text-xl font-black">+{n - 4}</span>
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ── Create Post ───────────────────────────────────────────────────
-function CreatePost({ user, onCreated }) {
-  const [expanded, setExpanded] = useState(false);
-  const [content, setContent]   = useState('');
-  const [files, setFiles]       = useState([]);
-  const [previews, setPreviews] = useState([]);
-  const [posting, setPosting]   = useState(false);
-  const fileRef = useRef(null);
-
-  const addFiles = (e) => {
-    const picked = Array.from(e.target.files || []).slice(0, 4 - files.length);
-    setFiles(prev => [...prev, ...picked].slice(0, 4));
-    picked.forEach(f => {
-      const reader = new FileReader();
-      reader.onload = (ev) => setPreviews(prev => [...prev, ev.target.result].slice(0, 4));
-      reader.readAsDataURL(f);
-    });
-    e.target.value = '';
-  };
-
-  const removeFile = (i) => {
-    setFiles(prev => prev.filter((_, j) => j !== i));
-    setPreviews(prev => prev.filter((_, j) => j !== i));
-  };
-
-  const handlePost = async () => {
-    if (!content.trim() && files.length === 0) return;
-    setPosting(true);
-    try {
-      const fd = new FormData();
-      fd.append('content', content.trim());
-      files.forEach(f => fd.append('images', f));
-      const { data } = await postAPI.create(fd);
-      onCreated(data.data);
-      setContent('');
-      setFiles([]);
-      setPreviews([]);
-      setExpanded(false);
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to post');
-    } finally { setPosting(false); }
-  };
-
-  return (
-    <div className="rounded-2xl border p-4" style={{ background: '#fff', borderColor: '#F1F5F9' }}>
-      <div className="flex items-center gap-3">
-        <Avatar name={user?.name} size={38} src={user?.profilePhoto} />
-        {!expanded ? (
-          <button onClick={() => setExpanded(true)}
-            className="flex-1 text-left px-4 py-2.5 rounded-2xl text-sm transition-all"
-            style={{ background: '#F8FAFC', color: '#94A3B8', border: '1px solid #E2E8F0' }}>
-            Share something with the estate…
-          </button>
-        ) : (
-          <span className="text-sm font-semibold" style={{ color: '#0F172A' }}>{user?.name}</span>
-        )}
-      </div>
-
-      {expanded && (
-        <div className="mt-3 space-y-3">
-          <textarea
-            autoFocus
-            rows={3}
-            value={content}
-            onChange={e => setContent(e.target.value)}
-            placeholder="What's happening in the estate?"
-            style={{ ...inputStyle, resize: 'none', fontSize: 15, lineHeight: 1.6 }}
-          />
-
-          {previews.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {previews.map((src, i) => (
-                <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border" style={{ borderColor: '#E2E8F0' }}>
-                  <img src={src} alt="" className="w-full h-full object-cover" />
-                  <button onClick={() => removeFile(i)}
-                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center">
-                    <X size={10} className="text-white" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="flex items-center justify-between pt-1">
-            <div className="flex items-center gap-2">
-              <button onClick={() => fileRef.current?.click()}
-                disabled={files.length >= 4}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all"
-                style={{ color: files.length < 4 ? '#6366F1' : '#CBD5E1', borderColor: files.length < 4 ? '#C7D2FE' : '#E2E8F0', background: files.length < 4 ? '#EEF2FF' : '#F8FAFC' }}>
-                <ImageIcon size={13} /> Photo {files.length > 0 && `(${files.length}/4)`}
-              </button>
-              <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={addFiles} />
-            </div>
-            <div className="flex gap-2">
-              <button onClick={() => { setExpanded(false); setContent(''); setFiles([]); setPreviews([]); }}
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold"
-                style={{ color: '#64748B', background: '#F1F5F9' }}>
-                Cancel
-              </button>
-              <button onClick={handlePost} disabled={posting || (!content.trim() && files.length === 0)}
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-bold text-white disabled:opacity-50 transition-all"
-                style={{ background: '#10B981' }}>
-                {posting ? <RefreshCw size={12} className="animate-spin" /> : <Send size={12} />}
-                Post
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Post Card ─────────────────────────────────────────────────────
-function PostCard({ post, currentUserId, onDelete, onLike }) {
-  const [showComments, setShowComments] = useState(false);
-  const [commentText, setCommentText]   = useState('');
-  const [comments, setComments]         = useState(post.comments || []);
-  const [likes, setLikes]               = useState(post.likes?.length || 0);
-  const [liked, setLiked]               = useState((post.likes || []).some(l => l === currentUserId || l?._id === currentUserId));
-  const [submitting, setSubmitting]     = useState(false);
-  const [deleting, setDeleting]         = useState(null);
-
-  const handleLike = async () => {
-    try {
-      const { data } = await postAPI.like(post._id);
-      setLikes(data.likes);
-      setLiked(data.liked);
-    } catch { toast.error('Failed to update like'); }
-  };
-
-  const handleComment = async (e) => {
-    e.preventDefault();
-    if (!commentText.trim()) return;
-    setSubmitting(true);
-    try {
-      const { data } = await postAPI.addComment(post._id, commentText.trim());
-      setComments(prev => [...prev, data.data]);
-      setCommentText('');
-    } catch { toast.error('Failed to add comment'); }
-    finally { setSubmitting(false); }
-  };
-
-  const handleDeleteComment = async (commentId) => {
-    setDeleting(commentId);
-    try {
-      await postAPI.deleteComment(post._id, commentId);
-      setComments(prev => prev.filter(c => c._id !== commentId));
-    } catch { toast.error('Failed to delete comment'); }
-    finally { setDeleting(null); }
-  };
-
-  const isManager = post.author?.role === 'estate_manager';
-
-  return (
-    <div className="rounded-2xl border" style={{ background: '#fff', borderColor: '#F1F5F9' }}>
-      {/* Author row */}
-      <div className="flex items-start justify-between p-4 pb-0">
-        <div className="flex items-center gap-3">
-          <Avatar name={post.author?.name} size={40} src={post.author?.profilePhoto} />
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold" style={{ color: '#0F172A' }}>{post.author?.name || 'Resident'}</span>
-              {isManager && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                  style={{ background: '#F0FDF4', color: '#10B981' }}>Manager</span>
-              )}
-            </div>
-            <span className="text-xs" style={{ color: '#94A3B8' }}>{timeAgo(post.createdAt)}</span>
-          </div>
-        </div>
-        <button onClick={() => onDelete(post._id)}
-          className="p-1.5 rounded-lg transition-all"
-          style={{ color: '#CBD5E1' }}
-          onMouseEnter={e => e.currentTarget.style.color = '#EF4444'}
-          onMouseLeave={e => e.currentTarget.style.color = '#CBD5E1'}
-          title="Delete post">
-          <Trash2 size={14} />
-        </button>
-      </div>
-
-      {/* Content */}
-      {post.content && (
-        <p className="px-4 pt-3 text-sm leading-relaxed" style={{ color: '#0F172A', whiteSpace: 'pre-wrap' }}>
-          {post.content}
-        </p>
-      )}
-
-      {/* Images */}
-      {post.images?.length > 0 && (
-        <div className="px-4">
-          <ImageGrid images={post.images} />
-        </div>
-      )}
-
-      {/* Actions */}
-      <div className="flex items-center gap-4 px-4 pt-3 pb-3 border-t mt-3" style={{ borderColor: '#F8FAFC' }}>
-        <button onClick={handleLike}
-          className="flex items-center gap-1.5 text-sm font-semibold transition-all"
-          style={{ color: liked ? '#EF4444' : '#94A3B8' }}>
-          <Heart size={17} fill={liked ? '#EF4444' : 'none'} strokeWidth={liked ? 0 : 2} />
-          {likes > 0 && <span>{likes}</span>}
-        </button>
-        <button onClick={() => setShowComments(s => !s)}
-          className="flex items-center gap-1.5 text-sm font-semibold transition-all"
-          style={{ color: showComments ? '#6366F1' : '#94A3B8' }}>
-          <MessageCircle size={17} />
-          {comments.length > 0 && <span>{comments.length}</span>}
-        </button>
-      </div>
-
-      {/* Comments */}
-      {showComments && (
-        <div className="px-4 pb-4 border-t" style={{ borderColor: '#F8FAFC' }}>
-          {comments.length > 0 && (
-            <div className="space-y-3 py-3">
-              {comments.map(c => (
-                <div key={c._id} className="flex items-start gap-2.5 group">
-                  <Avatar name={c.author?.name} size={28} src={c.author?.profilePhoto} />
-                  <div className="flex-1 min-w-0">
-                    <div className="rounded-2xl px-3 py-2" style={{ background: '#F8FAFC' }}>
-                      <span className="text-xs font-bold" style={{ color: '#0F172A' }}>{c.author?.name || 'Resident'} </span>
-                      <span className="text-xs" style={{ color: '#374151' }}>{c.text}</span>
-                    </div>
-                    <span className="text-[11px] pl-3" style={{ color: '#94A3B8' }}>{timeAgo(c.createdAt)}</span>
-                  </div>
-                  <button onClick={() => handleDeleteComment(c._id)}
-                    disabled={deleting === c._id}
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded-lg transition-all flex-shrink-0"
-                    style={{ color: '#CBD5E1' }}
-                    onMouseEnter={e => e.currentTarget.style.color = '#EF4444'}
-                    onMouseLeave={e => e.currentTarget.style.color = '#CBD5E1'}>
-                    <X size={11} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Add comment */}
-          <form onSubmit={handleComment} className="flex items-center gap-2 mt-2">
-            <input
-              value={commentText}
-              onChange={e => setCommentText(e.target.value)}
-              placeholder="Write a comment…"
-              style={{ ...inputStyle, fontSize: 13, padding: '6px 12px' }}
-            />
-            <button type="submit" disabled={submitting || !commentText.trim()}
-              className="p-2 rounded-xl flex-shrink-0 disabled:opacity-40"
-              style={{ background: '#EEF2FF', color: '#6366F1' }}>
-              {submitting ? <RefreshCw size={13} className="animate-spin" /> : <Send size={13} />}
-            </button>
-          </form>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Social Feed Tab ───────────────────────────────────────────────
-function SocialFeedTab({ user }) {
-  const [posts, setPosts]       = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [page, setPage]         = useState(1);
-  const [hasMore, setHasMore]   = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-
-  const load = useCallback(async (p = 1, append = false) => {
-    p === 1 ? setLoading(true) : setLoadingMore(true);
-    try {
-      const { data } = await postAPI.getAll(p);
-      setPosts(prev => append ? [...prev, ...(data.data || [])] : (data.data || []));
-      setHasMore(p < data.pages);
-      setPage(p);
-    } catch { toast.error('Failed to load posts'); }
-    finally { setLoading(false); setLoadingMore(false); }
-  }, []);
-
-  useEffect(() => { load(1); }, [load]);
-
-  const handleCreated = (post) => setPosts(prev => [post, ...prev]);
-
-  const handleDelete = async (id) => {
-    try {
-      await postAPI.delete(id);
-      setPosts(prev => prev.filter(p => p._id !== id));
-      toast.success('Post removed');
-    } catch { toast.error('Failed to delete post'); }
-  };
-
-  return (
-    <div className="space-y-3 max-w-xl mx-auto">
-      <CreatePost user={user} onCreated={handleCreated} />
-
-      {loading ? (
-        <div className="flex justify-center py-12"><RefreshCw size={20} className="text-emerald-500 animate-spin" /></div>
-      ) : posts.length === 0 ? (
-        <div className="rounded-2xl p-12 text-center border" style={{ borderColor: '#F1F5F9' }}>
-          <PartyPopper size={32} className="mx-auto mb-3" style={{ color: '#CBD5E1' }} />
-          <p className="font-semibold" style={{ color: '#94A3B8' }}>The feed is empty</p>
-          <p className="text-sm mt-1" style={{ color: '#CBD5E1' }}>Be the first to post something for the community!</p>
-        </div>
-      ) : (
-        <>
-          {posts.map(post => (
-            <PostCard
-              key={post._id}
-              post={post}
-              currentUserId={user?._id}
-              onDelete={handleDelete}
-              onLike={() => {}}
-            />
-          ))}
-
-          {hasMore && (
-            <button onClick={() => load(page + 1, true)} disabled={loadingMore}
-              className="w-full py-3 rounded-2xl text-sm font-semibold border transition-all flex items-center justify-center gap-2"
-              style={{ color: '#64748B', borderColor: '#E2E8F0', background: '#fff' }}>
-              {loadingMore ? <RefreshCw size={14} className="animate-spin" /> : <ChevronDown size={14} />}
-              Load more
-            </button>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
 
 // ── Activity types & defaults ─────────────────────────────────────
 const ACTIVITY_TYPES = [
@@ -459,7 +79,7 @@ function ActivitiesTab() {
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">
         <p className="text-sm" style={{ color:'#94A3B8' }}>
-          <span style={{ color:'#10B981', fontWeight:700 }}>{activities.filter(a=>a.visible).length}</span> visible &nbsp;·&nbsp;
+          <span style={{ color:'#6366F1', fontWeight:700 }}>{activities.filter(a=>a.visible).length}</span> visible &nbsp;·&nbsp;
           <span style={{ color:'#F59E0B', fontWeight:700 }}>{activities.filter(a=>a.pinned).length}</span> pinned
         </p>
         <div className="flex gap-2">
@@ -468,7 +88,7 @@ function ActivitiesTab() {
             Reset
           </button>
           <button onClick={() => setShowForm(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-white text-xs font-bold" style={{ background:'#10B981' }}>
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-white text-xs font-bold" style={{ background:'#6366F1' }}>
             <Plus size={13} /> Add
           </button>
         </div>
@@ -515,7 +135,7 @@ function ActivitiesTab() {
                   <Pin size={13} />
                 </button>
                 <button onClick={() => toggleVis(act.id)} className="p-1.5 rounded-lg transition-all"
-                  style={act.visible ? { color:'#10B981', background:'#F0FDF4' } : { color:'#94A3B8' }}>
+                  style={act.visible ? { color:'#6366F1', background:'#EEF2FF' } : { color:'#94A3B8' }}>
                   {act.visible ? <Eye size={13} /> : <EyeOff size={13} />}
                 </button>
                 <button onClick={() => remove(act.id)} className="p-1.5 rounded-lg hover:bg-red-50" style={{ color:'#CBD5E1' }}
@@ -573,7 +193,7 @@ function ActivitiesTab() {
               <div className="flex gap-3 pt-1">
                 <button type="button" onClick={() => setShowForm(false)}
                   className="flex-1 py-2.5 rounded-xl text-sm" style={{ background:'#F1F5F9', color:'#475569' }}>Cancel</button>
-                <button type="submit" className="flex-1 py-2.5 rounded-xl text-white text-sm font-bold" style={{ background:'#10B981' }}>
+                <button type="submit" className="flex-1 py-2.5 rounded-xl text-white text-sm font-bold" style={{ background:'#6366F1' }}>
                   Add Activity
                 </button>
               </div>
@@ -588,7 +208,7 @@ function ActivitiesTab() {
 
 // ── Events Tab ────────────────────────────────────────────────────
 const EVENT_CATEGORIES = [
-  { id:'general',    label:'General',    color:'#10B981', emoji:'📅' },
+  { id:'general',    label:'General',    color:'#6366F1', emoji:'📅' },
   { id:'fitness',    label:'Fitness',    color:'#0EA5E9', emoji:'🏃' },
   { id:'social',     label:'Social',     color:'#EC4899', emoji:'🎉' },
   { id:'networking', label:'Networking', color:'#8B5CF6', emoji:'🤝' },
@@ -630,12 +250,12 @@ function EventsTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm" style={{ color:'#94A3B8' }}>{upcoming.length} upcoming · {past.length} past</p>
-        <button onClick={() => setShowForm(true)} className="flex items-center gap-2 px-4 py-2 rounded-xl text-white font-semibold text-sm" style={{ background:'#10B981' }}>
+        <button onClick={() => setShowForm(true)} className="flex items-center gap-2 px-4 py-2 rounded-xl text-white font-semibold text-sm" style={{ background:'#6366F1' }}>
           <Plus size={14} /> New Event
         </button>
       </div>
 
-      {loading ? <div className="flex justify-center py-8"><RefreshCw size={18} className="text-emerald-500 animate-spin" /></div>
+      {loading ? <div className="flex justify-center py-8"><RefreshCw size={18} className="text-indigo-500 animate-spin" /></div>
        : events.length === 0 ? <div className="rounded-2xl p-10 text-center text-sm border" style={{ color:'#94A3B8', borderColor:'#F1F5F9' }}>No events yet. Create the first one!</div>
        : (
         <div className="space-y-3">
@@ -727,7 +347,7 @@ function EventsTab() {
               </label>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2.5 rounded-xl text-sm" style={{background:'#F1F5F9',color:'#475569'}}>Cancel</button>
-                <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-xl text-white text-sm font-bold flex items-center justify-center gap-2" style={{background:'#10B981'}}>
+                <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-xl text-white text-sm font-bold flex items-center justify-center gap-2" style={{background:'#6366F1'}}>
                   {saving ? <RefreshCw size={13} className="animate-spin" /> : <Calendar size={13} />} Create
                 </button>
               </div>
@@ -877,6 +497,12 @@ function MusicTab() {
   },[]);
   useEffect(()=>{load();},[load]);
 
+  const handleDeleteMixtape = async (m) => {
+    if (!confirm(`Delete "${m.title}" from the archive? This can't be undone.`)) return;
+    try { await djAPI.deleteMixtape(m._id); setMixtapes(prev=>prev.filter(x=>x._id!==m._id)); toast.success('Removed from archive'); }
+    catch (e) { toast.error(e.response?.data?.message || 'Failed to delete'); }
+  };
+
   const handleRemove = async (id) => {
     try { await loungeAPI.remove(id); setSession(prev=>prev?{...prev,suggestions:prev.suggestions.filter(s=>s._id!==id)}:prev); toast.success('Removed'); }
     catch { toast.error('Failed'); }
@@ -896,7 +522,7 @@ function MusicTab() {
 
       {/* ── Go Live / Live DJ hero ─────────────────────────────── */}
       <div className="rounded-2xl p-5 relative overflow-hidden"
-        style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', color: '#fff' }}>
+        style={{ background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 50%, #4338CA 100%)', color: '#fff' }}>
         <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full opacity-20" style={{ background: 'rgba(255,255,255,0.4)' }} />
         <div className="relative flex items-center gap-4 flex-wrap">
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.3)' }}>
@@ -919,7 +545,7 @@ function MusicTab() {
           </div>
           <button onClick={()=>navigate('/lounge/dj')}
             className="px-4 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 whitespace-nowrap"
-            style={{ background: '#fff', color: '#065F46' }}>
+            style={{ background: '#fff', color: '#4338CA' }}>
             {activeDJ && activeDJ.hostUserId === user?._id
               ? <><Radio size={14}/> Open decks</>
               : <><Mic size={14}/> Go live</>}
@@ -931,14 +557,14 @@ function MusicTab() {
       {mixtapes.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <Headphones size={14} className="text-emerald-500" />
+            <Headphones size={14} className="text-indigo-500" />
             <h3 className="text-sm font-bold" style={{ color: '#0F172A' }}>Mixtape Archive</h3>
             <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: '#94A3B8', background: '#F1F5F9' }}>{mixtapes.length}</span>
           </div>
           <div className="space-y-2">
             {mixtapes.slice(0, 5).map(m => (
               <div key={m._id} className="rounded-xl p-3 flex items-center gap-3 border" style={{ background:'#fff', borderColor:'#F1F5F9' }}>
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(16,185,129,0.12)', color: '#059669' }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(99,102,241,0.12)', color: '#4F46E5' }}>
                   <Play size={14} />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -947,6 +573,12 @@ function MusicTab() {
                     {m.hostName} · {Math.round((m.totalDurationSec || 0) / 60)} min · {m.setlist?.length || 0} tracks · {m.peakListeners || 0} peak
                   </p>
                 </div>
+                <button onClick={() => handleDeleteMixtape(m)} title="Delete from archive" aria-label="Delete from archive"
+                  className="p-1.5 rounded-lg hover:bg-red-50 flex-shrink-0" style={{ color:'#CBD5E1' }}
+                  onMouseEnter={e => e.currentTarget.style.color='#EF4444'}
+                  onMouseLeave={e => e.currentTarget.style.color='#CBD5E1'}>
+                  <Trash2 size={14} />
+                </button>
               </div>
             ))}
           </div>
@@ -1000,41 +632,91 @@ function MusicTab() {
 
 // ── Main ──────────────────────────────────────────────────────────
 const TABS = [
-  { key:'feed',       Icon:Activity,  label:'Feed',       color:'#10B981' },
-  { key:'events',     Icon:Calendar,  label:'Events',     color:'#F59E0B' },
+  { key:'feed',       Icon:Activity,  label:'Feed',       color:'#6366F1' },
+  { key:'events',     Icon:Calendar,  label:'Events',     color:'#0EA5E9' },
   { key:'activities', Icon:Zap,       label:'Activities', color:'#8B5CF6' },
-  { key:'polls',      Icon:BarChart2, label:'Polls',      color:'#6366F1' },
+  { key:'polls',      Icon:BarChart2, label:'Polls',      color:'#10B981' },
   { key:'music',      Icon:Music,     label:'Music',      color:'#EC4899' },
 ];
 
+// ── Friday countdown ──────────────────────────────────────────────
+function getNextFriday() {
+  const now = new Date();
+  const daysUntil = ((5 - now.getDay() + 7) % 7) || 7;
+  const next = new Date(now);
+  next.setDate(now.getDate() + daysUntil);
+  next.setHours(18, 0, 0, 0);
+  return next;
+}
+
+function useCountdown(target) {
+  const [diff, setDiff] = useState(target - Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setDiff(target - Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [target]);
+  const totalSec = Math.max(0, Math.floor(diff / 1000));
+  return {
+    d: Math.floor(totalSec / 86400),
+    h: Math.floor((totalSec % 86400) / 3600),
+    m: Math.floor((totalSec % 3600) / 60),
+    s: totalSec % 60,
+  };
+}
+
+// Same social hub as the residents' Lounge (shared feed + stories via
+// components/lounge), plus manager tools on the Events/Activities/Polls/Music tabs.
 export default function LoungeManager() {
   const [tab, setTab] = useState('feed');
   const { user } = useAuth();
 
+  const now           = new Date();
+  const isFridayNight = now.getDay() === 5 && now.getHours() >= 18;
+  const countdown     = useCountdown(getNextFriday().getTime());
+  const pad           = n => String(n).padStart(2, '0');
+
   return (
-    <div className="space-y-5 animate-fade-in pb-12">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2" style={{color:'#0F172A'}}>
-          <PartyPopper size={22} className="text-emerald-500"/> Community Lounge
-        </h1>
-        <p className="text-sm mt-0.5" style={{color:'#94A3B8'}}>Posts, events, activities, polls and music — all in one place</p>
+    <div className="animate-fade-in pb-12 -mt-4 md:-mt-6 lg:-mt-8">
+      {/* Sticky header + tabs. Offsets cancel <main>'s padding so no see-through strip shows on top. */}
+      <div className="sticky -top-4 md:-top-6 lg:-top-8 z-30 -mx-4 md:-mx-6 lg:-mx-8 px-4 md:px-6 lg:px-8 pt-3 pb-2 bg-white/90 backdrop-blur-xl border-b border-slate-100">
+        <div className="flex items-center justify-between gap-3 max-w-[960px] mx-auto">
+          <h1 className="text-[26px] font-black tracking-tight leading-none"
+            style={{ background: 'linear-gradient(90deg,#6366F1,#4F46E5)', WebkitBackgroundClip: 'text', color: 'transparent' }}>
+            Lounge
+          </h1>
+          {isFridayNight ? (
+            <span className="px-3 py-1.5 rounded-full text-[11px] font-bold text-white animate-pulse"
+              style={{ background: 'linear-gradient(90deg,#F59E0B,#EF4444)' }}>
+              🎉 Friday Night is LIVE
+            </span>
+          ) : (
+            <span className="px-3 py-1.5 rounded-full text-[11px] font-semibold text-slate-600 bg-slate-100 tabular-nums" title="Friday Night FunTimes">
+              🎉 Fri night in {countdown.d > 0 ? `${countdown.d}d ` : ''}{pad(countdown.h)}:{pad(countdown.m)}:{pad(countdown.s)}
+            </span>
+          )}
+        </div>
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar mt-3 max-w-[960px] mx-auto">
+          {TABS.map(({ key, Icon, label }) => {
+            const active = tab === key;
+            return (
+              <button key={key} onClick={() => setTab(key)}
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-semibold whitespace-nowrap transition-all shrink-0 ${active ? 'text-white shadow-sm' : 'text-slate-600 bg-slate-100 hover:bg-slate-200'}`}
+                style={active ? { background: 'linear-gradient(90deg,#6366F1,#4F46E5)' } : undefined}>
+                <Icon size={15} /> {label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="flex gap-1 rounded-2xl p-1 overflow-x-auto" style={{background:'#F1F5F9',scrollbarWidth:'none'}}>
-        {TABS.map(({key,Icon,label,color})=>(
-          <button key={key} onClick={()=>setTab(key)}
-            className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0"
-            style={tab===key?{background:'#FFFFFF',color:color,boxShadow:'0 1px 3px rgba(0,0,0,0.08)'}:{color:'#94A3B8'}}>
-            <Icon size={13}/> {label}
-          </button>
-        ))}
+      {/* Tab content */}
+      <div className="pt-4">
+        {tab === 'feed'       && <Feed me={user} />}
+        {tab === 'events'     && <div className="max-w-[960px] mx-auto"><EventsTab /></div>}
+        {tab === 'activities' && <div className="max-w-[960px] mx-auto"><ActivitiesTab /></div>}
+        {tab === 'polls'      && <div className="max-w-[960px] mx-auto"><PollsTab /></div>}
+        {tab === 'music'      && <div className="max-w-[960px] mx-auto"><MusicTab /></div>}
       </div>
-
-      {tab==='feed'       && <SocialFeedTab user={user} />}
-      {tab==='events'     && <EventsTab />}
-      {tab==='activities' && <ActivitiesTab />}
-      {tab==='polls'      && <PollsTab />}
-      {tab==='music'      && <MusicTab />}
     </div>
   );
 }

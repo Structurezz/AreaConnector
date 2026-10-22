@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Radio, Mic, Play, Pause, X, Users, Clock, Calendar, Headphones,
-  Volume2, ChevronRight, Heart, MessageSquare,
+  Volume2, ChevronRight, Heart, MessageSquare, Trash2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { djAPI, podcastAPI } from '../api';
@@ -134,6 +134,21 @@ export default function Podcasts() {
   const [activeDJ, setActiveDJ] = useState(null);
   const [liveFM, setLiveFM]     = useState(null);
   const [playing, setPlaying]   = useState(null); // { kind: 'ep'|'mix', item }
+  const [deleting, setDeleting] = useState(null);
+
+  // Managers can remove any recording from the estate's archive (server allows host or manager).
+  const deleteMixtape = async (m) => {
+    if (!confirm(`Delete "${m.title}" from the archive? This can't be undone.`)) return;
+    setDeleting(m._id);
+    try {
+      await djAPI.deleteMixtape(m._id);
+      setMixtapes(prev => prev.filter(x => x._id !== m._id));
+      if (playing?.kind === 'mix' && playing.item._id === m._id) setPlaying(null);
+      toast.success('Removed from archive');
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Failed to delete');
+    } finally { setDeleting(null); }
+  };
 
   useEffect(() => {
     Promise.all([
@@ -271,10 +286,11 @@ export default function Podcasts() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {mixtapes.map(m => (
-              <button key={m._id} onClick={() => setPlaying({ kind: 'mix', item: m })}
-                style={{ textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12, cursor: 'pointer' }}
+              <div key={m._id} style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12 }}
                 onMouseEnter={e => e.currentTarget.style.borderColor = INDIGO}
                 onMouseLeave={e => e.currentTarget.style.borderColor = '#E2E8F0'}>
+              <button onClick={() => setPlaying({ kind: 'mix', item: m })}
+                style={{ flex: 1, minWidth: 0, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 4px 10px 12px', background: 'transparent', border: 'none', cursor: 'pointer' }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: `${INDIGO}18`, color: INDIGO_DARK, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
                   {m.hostPhoto ? <img src={m.hostPhoto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }}/> : <Play size={14}/>}
                 </div>
@@ -286,6 +302,13 @@ export default function Podcasts() {
                 </div>
                 <ChevronRight size={14} color="#94A3B8"/>
               </button>
+              <button onClick={() => deleteMixtape(m)} disabled={deleting === m._id} aria-label="Delete from archive" title="Delete from archive"
+                style={{ padding: '10px 12px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#CBD5E1', flexShrink: 0, opacity: deleting === m._id ? 0.5 : 1 }}
+                onMouseEnter={e => e.currentTarget.style.color = '#EF4444'}
+                onMouseLeave={e => e.currentTarget.style.color = '#CBD5E1'}>
+                <Trash2 size={15}/>
+              </button>
+              </div>
             ))}
           </div>
         </div>
