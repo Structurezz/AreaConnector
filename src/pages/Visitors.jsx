@@ -6,7 +6,8 @@ import { useAuth } from '../context/AuthContext';
 import Spinner from '../components/ui/Spinner';
 import TablePager from '../components/dashboard/TablePager';
 import InviteForm from '../components/visitors/InviteForm';
-import { VisitorsHero, VisitorsFilters, VisitorCards, CardAction, VisitorsPager, VISITOR_STATUS, purposeIcon } from '../components/visitors/MobileVisitors';
+import { VISITOR_STATUS, purposeIcon } from '../components/visitors/MobileVisitors';
+import VisitorsMobile from '../components/visitors/VisitorsMobile';
 import PageHeader, { HEADER_BTN_PRIMARY } from '../components/dashboard/PageHeader';
 import Modal from '../components/ui/Modal';
 import EmptyState from '../components/ui/EmptyState';
@@ -1021,32 +1022,15 @@ export default function ManagerVisitors() {
   return (
     <div className="animate-fade-in">
       {/* ── Phone ── */}
-      <div className="md:hidden pb-6">
-        <VisitorsHero
-          title="Visitor log" subtitle="Everyone coming in and out of the estate"
-          gradient="linear-gradient(135deg,#064E3B 0%,#047857 55%,#10B981 100%)"
-          counts={counts} statusFilter={statusFilter} onPick={pickStatus}
-          cta="Create guest pass" onCta={createPass}
+      <div className="md:hidden">
+        <VisitorsMobile
+          visitors={visitors} loading={loading} counts={counts}
+          search={search} onSearch={handleSearch}
+          statusFilter={statusFilter} onPick={pickStatus} onStatus={handleStatusChange}
+          page={page} pagination={pagination} limit={limit} onPage={handlePage}
+          onOpen={(v) => navigate(`/visitors/${v._id}`)} onCreate={createPass}
+          onCheckIn={handleCheckIn} onCheckOut={handleCheckOut} onCancel={handleCancel}
         />
-        <VisitorsFilters search={search} onSearch={handleSearch} statusFilter={statusFilter} onStatus={pickStatus} counts={counts} accent={ACCENT} />
-        <VisitorCards
-          visitors={visitors} loading={loading} accent={ACCENT_DARK} showHost
-          onOpen={(v) => navigate(`/visitors/${v._id}`)}
-          emptyText={search ? `No visitors match "${search}"` : statusFilter ? 'No visitors here' : 'No visitors yet'}
-          emptyCta={!search && !statusFilter ? 'Create guest pass' : null} onEmptyCta={createPass}
-          renderActions={(v) => {
-            if (!['active', 'checked-in'].includes(v.status)) return null;
-            return (
-              <>
-                {v.status === 'active' && <CardAction tone="primary" accent={ACCENT} onClick={() => handleCheckIn(v._id)}><LogIn size={14} /> Check in</CardAction>}
-                {v.status === 'checked-in' && <CardAction tone="primary" accent="#2563EB" onClick={() => handleCheckOut(v._id)}><LogOut size={14} /> Check out</CardAction>}
-                {v.visitorPhone && <CardAction onClick={() => { window.location.href = `tel:${v.visitorPhone}`; }}><Phone size={14} style={{ color: ACCENT }} /> Call</CardAction>}
-                {v.status === 'active' && <CardAction tone="danger" onClick={() => handleCancel(v)}><XCircle size={14} /> Cancel</CardAction>}
-              </>
-            );
-          }}
-        />
-        <VisitorsPager page={page} pages={pagination.pages} total={pagination.total} limit={limit} onPage={handlePage} accent={ACCENT} />
       </div>
 
       {/* ── Tablet / desktop ── */}

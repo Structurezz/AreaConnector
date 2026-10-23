@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { residentAPI, unitAPI } from '../api';
-import Spinner from '../components/ui/Spinner';
-import EmptyState from '../components/ui/EmptyState';
 import Modal from '../components/ui/Modal';
 import {
   Users, Search, Plus, UserX, UserCheck,
@@ -12,8 +10,8 @@ import {
 import PageHeader, { HEADER_BTN_PRIMARY, HEADER_BTN_GHOST } from '../components/dashboard/PageHeader';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
-import Pagination from '../components/ui/Pagination';
 import TablePager from '../components/dashboard/TablePager';
+import ResidentsMobile from '../components/residents/ResidentsMobile';
 
 // ── Bulk CSV parser: "Name, email, phone?, unitNumber?" lines ─────────────────
 function parseBulkText(raw) {
@@ -447,95 +445,14 @@ export default function ManagerResidents() {
       </div>
 
       {/* ── Phone / tablet ── */}
-      <div className="lg:hidden space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900" style={{ letterSpacing: '-0.03em' }}>Residents</h1>
-            <p className="text-sm mt-0.5" style={{ color: 'var(--text-sub)' }}>{pagination.total} registered residents</p>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={() => setShowBulk(true)} className="btn-outline gap-2">
-              <Upload size={14} /> Bulk Invite
-            </button>
-            <button onClick={() => setShowInvite(true)} className="btn-outline gap-2">
-              <MailPlus size={14} /> Invite
-            </button>
-            <button onClick={() => setShowAdd(true)} className="btn-primary gap-2">
-              <Plus size={14} /> Add Resident
-            </button>
-          </div>
-        </div>
-  
-        {/* Search */}
-        <div className="relative">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-dim)' }} />
-          <input className="input-field pl-9" placeholder="Search by name or email…"
-            value={search} onChange={e => handleSearch(e.target.value)} />
-        </div>
-  
-        {/* Table */}
-        <div className="glass-card overflow-hidden">
-          {loading ? (
-            <div className="flex justify-center p-12"><Spinner /></div>
-          ) : residents.length === 0 ? (
-            <EmptyState icon={Users} title="No residents found" />
-          ) : (
-            <div>
-              {residents.map((r, i) => (
-                <div key={r._id}
-                  className="flex items-center gap-4 px-5 py-4 transition-colors"
-                  style={{ borderTop: i > 0 ? '1px solid rgba(0,0,0,0.06)' : 'none', cursor: 'pointer' }}
-                  onClick={() => {
-                    if (window.innerWidth < 640) navigate(`/residents/${r._id}`, { state: { resident: r, units } });
-                    else setSelected(r);
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                  {r.profilePhoto ? (
-                    <img src={r.profilePhoto} alt=""
-                      className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-                      style={{ border: '1px solid rgba(16,185,129,0.25)' }} />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
-                      style={{ background: 'rgba(16,185,129,0.12)', color: '#34D399', border: '1px solid rgba(16,185,129,0.2)' }}>
-                      {r.name[0]?.toUpperCase()}
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-slate-900 text-sm flex items-center gap-2">
-                      {r.name}
-                      {!r.isActive && <span className="badge badge-red">Suspended</span>}
-                    </div>
-                    <div className="text-xs mt-0.5" style={{ color: 'var(--text-dim)' }}>
-                      {r.email}{r.phone ? ` · ${r.phone}` : ''}
-                    </div>
-                  </div>
-                  <div className="text-sm hidden sm:block" style={{ color: 'var(--text-dim)' }}>
-                    {r.unitId
-                      ? (r.unitId.block ? `Block ${r.unitId.block} · Apt ${r.unitId.unitNumber}` : `Apt ${r.unitId.unitNumber}`)
-                      : <span style={{ color: 'var(--text-dim)', fontStyle: 'italic' }}>No apartment</span>}
-                  </div>
-                  <button onClick={(e) => { e.stopPropagation(); handleToggle(r); }}
-                    className="p-2 rounded-lg transition-all flex-shrink-0"
-                    title={r.isActive ? 'Suspend' : 'Activate'}
-                    style={{ color: '#94A3B8' }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.color = r.isActive ? '#F87171' : '#34D399';
-                      e.currentTarget.style.background = r.isActive ? 'rgba(239,68,68,0.1)' : 'rgba(52,211,153,0.1)';
-                    }}
-                    onMouseLeave={e => { e.currentTarget.style.color = '#94A3B8'; e.currentTarget.style.background = 'transparent'; }}>
-                    {r.isActive ? <UserX size={15} /> : <UserCheck size={15} />}
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
       <div className="lg:hidden">
-        <Pagination page={page} pages={pagination.pages} total={pagination.total} limit={limit} onPage={handlePage} />
+        <ResidentsMobile
+          residents={residents} loading={loading} search={search} onSearch={handleSearch}
+          totalAll={totalAll} unitStats={unitStats}
+          page={page} pagination={pagination} limit={limit} onPage={handlePage}
+          onOpen={openResident} onToggle={handleToggle}
+          onInvite={() => setShowInvite(true)} onBulk={() => setShowBulk(true)} onAdd={() => setShowAdd(true)}
+        />
       </div>
 
       {/* ── Single Invite Modal ─────────────────────────────────── */}
