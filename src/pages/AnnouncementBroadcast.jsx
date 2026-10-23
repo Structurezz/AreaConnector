@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Megaphone, Mic, MicOff, Users, X, Loader2, Music, Volume2, VolumeX, Volume1,
-  SkipForward,
+  SkipForward, Bell, Check, ListChecks,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth }    from '../context/AuthContext';
@@ -15,7 +15,9 @@ import Portal from '../components/ui/Portal';
 import useIsDesktop from '../hooks/useIsDesktop';
 import useFillHeight from '../hooks/useFillHeight';
 import { useRoomEngagement, useMicLevel } from '../components/podcast/StudioPanels';
-import { BroadcastSetupDesktop, BroadcastStudioDesktop } from '../components/announcements/BroadcastDesktop';
+import { BroadcastSetupDesktop, BroadcastStudioDesktop, TalkingPoints, TEMPLATES } from '../components/announcements/BroadcastDesktop';
+import MobileHostStudio from '../components/podcast/MobileHostStudio';
+import SetupSteps, { MicCheck } from '../components/podcast/SetupSteps';
 
 const RED      = '#EF4444';
 const RED_DARK = '#DC2626';
@@ -167,217 +169,140 @@ export default function AnnouncementBroadcast() {
     );
   }
 
-  // ── Pre-live screen (phone) ───────────────────────────────────────────────
+  // ── Phone: step-by-step set-up ────────────────────────────────────────────
   if (!session) {
+    const firstName = user?.name?.split(' ')[0] || 'there';
     return (
-      <div style={{ maxWidth: 540, margin: '0 auto', padding: '24px 16px 40px' }}>
-        <button onClick={() => navigate(-1)}
-          style={{ background: 'none', border: 'none', color: '#64748B', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 12, padding: 0, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          ← Back to announcements
-        </button>
-
-        <div style={{ background: `linear-gradient(135deg, ${RED}, ${RED_DARK})`, borderRadius: 22, padding: '26px 22px', color: '#fff', boxShadow: '0 20px 44px -18px rgba(239,68,68,0.55)' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.18)', padding: '6px 12px', borderRadius: 999, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', marginBottom: 14 }}>
-            <Megaphone size={13}/> ESTATE ANNOUNCEMENT
-          </div>
-          <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.02em', margin: 0, lineHeight: 1.2 }}>Speak to the whole estate.</h1>
-          <p style={{ fontSize: 14, lineHeight: 1.55, marginTop: 10, opacity: 0.9 }}>
-            Every resident gets an instant notification. Optionally pick a background track to play softly under your voice.
-          </p>
-
-          <label style={{ display: 'block', fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', opacity: 0.9, marginTop: 18 }}>
-            Headline (shown on their banner)
-          </label>
-          <input value={headline} onChange={e => setHeadline(e.target.value)}
-            placeholder="e.g. Water will be off from 10am–2pm"
-            style={{ width: '100%', marginTop: 6, padding: '12px 14px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.12)', color: '#fff', fontSize: 14, outline: 'none' }} />
-
-          {/* Background music picker */}
-          <div style={{ marginTop: 14 }}>
-            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', opacity: 0.9, marginBottom: 6 }}>
-              Background music (optional)
-            </div>
-            {bgTrack ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12, background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.22)' }}>
-                <Music size={14} style={{ flexShrink: 0 }}/>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bgTrack.title}</div>
-                  <div style={{ fontSize: 11, opacity: 0.75 }}>{bgTrack.artist || 'From the Lounge library'}</div>
+      <SetupSteps heading="Live announcement" accent={RED} onExit={() => navigate('/announcements')}
+        onFinish={goLive} finishing={starting} finishLabel="Go live to the estate"
+        steps={[
+          { key: 'headline', title: 'What do residents need to hear?', hint: `This headline appears on every resident's banner, ${firstName}.`,
+            ready: !!headline.trim(),
+            content: (
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-[12px] font-semibold text-slate-500">Headline</label>
+                    <span className="text-[11px] text-slate-400 tabular-nums">{headline.length}/120</span>
+                  </div>
+                  <input value={headline} maxLength={120} autoFocus onChange={e => setHeadline(e.target.value)}
+                    placeholder="e.g. Water will be off from 10am–2pm"
+                    className="mt-1.5 w-full px-3.5 py-3 rounded-xl bg-white border border-slate-200 text-[15px] outline-none focus:border-red-300 focus:ring-4 focus:ring-red-50" />
                 </div>
-                <button onClick={() => setPicker(true)}
-                  style={{ fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.18)', border: 'none', color: '#fff', cursor: 'pointer' }}>Change</button>
-                <button onClick={() => setBgTrack(null)}
-                  style={{ padding: 5, borderRadius: 8, background: 'rgba(0,0,0,0.2)', border: 'none', color: '#fff', cursor: 'pointer' }}>
-                  <X size={13}/>
-                </button>
-              </div>
-            ) : (
-              <button onClick={() => setPicker(true)}
-                style={{ width: '100%', padding: '10px 12px', borderRadius: 12, background: 'rgba(255,255,255,0.08)', border: '1px dashed rgba(255,255,255,0.3)', color: '#fff', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 13, fontWeight: 600 }}>
-                <Music size={14}/> Pick a track
-              </button>
-            )}
-          </div>
-
-          <button onClick={goLive} disabled={starting || !headline.trim()}
-            style={{ marginTop: 18, width: '100%', padding: '14px 20px', borderRadius: 14, border: 'none',
-              background: '#fff', color: RED_DARK, fontWeight: 800, fontSize: 15,
-              opacity: !headline.trim() ? 0.5 : 1,
-              cursor: starting ? 'wait' : (!headline.trim() ? 'not-allowed' : 'pointer'),
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-            {starting ? <><Loader2 size={16} className="animate-spin"/> Preparing…</> : <><Megaphone size={16}/> Start broadcast</>}
-          </button>
-          <div style={{ fontSize: 11, opacity: 0.75, marginTop: 10, textAlign: 'center' }}>
-            Mic access required.
-          </div>
-        </div>
-
-        <div style={{ marginTop: 18, padding: 14, borderRadius: 12, background: '#F8FAFC', border: '1px solid #E2E8F0', fontSize: 12, color: '#64748B' }}>
-          <strong style={{ color: '#334155' }}>Tip:</strong> For non-urgent news, use <em>New Announcement</em> (text post). Live is best for things residents need to hear <em>right now</em>.
-        </div>
-
-        {/* Track picker modal */}
-        {showPicker && (
-          <Portal>
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.65)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-            <div style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 480, maxHeight: '80vh', display: 'flex', flexDirection: 'column', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
-              <div style={{ padding: '14px 18px', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ fontSize: 14, fontWeight: 800, color: '#0F172A' }}>Pick a background track</div>
-                <button onClick={() => setPicker(false)} style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer' }}><X size={16}/></button>
-              </div>
-              <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
-                {sortedLibrary.length === 0 && <div style={{ padding: 24, textAlign: 'center', color: '#94A3B8', fontSize: 13 }}>No tracks in the Lounge library.</div>}
-                {sortedLibrary.map(t => (
-                  <button key={t._id} onClick={() => { setBgTrack({ videoId: t.videoId, title: t.title, artist: t.artist }); setPicker(false); }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', width: '100%', textAlign: 'left', background: 'transparent', border: '1px solid transparent', borderRadius: 10, cursor: 'pointer' }}
-                    onMouseEnter={e => { e.currentTarget.style.background = '#F8FAFC'; e.currentTarget.style.borderColor = '#E2E8F0'; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}>
-                    <div style={{ width: 32, height: 32, borderRadius: 10, background: '#FEE2E2', color: RED_DARK, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Music size={13}/></div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</div>
-                      <div style={{ fontSize: 11, color: '#94A3B8' }}>{t.artist || 'Resident'}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-          </Portal>
-        )}
-      </div>
-    );
-  }
-
-  // ── Live view ─────────────────────────────────────────────────────────────
-  const hasMusic = !!current;
-  const upcoming = sortedLibrary.filter(t => t.videoId !== current?.videoId).slice(0, 15);
-
-  return (
-    <div style={{ maxWidth: 720, margin: '0 auto', padding: '24px 16px 40px' }}>
-      <div style={{ background: `linear-gradient(135deg, ${RED} 0%, ${RED_DARK} 100%)`, borderRadius: 20, padding: 22, color: '#fff', boxShadow: '0 20px 44px -18px rgba(239,68,68,0.55)', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: -40, right: -40, width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,255,255,0.08)' }}/>
-        <div style={{ position: 'relative' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ position: 'relative', display: 'inline-flex', width: 10, height: 10 }}>
-                <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#fff', animation: 'ping 1.6s infinite' }} />
-                <span style={{ position: 'relative', borderRadius: '50%', width: 10, height: 10, background: '#fff' }} />
-              </span>
-              <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.16em' }}>LIVE · ANNOUNCEMENT</span>
-              <span style={{ fontSize: 12, opacity: 0.85, marginLeft: 4 }}>{fmtDur(elapsed)}</span>
-            </div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.18)', padding: '5px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
-              <Users size={13}/> {live.listenerCount}
-            </div>
-          </div>
-
-          {/* Music player (if a track is set) */}
-          {hasMusic && (
-            <div style={{ position: 'relative', paddingBottom: '42%', background: '#000', borderRadius: 14, overflow: 'hidden', marginBottom: 14, border: '1px solid rgba(255,255,255,0.15)' }}>
-              <iframe ref={iframeRef} key={current.videoId}
-                src={`https://www.youtube.com/embed/${current.videoId}?autoplay=1&modestbranding=1&rel=0&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`}
-                allow="autoplay; encrypted-media" allowFullScreen
-                onLoad={() => setTimeout(() => applyVolume(musicVol), 400)}
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }} />
-            </div>
-          )}
-
-          {/* Mic + message */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <button onClick={live.toggleMic}
-              style={{ width: 70, height: 70, borderRadius: '50%', border: 'none', cursor: 'pointer',
-                background: live.micOn ? '#fff' : 'rgba(255,255,255,0.14)',
-                color: live.micOn ? RED_DARK : '#fff',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: live.micOn ? '0 10px 24px rgba(0,0,0,0.2)' : 'none', flexShrink: 0 }}>
-              {live.micOn ? <Mic size={26}/> : <MicOff size={26}/>}
-            </button>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', opacity: 0.85 }}>
-                {live.micOn ? 'Speaking' : 'Muted'}
-              </div>
-              <div style={{ fontSize: 18, fontWeight: 800, lineHeight: 1.2, marginTop: 3 }}>{session.message || session.title}</div>
-              <div style={{ fontSize: 12, marginTop: 4, opacity: 0.85 }}>
-                {user?.name} · Peak {peak}
-                {hasMusic && <> · 🎵 {current.title}</>}
-              </div>
-            </div>
-          </div>
-
-          {/* Mixer: Music + Mic faders */}
-          <div style={{ marginTop: 16, padding: 12, borderRadius: 12, background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: 10 }}>
-            <Fader label="Music" value={musicVol} max={100} unit="%"
-              disabled={!hasMusic}
-              onChange={applyVolume}
-              color="#fff"
-              icon={musicVol === 0 ? <VolumeX size={13}/> : musicVol < 40 ? <Volume1 size={13}/> : <Volume2 size={13}/>}
-              quickActions={[{ label: 'Duck', value: 15 }, { label: 'Up', value: 60 }]}
-            />
-            <Fader label="Mic" value={Math.round((live.micGain || 1) * 100)} max={200} unit="%"
-              disabled={false}
-              onChange={(v) => live.setMicGain((v || 0) / 100)}
-              color="#10B981"
-              icon={<Mic size={13}/>}
-              quickActions={[{ label: 'Low', value: 80 }, { label: 'Hot', value: 150 }]}
-            />
-          </div>
-
-          {hasMusic && (
-            <>
-              {upcoming.length > 0 && (
-                <details style={{ marginTop: 10 }}>
-                  <summary style={{ cursor: 'pointer', fontSize: 11, opacity: 0.85, fontWeight: 700 }}>Change track →</summary>
-                  <div style={{ marginTop: 8, maxHeight: 180, overflowY: 'auto', background: 'rgba(0,0,0,0.2)', borderRadius: 10, padding: 6 }}>
-                    {upcoming.map(t => (
-                      <button key={t._id} onClick={() => changeTrack(t)}
-                        style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 10px', borderRadius: 8, background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', textAlign: 'left' }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                        <SkipForward size={11}/>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 12, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</div>
-                        </div>
+                <div>
+                  <div className="text-[12px] font-semibold text-slate-500 mb-2">Or start from a template</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {TEMPLATES.map(([emoji, text]) => (
+                      <button key={text} type="button" onClick={() => setHeadline(text)}
+                        className="text-[12px] font-medium px-3 py-1.5 rounded-full border transition-all active:scale-95"
+                        style={headline === text ? { borderColor: RED, background: '#FEF2F2', color: RED_DARK } : { borderColor: '#E2E8F0', background: '#fff', color: '#475569' }}>
+                        {emoji} {text.split(' — ')[0].replace(/ (today|this .*)$/, '')}
                       </button>
                     ))}
                   </div>
-                </details>
-              )}
-            </>
-          )}
+                </div>
+                <div className="rounded-2xl border border-dashed border-slate-200 p-3">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1"><Bell size={11} /> What residents will see</div>
+                  <div className="rounded-2xl p-3 flex items-start gap-3 border" style={{ background: 'linear-gradient(135deg,#FEF2F2,#FFFFFF)', borderColor: '#FECACA' }}>
+                    <span className="relative w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `linear-gradient(135deg, ${RED}, ${RED_DARK})` }}>
+                      <Megaphone size={15} className="text-white" />
+                      <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 border-2 border-white animate-pulse" />
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[10px] font-bold tracking-wider text-red-600">LIVE NOW <span className="text-slate-400 font-medium tracking-normal">· {user?.name || 'Estate manager'}</span></div>
+                      <div className="text-[13px] font-semibold text-slate-900 mt-0.5 break-words">{headline.trim() || 'Your headline appears here'}</div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">Tap to listen</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) },
+          { key: 'music', title: 'Background music', hint: 'Optional. A soft track plays under your voice — or keep it voice only.',
+            content: (
+              <div className="space-y-2">
+                <button type="button" onClick={() => setBgTrack(null)}
+                  className="w-full flex items-center gap-3 p-3 rounded-2xl border text-left"
+                  style={!bgTrack ? { borderColor: RED, background: '#FEF2F2' } : { borderColor: '#E2E8F0', background: '#fff' }}>
+                  <span className="w-12 h-9 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0"><VolumeX size={15} className="text-slate-500" /></span>
+                  <span className="flex-1 text-[14px] font-semibold text-slate-800">Voice only</span>
+                  {!bgTrack && <Check size={16} style={{ color: RED }} />}
+                </button>
+                {sortedLibrary.length === 0 && <p className="text-[13px] text-slate-400 px-1 py-2">The Lounge library is empty — add songs from the Lounge Music tab.</p>}
+                {sortedLibrary.map(t => {
+                  const on = bgTrack?.videoId === t.videoId;
+                  return (
+                    <button key={t._id || t.videoId} type="button" onClick={() => setBgTrack({ videoId: t.videoId, title: t.title, artist: t.artist })}
+                      className="w-full flex items-center gap-3 p-2.5 rounded-2xl border text-left"
+                      style={on ? { borderColor: RED, background: '#FEF2F2' } : { borderColor: '#E2E8F0', background: '#fff' }}>
+                      <img src={`https://i.ytimg.com/vi/${t.videoId}/default.jpg`} alt="" loading="lazy" className="w-12 h-9 rounded-lg object-cover flex-shrink-0" />
+                      <span className="flex-1 min-w-0">
+                        <span className={`block text-[13px] truncate ${on ? 'font-semibold text-red-700' : 'font-medium text-slate-800'}`}>{t.title}</span>
+                        <span className="block text-[11px] text-slate-400 truncate">{t.artist || 'Lounge library'}</span>
+                      </span>
+                      {on && <Check size={16} style={{ color: RED }} />}
+                    </button>
+                  );
+                })}
+              </div>
+            ) },
+          { key: 'mic', title: 'Check your mic', hint: 'Say a few words — make sure the bars move.',
+            content: (
+              <div className="space-y-3">
+                <MicCheck accent={RED} />
+                <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4 space-y-2 text-[13px] text-slate-600">
+                  <div>🔔 Every resident gets a notification the moment you go live.</div>
+                  <div>📻 Going live interrupts any DJ set that's playing.</div>
+                  <div>🎧 Speak close to the mic, away from noise.</div>
+                </div>
+              </div>
+            ) },
+        ]} />
+    );
+  }
 
-          <button onClick={endBroadcast}
-            style={{ marginTop: 16, width: '100%', padding: '11px 0', borderRadius: 12, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(0,0,0,0.2)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            <X size={14}/> End announcement
-          </button>
-        </div>
-      </div>
-
-      {/* Audience panel */}
-      <div style={{ marginTop: 14, background: 'linear-gradient(180deg, #0F172A, #1E1B4B)', borderRadius: 18, padding: 14, border: '1px solid #334155' }}>
-        <AudiencePanel roomType="dj" roomId={session._id} accent="#EF4444" />
-      </div>
-
-      <style>{`@keyframes ping { 75%,100% { transform: scale(2.4); opacity: 0; } }`}</style>
-    </div>
+  // ── Phone: on air ─────────────────────────────────────────────────────────
+  const nextTrack = sortedLibrary.find(t => t.videoId !== current?.videoId);
+  const endOnPhone = () => { if (window.confirm('End the announcement for everyone?')) endBroadcast(); };
+  return (
+    <MobileHostStudio
+      title={session.message || session.title} kindLabel={`Announcement · ${user?.name || 'Estate manager'}`} KindIcon={Megaphone}
+      accent={RED} dark={RED_DARK} live={live} level={level} elapsed={elapsed} peak={peak}
+      engagement={engagement} onEnd={endOnPhone}
+      music={{
+        title: current?.title, subtitle: current ? (current.artist || 'Playing softly under your voice') : 'Voice only — add music in the Music tab',
+        thumb: current?.videoId ? `https://i.ytimg.com/vi/${current.videoId}/default.jpg` : null,
+        onNext: nextTrack ? () => changeTrack(nextTrack) : null, nextLabel: current ? 'Next' : 'Play',
+        volume: musicVol, onVolume: applyVolume,
+        player: current && (
+          <div className="relative mt-3 w-full aspect-video rounded-xl overflow-hidden bg-black/40 border border-white/10">
+            <iframe ref={iframeRef} key={current.videoId} title="Background music"
+              src={`https://www.youtube.com/embed/${current.videoId}?autoplay=1&playsinline=1&modestbranding=1&rel=0&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`}
+              allow="autoplay; encrypted-media"
+              onLoad={() => setTimeout(() => applyVolume(musicVol), 400)}
+              className="absolute inset-0 w-full h-full border-0" />
+          </div>
+        ),
+      }}
+      tabs={[
+        { key: 'points', label: 'Talking points', Icon: ListChecks, content: <TalkingPoints /> },
+        { key: 'music', label: 'Music', Icon: Music, content: (
+          <div className="rounded-2xl bg-white border border-slate-200 overflow-hidden">
+            <p className="px-4 pt-3 pb-1 text-[11px] text-slate-400">Tap a song to play it under your voice. Use Mute on the music slider to go voice only.</p>
+            {sortedLibrary.map(t => {
+              const on = current?.videoId === t.videoId;
+              return (
+                <button key={t._id || t.videoId} onClick={() => changeTrack(t)} className="w-full flex items-center gap-3 px-4 py-2 text-left" style={on ? { background: '#FEF2F2' } : undefined}>
+                  <img src={`https://i.ytimg.com/vi/${t.videoId}/default.jpg`} alt="" loading="lazy" className="w-11 h-8 rounded-md object-cover flex-shrink-0" />
+                  <span className="flex-1 min-w-0">
+                    <span className={`block text-[13px] truncate ${on ? 'font-semibold text-red-700' : 'font-medium text-slate-800'}`}>{t.title}</span>
+                    <span className="block text-[11px] text-slate-400 truncate">{on ? 'Playing now' : (t.artist || 'Lounge library')}</span>
+                  </span>
+                  {!on && <SkipForward size={14} className="text-slate-300" />}
+                </button>
+              );
+            })}
+          </div>
+        ) },
+      ]} />
   );
 }

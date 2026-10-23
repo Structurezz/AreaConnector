@@ -17,7 +17,7 @@ const ago = (d) => {
   return h < 1 ? 'just now' : h < 24 ? `${h}h ago` : `${Math.round(h / 24)}d ago`;
 };
 
-const TEMPLATES = [
+export const TEMPLATES = [
   ['🚰', 'Water will be off from 10am to 2pm today'],
   ['⚡', 'Power update — generator schedule change'],
   ['🛡️', 'Security notice — please read'],
@@ -252,7 +252,7 @@ export function BroadcastSetupDesktop({
 /* ── On air ────────────────────────────────────────────────────────────── */
 const NOTES_KEY = 'ac_announce_points';
 
-function TalkingPoints() {
+export function TalkingPoints() {
   const [items, setItems] = useState(() => {
     try { return JSON.parse(localStorage.getItem(NOTES_KEY)) || []; } catch { return []; }
   });

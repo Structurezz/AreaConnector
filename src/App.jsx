@@ -1,6 +1,7 @@
 import SeoTracker from './components/SeoTracker';
 import { CallProvider } from './context/CallContext';
 import CallOverlay from './components/calls/CallOverlay';
+import UpdateBanner from './components/ui/UpdateBanner';
 import Calls from './pages/Calls';
 import Marketplace from './pages/Marketplace';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
@@ -138,6 +139,7 @@ export default function App() {
         <SocketProvider>
           <CallProvider>
           <CallOverlay />
+          <UpdateBanner />
           <AppRoutes />
           <Toaster position="top-right" toastOptions={{
             style: { background: '#1C1C20', color: '#E4E4E7', border: '1px solid #2E2E33', borderRadius: '8px', fontSize: '0.875rem' },
