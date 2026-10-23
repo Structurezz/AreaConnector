@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Mic, MicOff, Users, X, Save, Loader2, Headphones, MessageSquare, Heart, ArrowLeft, Clock, TrendingUp, Smile,
+  Music, Sparkles, ListChecks, StickyNote,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
@@ -15,11 +16,13 @@ import {
   useRoomEngagement, ReactionLayer, ChatPanel, Soundboard, useRundown, RundownPanel, NotesPanel, useMicLevel,
 } from '../components/podcast/StudioPanels';
 import DeckList, { useMusicDeck, useMusicPlayer, MusicChannel } from '../components/podcast/MusicDeck';
+import MobileHostStudio from '../components/podcast/MobileHostStudio';
+import SetupSteps, { OptionCard, MicCheck } from '../components/podcast/SetupSteps';
 
 // Podcast rooms are voice-only live sessions (server kinds: podcast | chat | prayer).
 // Everything here stays inside the Podcast section; the Lounge's DJ console is separate.
 const STYLES = [
-  { key: 'podcast', Icon: Headphones,    label: 'Podcast show', desc: 'Host a show; it is recorded and saved to the archive.', color: '#8B5CF6', dark: '#6D28D9' },
+  { key: 'podcast', Icon: Headphones,    label: 'Podcast show', desc: 'Host a show; it is recorded and saved to the archive.', color: '#10B981', dark: '#059669' },
   { key: 'chat',    Icon: MessageSquare, label: 'Talk room',    desc: 'An open conversation with your residents.',             color: '#0EA5E9', dark: '#0369A1' },
   { key: 'prayer',  Icon: Heart,         label: 'Prayer room',  desc: 'Lead a prayer or devotional session.',                  color: '#EC4899', dark: '#BE185D' },
 ];
@@ -196,6 +199,115 @@ export default function PodcastStudio() {
     } finally { setSaving(false); }
   };
 
+  const saveModal = showSave && (
+    <Portal>
+          <div className="fixed inset-0 z-[100] overlay-scrim flex items-center justify-center p-4">
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl animate-scale-in">
+              <div className="text-[16px] font-semibold text-slate-900">Save to the Podcast archive?</div>
+              <p className="text-[13px] text-slate-500 mt-1">
+                {fmtDur(voiceDurRef.current * 1000)} recorded{setlist.length ? ` · ${setlist.length} song${setlist.length === 1 ? '' : 's'}` : ''} · peak {peak} listener{peak === 1 ? '' : 's'} · {engagement.likes} like{engagement.likes === 1 ? '' : 's'}
+              </p>
+              <input value={saveTitle} onChange={(e) => setSaveTitle(e.target.value)} className="input-field mt-4" placeholder="Title" />
+              <div className="flex gap-2 mt-4">
+                <button onClick={() => navigate('/podcasts')} disabled={saving} className="btn-outline">Discard</button>
+                <button onClick={saveRecording} disabled={saving || !saveTitle.trim()} className="btn-primary flex-1"
+                  style={{ background: `linear-gradient(135deg, ${meta.color}, ${meta.dark})` }}>
+                  {saving ? <><Loader2 size={14} className="animate-spin" /> Saving…</> : <><Save size={14} /> Save recording</>}
+                </button>
+              </div>
+            </div>
+          </div>
+        </Portal>
+  );
+
+  /* ── Phone: step-by-step set-up ─────────────────────────────────────── */
+  if (!session && !isDesktop) {
+    const inputCls = 'w-full px-3.5 py-3 rounded-xl bg-white border border-slate-200 text-[15px] outline-none focus:border-slate-400';
+    return (
+      <SetupSteps heading={meta.label} accent={meta.color} onExit={() => navigate('/podcasts')}
+        onFinish={goLive} finishing={starting}
+        steps={[
+          { key: 'style', title: 'What kind of room?', hint: 'Pick how you want to talk to your residents.',
+            content: (
+              <div className="space-y-2.5">
+                {STYLES.map(({ key, Icon, label, desc, color }) => (
+                  <OptionCard key={key} on={style === key} color={color} Icon={Icon} label={label} desc={desc} onClick={() => setStyle(key)} />
+                ))}
+              </div>
+            ) },
+          { key: 'details', title: 'Name your room', hint: 'This is what residents see in their notification.',
+            content: (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[12px] font-semibold text-slate-500">Title</label>
+                  <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={80} autoFocus
+                    placeholder={`${user?.name || 'Your'}'s ${meta.label}`} className={`mt-1.5 ${inputCls}`} />
+                  <p className="text-[11px] text-slate-400 mt-1">Leave blank to use “{user?.name || 'Your'}'s {meta.label}”.</p>
+                </div>
+                <div>
+                  <label className="text-[12px] font-semibold text-slate-500">What's it about? <span className="font-normal text-slate-400">(optional)</span></label>
+                  <textarea value={topic} onChange={(e) => setTopic(e.target.value)} rows={3} maxLength={200}
+                    placeholder="e.g. Monthly estate update and Q&A" className={`mt-1.5 resize-none ${inputCls}`} />
+                </div>
+              </div>
+            ) },
+          { key: 'music', title: 'Add music (optional)', hint: 'Songs you can play between segments. You can skip this and add them later.',
+            content: <DeckList deck={deck} accent={meta.color} /> },
+          { key: 'rundown', title: 'Plan your show (optional)', hint: 'A simple running order you can tick off while you are live.',
+            content: <RundownPanel rundown={rundown} live={false} accent={meta.color} /> },
+          { key: 'mic', title: 'Check your mic', hint: 'Make sure residents can hear you clearly.',
+            content: (
+              <div className="space-y-3">
+                <MicCheck accent={meta.color} />
+                <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4 space-y-2 text-[13px] text-slate-600">
+                  <div>🎧 Use headphones so your speaker doesn't echo into the mic.</div>
+                  <div>🔔 Residents get a notification the moment you go live.</div>
+                  {style === 'podcast' && <div>💾 When you end, you can save the recording to the Podcast archive.</div>}
+                </div>
+              </div>
+            ) },
+        ]} />
+    );
+  }
+
+  /* ── Phone: live ────────────────────────────────────────────────────── */
+  if (session && !isDesktop) {
+    const cur = player.current;
+    return (
+      <>
+        <MobileHostStudio
+          title={session.title} kindLabel={`${meta.label}${session.message ? ` · ${session.message}` : ''}`} KindIcon={meta.Icon}
+          accent={meta.color} dark={meta.dark} live={live} level={level} elapsed={elapsed} peak={peak}
+          engagement={engagement} onEnd={endRoom} ending={ending}
+          music={{
+            title: cur?.title, subtitle: cur ? 'Playing to everyone' : (deck.tracks.length ? 'Tap Next to start the music' : 'Add songs in the Music tab'),
+            thumb: cur?.videoId ? `https://i.ytimg.com/vi/${cur.videoId}/default.jpg` : null,
+            onNext: deck.tracks.length ? player.next : null, nextLabel: cur ? 'Next' : 'Play',
+            volume: player.vol, onVolume: player.setVolume,
+            player: cur && (
+              <div className="relative mt-3 w-full aspect-video rounded-xl overflow-hidden bg-black/40 border border-white/10">
+                <iframe ref={player.iframeRef} key={cur.videoId} title="Now playing"
+                  src={`https://www.youtube.com/embed/${cur.videoId}?autoplay=1&playsinline=1&modestbranding=1&rel=0&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`}
+                  allow="autoplay; encrypted-media"
+                  onLoad={() => {
+                    try { player.iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: 'listening' }), '*'); } catch {}
+                    setTimeout(() => player.post('setVolume', [player.vol]), 400);
+                  }}
+                  className="absolute inset-0 w-full h-full border-0" />
+              </div>
+            ),
+          }}
+          tabs={[
+            { key: 'music', label: 'Music', Icon: Music, content: <DeckList deck={deck} player={player} accent={meta.color} /> },
+            { key: 'sounds', label: 'Sounds', Icon: Sparkles, content: <Soundboard getMixBus={live.getMixBus} accent={meta.color} enabled /> },
+            { key: 'rundown', label: 'Rundown', Icon: ListChecks, content: <RundownPanel rundown={rundown} live accent={meta.color} /> },
+            { key: 'notes', label: 'Notes', Icon: StickyNote, content: <NotesPanel accent={meta.color} /> },
+          ]} />
+        {saveModal}
+      </>
+    );
+  }
+
   /* ── Set-up ─────────────────────────────────────────────────────────── */
   if (!session) {
     return (
@@ -330,7 +442,7 @@ export default function PodcastStudio() {
 
           {/* Console — mic and music channels side by side */}
           <div className="relative overflow-hidden rounded-2xl text-white"
-            style={{ background: `linear-gradient(150deg, #0F172A 0%, #1E1B4B 55%, ${meta.dark} 150%)` }}>
+            style={{ background: `linear-gradient(150deg, #0F172A 0%, #022C22 55%, ${meta.dark} 150%)` }}>
             <div className="dash-blob absolute -top-24 left-1/4 w-72 h-72 rounded-full blur-3xl pointer-events-none" style={{ background: `${meta.color}44` }} />
             <ReactionLayer reactions={engagement.reactions} />
             <div className="relative grid grid-cols-1 md:grid-cols-2 md:divide-x divide-white/10">
@@ -391,26 +503,7 @@ export default function PodcastStudio() {
         </div>
       </div>
 
-      {showSave && (
-        <Portal>
-          <div className="fixed inset-0 z-[100] overlay-scrim flex items-center justify-center p-4">
-            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl animate-scale-in">
-              <div className="text-[16px] font-semibold text-slate-900">Save to the Podcast archive?</div>
-              <p className="text-[13px] text-slate-500 mt-1">
-                {fmtDur(voiceDurRef.current * 1000)} recorded{setlist.length ? ` · ${setlist.length} song${setlist.length === 1 ? '' : 's'}` : ''} · peak {peak} listener{peak === 1 ? '' : 's'} · {engagement.likes} like{engagement.likes === 1 ? '' : 's'}
-              </p>
-              <input value={saveTitle} onChange={(e) => setSaveTitle(e.target.value)} className="input-field mt-4" placeholder="Title" />
-              <div className="flex gap-2 mt-4">
-                <button onClick={() => navigate('/podcasts')} disabled={saving} className="btn-outline">Discard</button>
-                <button onClick={saveRecording} disabled={saving || !saveTitle.trim()} className="btn-primary flex-1"
-                  style={{ background: `linear-gradient(135deg, ${meta.color}, ${meta.dark})` }}>
-                  {saving ? <><Loader2 size={14} className="animate-spin" /> Saving…</> : <><Save size={14} /> Save recording</>}
-                </button>
-              </div>
-            </div>
-          </div>
-        </Portal>
-      )}
+      {saveModal}
     </div>
   );
 }

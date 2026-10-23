@@ -1,16 +1,12 @@
 import { useEffect, useState } from 'react';
 import { alertAPI } from '../api';
 import { upsertAlert } from '../utils/alertEvents';
-import Badge, { alertTypeBadge, alertStatusBadge } from '../components/ui/Badge';
-import Spinner from '../components/ui/Spinner';
-import EmptyState from '../components/ui/EmptyState';
 import Modal from '../components/ui/Modal';
-import { Bell, CheckCircle, XCircle, Megaphone, MapPin, Phone, AlertTriangle, ShieldAlert, Users, Shield, Briefcase, UserCog } from 'lucide-react';
-import { format } from 'date-fns';
+import { MapPin, Phone, AlertTriangle, ShieldAlert, Users, Shield, Briefcase, UserCog } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useSocket } from '../context/SocketContext';
-import Pagination from '../components/ui/Pagination';
 import AlertsDesktop from '../components/alerts/AlertsDesktop';
+import AlertsMobile from '../components/alerts/AlertsMobile';
 import useIsDesktop from '../hooks/useIsDesktop';
 
 const PAGE_SIZE = 10;
@@ -276,105 +272,14 @@ export default function ManagerAlerts() {
   );
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-3xl font-display font-bold text-slate-900 mb-1">Security Alerts</h1>
-          <p className="text-slate-500 text-sm">Monitor and respond to estate alerts</p>
-        </div>
-        <div className="flex gap-2">
-          <select className="input-field w-44"
-            value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="">All alerts</option>
-            <option value="open">Open</option>
-            <option value="acknowledged">Acknowledged</option>
-            <option value="resolved">Resolved</option>
-          </select>
-          <button onClick={() => setShowBroadcast(true)} className="btn-danger gap-2">
-            <Megaphone size={16} /> Broadcast
-          </button>
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="flex justify-center p-12"><Spinner /></div>
-      ) : alerts.length === 0 ? (
-        <EmptyState icon={Bell} title="No alerts found" message="The estate is calm" />
-      ) : (
-        <div className="space-y-3">
-          {alerts.map((a) => (
-            <div key={a._id} className={`glass-card p-5 transition-all ${
-              a.status === 'open' ? 'border-red-300 bg-red-50' :
-              a.status === 'acknowledged' ? 'border-amber-200' : ''}`}>
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                    <Badge variant={alertTypeBadge(a.type)}>{a.type}</Badge>
-                    <Badge variant={alertStatusBadge(a.status)}>{a.status}</Badge>
-                    {a.isEmergencyBroadcast && <Badge variant="red">📢 Broadcast</Badge>}
-                    {a.severity && a.isEmergencyBroadcast && (
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
-                        a.severity === 'critical' ? 'bg-red-100 text-red-700' :
-                        a.severity === 'high' ? 'bg-orange-100 text-orange-700' :
-                        a.severity === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-green-100 text-green-700'
-                      }`}>{a.severity.toUpperCase()}</span>
-                    )}
-                  </div>
-                  {a.title && <div className="text-slate-900 font-semibold text-sm mb-0.5">{a.title}</div>}
-                  <div className="flex items-center gap-1.5 text-slate-500 text-xs mb-1 flex-wrap">
-                    {a.residentId?.profilePhoto ? (
-                      <img src={a.residentId.profilePhoto} alt=""
-                        className="w-5 h-5 rounded-full object-cover flex-shrink-0"
-                        style={{ border: '1px solid rgba(16,185,129,0.25)' }} />
-                    ) : a.residentId?.name ? (
-                      <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black flex-shrink-0"
-                        style={{ background: 'rgba(16,185,129,0.14)', color: '#059669' }}>
-                        {a.residentId.name[0]?.toUpperCase()}
-                      </div>
-                    ) : null}
-                    <span>
-                      {a.residentId?.name}{a.unitId?.unitNumber ? ` · Unit ${a.unitId.unitNumber}` : ''}
-                      {a.location && <><span className="mx-1.5">·</span><MapPin size={10} className="inline mr-0.5" />{a.location}</>}
-                    </span>
-                  </div>
-                  {a.note && <p className="text-slate-600 text-sm mb-1.5">{a.note}</p>}
-                  {a.actionRequired && (
-                    <div className="flex items-center gap-1.5 text-xs text-amber-600 mb-1.5">
-                      <AlertTriangle size={11} /> <span className="font-medium">Action:</span> {a.actionRequired}
-                    </div>
-                  )}
-                  {a.contactNumber && (
-                    <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-1.5">
-                      <Phone size={11} /> {a.contactNumber}
-                    </div>
-                  )}
-                  <div className="text-xs text-slate-400">
-                    {format(new Date(a.createdAt), 'MMM d, yyyy · HH:mm')}
-                    {a.resolvedBy && ` · Resolved by ${a.resolvedBy.name}`}
-                  </div>
-                </div>
-                {a.status !== 'resolved' && (
-                  <div className="flex gap-2 flex-shrink-0">
-                    {a.status === 'open' && (
-                      <button onClick={() => handleAck(a._id)} className="btn-outline text-sm px-3 py-1.5">
-                        Acknowledge
-                      </button>
-                    )}
-                    <button onClick={() => handleResolve(a._id)} className="btn-primary text-sm px-3 py-1.5">
-                      Resolve
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <Pagination page={page} pages={pagination.pages} total={pagination.total} limit={PAGE_SIZE} onPage={handlePage} />
-
+    <>
+      <AlertsMobile
+        alerts={alerts} loading={loading} counts={counts}
+        statusFilter={statusFilter} setStatusFilter={setStatusFilter}
+        page={page} pagination={pagination} pageSize={PAGE_SIZE} onPage={handlePage}
+        onAck={handleAck} onResolve={handleResolve} onBroadcast={() => setShowBroadcast(true)}
+      />
       {broadcastModal}
-    </div>
+    </>
   );
 }

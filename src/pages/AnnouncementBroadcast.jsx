@@ -7,11 +7,15 @@ import {
 import toast from 'react-hot-toast';
 import { useAuth }    from '../context/AuthContext';
 import { useSocket }  from '../context/SocketContext';
-import { djAPI, loungeAPI } from '../api';
+import { djAPI, loungeAPI, estateAPI, announcementAPI } from '../api';
 import { useLiveAudio } from '../hooks/useLiveAudio';
 import { Fader }      from '../components/MixerDeck';
 import AudiencePanel  from '../components/AudiencePanel';
 import Portal from '../components/ui/Portal';
+import useIsDesktop from '../hooks/useIsDesktop';
+import useFillHeight from '../hooks/useFillHeight';
+import { useRoomEngagement, useMicLevel } from '../components/podcast/StudioPanels';
+import { BroadcastSetupDesktop, BroadcastStudioDesktop } from '../components/announcements/BroadcastDesktop';
 
 const RED      = '#EF4444';
 const RED_DARK = '#DC2626';
@@ -37,8 +41,14 @@ export default function AnnouncementBroadcast() {
   const [musicVol, setMusicVol]   = useState(20);    // very quiet background — voice is the point
   const [showPicker, setPicker]   = useState(false);
 
+  const [rawStream, setRawStream] = useState(null);
+  const [residentCount, setResidentCount] = useState(0);
+  const [recent, setRecent]       = useState([]);
+
   const startRef  = useRef(0);
   const iframeRef = useRef(null);
+  const shellRef  = useRef(null);
+  const isDesktop = useIsDesktop();
 
   const live = useLiveAudio({
     roomType: 'dj',
@@ -47,9 +57,31 @@ export default function AnnouncementBroadcast() {
     enabled:  !!session,
   });
 
+  const engagement  = useRoomEngagement(session?._id);
+  const level       = useMicLevel(rawStream, !!session && live.micOn);
+  const shellHeight = useFillHeight(shellRef, !!session && isDesktop, { min: 560 });
+
   useEffect(() => {
     loungeAPI.getSession().then(({ data }) => setLibrary(data.data?.suggestions || [])).catch(() => {});
   }, []);
+
+  // Desktop setup screen: who'll be notified, and what was said recently
+  useEffect(() => {
+    if (!isDesktop) return;
+    estateAPI.getStats().then(({ data }) => setResidentCount(data.data?.totalResidents || 0)).catch(() => {});
+    announcementAPI.getAll({ limit: 4 }).then(({ data }) => setRecent(data.data || [])).catch(() => {});
+  }, [isDesktop]);
+
+  // M toggles the mic while live (not while typing)
+  useEffect(() => {
+    if (!session) return;
+    const onKey = (e) => {
+      if (['INPUT', 'TEXTAREA'].includes(e.target.tagName) || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === 'm' || e.key === 'M') { e.preventDefault(); live.toggleMic(); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [session, live]);
 
   useEffect(() => { if (live.listenerCount > peak) setPeak(live.listenerCount); }, [live.listenerCount, peak]);
 
@@ -72,7 +104,8 @@ export default function AnnouncementBroadcast() {
     if (!headline.trim()) return toast.error('Give the announcement a headline');
     try {
       setStarting(true);
-      await live.getLocalStream();
+      const stream = await live.getLocalStream();
+      setRawStream(live.getRawStream?.() || stream);
       const { data } = await djAPI.start({
         kind: 'announcement',
         title: `Announcement from ${user?.name || 'the manager'}`,
@@ -114,7 +147,27 @@ export default function AnnouncementBroadcast() {
     navigate('/announcements');
   };
 
-  // ── Pre-live screen ───────────────────────────────────────────────────────
+  // ── Desktop ───────────────────────────────────────────────────────────────
+  if (isDesktop && !session) {
+    return (
+      <BroadcastSetupDesktop
+        user={user} headline={headline} setHeadline={setHeadline}
+        bgTrack={bgTrack} setBgTrack={setBgTrack} library={sortedLibrary}
+        starting={starting} onGoLive={goLive} onBack={() => navigate('/announcements')}
+        residentCount={residentCount} recent={recent} />
+    );
+  }
+  if (isDesktop && session) {
+    return (
+      <BroadcastStudioDesktop
+        session={session} user={user} live={live} level={level} elapsed={elapsed} peak={peak}
+        engagement={engagement} current={current} library={sortedLibrary} onChangeTrack={changeTrack}
+        musicVol={musicVol} applyVolume={applyVolume} iframeRef={iframeRef} onEnd={endBroadcast}
+        shellRef={shellRef} shellHeight={shellHeight} />
+    );
+  }
+
+  // ── Pre-live screen (phone) ───────────────────────────────────────────────
   if (!session) {
     return (
       <div style={{ maxWidth: 540, margin: '0 auto', padding: '24px 16px 40px' }}>

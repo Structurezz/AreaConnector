@@ -3,8 +3,8 @@ import { Radio, Calendar, Play, Pause, X, Volume2 } from 'lucide-react';
 import { podcastAPI } from '../api';
 import Portal from './ui/Portal';
 
-const VIOLET      = '#8B5CF6';
-const VIOLET_DARK = '#6D28D9';
+const GREEN      = '#10B981';
+const GREEN_DARK = '#059669';
 
 const niceDate = (d) => d ? new Date(d).toLocaleString('en-NG', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
 const fmtMin   = (s) => `${Math.round((s || 0) / 60)} min`;
@@ -34,30 +34,30 @@ function EpisodePlayer({ episode, onClose }) {
 
   return (
     <Portal>
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'linear-gradient(180deg, #0F172A, #1E1B4B)', display: 'flex', flexDirection: 'column', color: '#fff' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'linear-gradient(180deg, #0F172A, #022C22)', display: 'flex', flexDirection: 'column', color: '#fff' }}>
       <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', color: '#C4B5FD', textTransform: 'uppercase' }}>AreaConnect FM</div>
+        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', color: '#A7F3D0', textTransform: 'uppercase' }}>AreaConnect FM</div>
         <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 10, padding: 8, color: '#fff', cursor: 'pointer' }}><X size={16}/></button>
       </div>
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <div style={{ maxWidth: 440, width: '100%', textAlign: 'center' }}>
-          <div style={{ width: 110, height: 110, borderRadius: 28, background: `linear-gradient(135deg, ${VIOLET}, ${VIOLET_DARK})`, margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 20px 44px rgba(139,92,246,0.5)' }}>
+          <div style={{ width: 110, height: 110, borderRadius: 28, background: `linear-gradient(135deg, ${GREEN}, ${GREEN_DARK})`, margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 20px 44px rgba(16,185,129,0.5)' }}>
             <Radio size={44}/>
           </div>
-          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.14em', color: '#C4B5FD', textTransform: 'uppercase' }}>{episode.hostName}</div>
+          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.14em', color: '#A7F3D0', textTransform: 'uppercase' }}>{episode.hostName}</div>
           <h2 style={{ fontSize: 22, fontWeight: 800, margin: '4px 0 8px' }}>{episode.title}</h2>
           {episode.description && <p style={{ color: '#CBD5E1', fontSize: 13, lineHeight: 1.55, marginBottom: 20 }}>{episode.description}</p>}
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <button onClick={toggle}
               style={{ width: 56, height: 56, borderRadius: '50%', border: 'none', cursor: 'pointer',
-                background: `linear-gradient(135deg, ${VIOLET}, ${VIOLET_DARK})`, color: '#fff',
+                background: `linear-gradient(135deg, ${GREEN}, ${GREEN_DARK})`, color: '#fff',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 10px 24px rgba(139,92,246,0.5)' }}>
+                boxShadow: '0 10px 24px rgba(16,185,129,0.5)' }}>
               {playing ? <Pause size={22}/> : <Play size={22}/>}
             </button>
             <div style={{ flex: 1 }}>
               <div style={{ height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: 999, overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${Math.min(100, dur ? (pos / dur) * 100 : 0)}%`, background: `linear-gradient(90deg, ${VIOLET}, ${VIOLET_DARK})`, transition: 'width 0.3s' }} />
+                <div style={{ height: '100%', width: `${Math.min(100, dur ? (pos / dur) * 100 : 0)}%`, background: `linear-gradient(90deg, ${GREEN}, ${GREEN_DARK})`, transition: 'width 0.3s' }} />
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#94A3B8', marginTop: 4 }}>
                 <span>{Math.floor(pos / 60)}:{String(Math.floor(pos % 60)).padStart(2,'0')}</span>
@@ -89,9 +89,9 @@ export default function PodcastFM() {
   if (upcoming.length === 0 && episodes.length === 0) return null;
 
   return (
-    <div className="rounded-2xl p-4 border" style={{ borderColor: '#E2E8F0', background: 'linear-gradient(135deg, #FAF5FF, #F5F3FF)' }}>
+    <div className="rounded-2xl p-4 border" style={{ borderColor: '#E2E8F0', background: 'linear-gradient(135deg, #F0FDF4, #ECFDF5)' }}>
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: `${VIOLET}18`, color: VIOLET_DARK }}>
+        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: `${GREEN}18`, color: GREEN_DARK }}>
           <Radio size={14}/>
         </div>
         <div className="text-sm font-extrabold" style={{ color: '#0F172A' }}>AreaConnect FM</div>
@@ -101,20 +101,20 @@ export default function PodcastFM() {
       {upcoming.length > 0 && (
         <div className="mb-4">
           <div className="flex items-center gap-2 mb-2">
-            <Calendar size={11} style={{ color: VIOLET_DARK }}/>
-            <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: VIOLET_DARK }}>Upcoming</span>
+            <Calendar size={11} style={{ color: GREEN_DARK }}/>
+            <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: GREEN_DARK }}>Upcoming</span>
           </div>
           <div className="space-y-2">
             {upcoming.slice(0, 3).map(s => (
               <div key={s._id} className="rounded-xl p-3 flex items-center gap-3 border bg-white" style={{ borderColor: '#E2E8F0' }}>
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${VIOLET}18`, color: VIOLET_DARK }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${GREEN}18`, color: GREEN_DARK }}>
                   <Radio size={15}/>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-bold truncate" style={{ color: '#0F172A' }}>{s.title}</div>
                   <div className="text-[11px]" style={{ color: '#94A3B8' }}>
                     {s.scheduledAt ? niceDate(s.scheduledAt) : 'Any time'}
-                    {s.isRecurring && <span className="ml-2 px-1.5 py-0.5 rounded-full text-[10px] font-bold" style={{ background: '#EDE9FE', color: VIOLET_DARK }}>Recurring</span>}
+                    {s.isRecurring && <span className="ml-2 px-1.5 py-0.5 rounded-full text-[10px] font-bold" style={{ background: '#D1FAE5', color: GREEN_DARK }}>Recurring</span>}
                   </div>
                 </div>
               </div>
@@ -126,17 +126,17 @@ export default function PodcastFM() {
       {episodes.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <Play size={11} style={{ color: VIOLET_DARK }}/>
-            <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: VIOLET_DARK }}>Past episodes</span>
+            <Play size={11} style={{ color: GREEN_DARK }}/>
+            <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: GREEN_DARK }}>Past episodes</span>
           </div>
           <div className="space-y-2">
             {episodes.slice(0, 5).map(ep => (
               <button key={ep._id} onClick={() => setPlaying(ep)}
                 className="w-full text-left rounded-xl p-3 flex items-center gap-3 border bg-white transition-colors"
                 style={{ borderColor: '#E2E8F0' }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = VIOLET}
+                onMouseEnter={e => e.currentTarget.style.borderColor = GREEN}
                 onMouseLeave={e => e.currentTarget.style.borderColor = '#E2E8F0'}>
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${VIOLET}18`, color: VIOLET_DARK }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${GREEN}18`, color: GREEN_DARK }}>
                   <Volume2 size={15}/>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -146,7 +146,7 @@ export default function PodcastFM() {
                     {ep.guestNames?.length > 0 && <> · with {ep.guestNames.slice(0, 2).join(', ')}{ep.guestNames.length > 2 ? '…' : ''}</>}
                   </div>
                 </div>
-                <Play size={14} style={{ color: VIOLET_DARK }}/>
+                <Play size={14} style={{ color: GREEN_DARK }}/>
               </button>
             ))}
           </div>

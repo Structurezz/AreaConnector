@@ -1,8 +1,8 @@
 import { Radio, Mic, Play, Clock, Calendar, Headphones, Trash2, ListMusic, Repeat } from 'lucide-react';
 import DJLive from './DJLive';
 
-const VIOLET = '#8B5CF6';
-const INDIGO = '#6366F1';
+const GREEN = '#10B981';
+const TEAL = '#0D9488';
 
 const fmtMin = (s) => `${Math.round((s || 0) / 60)} min`;
 const fmtClock = (s) => `${Math.floor((s || 0) / 60)}:${String(Math.floor((s || 0) % 60)).padStart(2, '0')}`;
@@ -46,9 +46,9 @@ export default function PodcastsDesktop({ upcoming, episodes, mixtapes, activeDJ
     <div className="max-w-[1400px] mx-auto space-y-6 pb-10">
       {/* ── Banner ── */}
       <div className="dash-rise relative overflow-hidden rounded-2xl px-6 py-5"
-        style={{ background: 'linear-gradient(120deg, #3B0764 0%, #6D28D9 50%, #A855F7 100%)', boxShadow: '0 16px 32px -18px rgba(109,40,217,0.8)' }}>
-        <div className="dash-blob absolute -top-20 right-56 w-56 h-56 rounded-full blur-3xl pointer-events-none" style={{ background: 'rgba(236,72,153,0.4)' }} />
-        <div className="dash-blob absolute -bottom-24 left-32 w-64 h-64 rounded-full blur-3xl pointer-events-none" style={{ background: 'rgba(99,102,241,0.5)', animationDelay: '-6s' }} />
+        style={{ background: 'linear-gradient(120deg, #022C22 0%, #059669 50%, #34D399 100%)', boxShadow: '0 16px 32px -18px rgba(5,150,105,0.8)' }}>
+        <div className="dash-blob absolute -top-20 right-56 w-56 h-56 rounded-full blur-3xl pointer-events-none" style={{ background: 'rgba(52,211,153,0.4)' }} />
+        <div className="dash-blob absolute -bottom-24 left-32 w-64 h-64 rounded-full blur-3xl pointer-events-none" style={{ background: 'rgba(13,148,136,0.45)', animationDelay: '-6s' }} />
         <Equalizer bars={28} className="absolute right-6 bottom-0 h-16 opacity-20 pointer-events-none" />
         <div className="relative flex items-center justify-between gap-6">
           <div className="min-w-0">
@@ -70,7 +70,7 @@ export default function PodcastsDesktop({ upcoming, episodes, mixtapes, activeDJ
               </div>
             ))}
             <button onClick={onStart}
-              className="group inline-flex items-center gap-1.5 text-[13px] font-semibold px-3.5 py-2.5 rounded-xl bg-white text-violet-700 hover:-translate-y-0.5 transition-all"
+              className="group inline-flex items-center gap-1.5 text-[13px] font-semibold px-3.5 py-2.5 rounded-xl bg-white text-emerald-700 hover:-translate-y-0.5 transition-all"
               style={{ boxShadow: '0 8px 18px -8px rgba(0,0,0,0.4)' }}>
               <Mic size={14} /> Start a live room
             </button>
@@ -81,14 +81,14 @@ export default function PodcastsDesktop({ upcoming, episodes, mixtapes, activeDJ
       {isEmpty ? (
         <div className="dash-rise rounded-2xl bg-white border border-slate-200/70 py-16 text-center">
           <div className="relative w-16 h-16 mx-auto flex items-center justify-center">
-            <span className="dash-ripple absolute inset-0 rounded-2xl border border-violet-300" />
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white" style={{ background: `linear-gradient(135deg, ${VIOLET}, #6D28D9)` }}>
+            <span className="dash-ripple absolute inset-0 rounded-2xl border border-emerald-300" />
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white" style={{ background: `linear-gradient(135deg, ${GREEN}, #059669)` }}>
               <Radio size={24} />
             </div>
           </div>
           <div className="text-[15px] font-semibold text-slate-900 mt-4">Nothing on air yet</div>
           <p className="text-[13px] text-slate-500 mt-1 max-w-sm mx-auto">Start the first live room: a prayer, a chat or a DJ set. Your neighbours will get notified.</p>
-          <button onClick={onStart} className="btn-primary !text-[13px] !px-4 !py-2 mt-4" style={{ background: `linear-gradient(135deg, ${VIOLET}, #6D28D9)` }}>
+          <button onClick={onStart} className="btn-primary !text-[13px] !px-4 !py-2 mt-4" style={{ background: `linear-gradient(135deg, ${GREEN}, #059669)` }}>
             <Mic size={14} /> Start a live room
           </button>
         </div>
@@ -103,7 +103,7 @@ export default function PodcastsDesktop({ upcoming, episodes, mixtapes, activeDJ
                 <DJLive />
                 {liveFM && !activeDJ && (
                   <div className="relative overflow-hidden flex items-center gap-4 p-4 rounded-2xl text-white"
-                    style={{ background: 'linear-gradient(120deg, #4C1D95, #7C3AED)' }}>
+                    style={{ background: 'linear-gradient(120deg, #064E3B, #047857)' }}>
                     <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0"><Radio size={20} /></div>
                     <div className="flex-1 min-w-0">
                       <div className="text-[11px] font-semibold uppercase tracking-wider text-white/75">AreaConnect FM · Live</div>
@@ -118,7 +118,7 @@ export default function PodcastsDesktop({ upcoming, episodes, mixtapes, activeDJ
 
             {mixtapes.length > 0 && (
               <section className="dash-rise" style={{ animationDelay: '120ms' }}>
-                <SectionHead Icon={Headphones} color={INDIGO} title="Your estate's archive" count={mixtapes.length} />
+                <SectionHead Icon={Headphones} color={TEAL} title="Your estate's archive" count={mixtapes.length} />
                 <div className="grid grid-cols-3 2xl:grid-cols-4 gap-4">
                   {mixtapes.map((m, i) => {
                     const [c1, c2] = coverFor(m.title);
@@ -136,7 +136,7 @@ export default function PodcastsDesktop({ upcoming, episodes, mixtapes, activeDJ
                               </>
                             )}
                           <span className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors" />
-                          <span className="absolute right-3 bottom-3 w-11 h-11 rounded-full bg-white text-violet-700 flex items-center justify-center shadow-lg opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+                          <span className="absolute right-3 bottom-3 w-11 h-11 rounded-full bg-white text-emerald-700 flex items-center justify-center shadow-lg opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
                             <Play size={18} className="ml-0.5" fill="currentColor" />
                           </span>
                           <span className="absolute left-2.5 top-2.5 text-[10px] font-semibold text-white px-2 py-0.5 rounded-full bg-black/30 backdrop-blur">{fmtMin(m.totalDurationSec)}</span>
@@ -160,24 +160,24 @@ export default function PodcastsDesktop({ upcoming, episodes, mixtapes, activeDJ
 
             {episodes.length > 0 && (
               <section className="dash-rise" style={{ animationDelay: '180ms' }}>
-                <SectionHead Icon={ListMusic} color={VIOLET} title="AreaConnect FM archive" count={episodes.length} />
+                <SectionHead Icon={ListMusic} color={GREEN} title="AreaConnect FM archive" count={episodes.length} />
                 <div className="rounded-2xl bg-white border border-slate-200/70 overflow-hidden">
                   <div className="grid grid-cols-[40px_minmax(0,1fr)_120px_70px] gap-3 px-4 py-2 text-[11px] font-medium text-slate-400 border-b border-slate-100">
                     <span className="text-center">#</span><span>Episode</span><span>Published</span><span className="text-right"><Clock size={12} className="inline" /></span>
                   </div>
                   {episodes.slice(0, 20).map((ep, i) => (
                     <button key={ep._id} onClick={() => onPlay('ep', ep)}
-                      className="dash-rise group w-full grid grid-cols-[40px_minmax(0,1fr)_120px_70px] gap-3 items-center px-4 py-2.5 text-left border-t border-slate-50 first-of-type:border-0 hover:bg-violet-50/50 transition-colors"
+                      className="dash-rise group w-full grid grid-cols-[40px_minmax(0,1fr)_120px_70px] gap-3 items-center px-4 py-2.5 text-left border-t border-slate-50 first-of-type:border-0 hover:bg-emerald-50/50 transition-colors"
                       style={{ animationDelay: `${220 + i * 30}ms` }}>
                       <span className="relative w-8 h-8 mx-auto flex items-center justify-center">
                         <span className="text-[12px] text-slate-400 tabular-nums group-hover:opacity-0 transition-opacity">{i + 1}</span>
                         <span className="absolute inset-0 rounded-full flex items-center justify-center text-white opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100 transition-all"
-                          style={{ background: `linear-gradient(135deg, ${VIOLET}, #6D28D9)` }}>
+                          style={{ background: `linear-gradient(135deg, ${GREEN}, #059669)` }}>
                           <Play size={13} className="ml-0.5" fill="currentColor" />
                         </span>
                       </span>
                       <span className="min-w-0">
-                        <span className="block text-[13px] font-medium text-slate-900 truncate group-hover:text-violet-700 transition-colors">{ep.title}</span>
+                        <span className="block text-[13px] font-medium text-slate-900 truncate group-hover:text-emerald-700 transition-colors">{ep.title}</span>
                         <span className="block text-[11px] text-slate-400 truncate">
                           {ep.hostName || 'AreaConnect FM'}
                           {ep.guestNames?.length > 0 && <> · with {ep.guestNames.slice(0, 2).join(', ')}{ep.guestNames.length > 2 ? '…' : ''}</>}
@@ -197,7 +197,7 @@ export default function PodcastsDesktop({ upcoming, episodes, mixtapes, activeDJ
             <div className="dash-rise rounded-2xl bg-white border border-slate-200/70 overflow-hidden" style={{ animationDelay: '100ms' }}>
               <div className="flex items-center justify-between px-4 h-11 border-b border-slate-100">
                 <h3 className="text-[13px] font-semibold text-slate-900 flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${VIOLET}, #6D28D9)` }}>
+                  <span className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${GREEN}, #059669)` }}>
                     <Calendar size={12} className="text-white" />
                   </span>
                   Coming up on FM
@@ -208,17 +208,17 @@ export default function PodcastsDesktop({ upcoming, episodes, mixtapes, activeDJ
                 <p className="px-4 py-4 text-[12px] text-slate-400">No shows scheduled.</p>
               ) : (
                 <div className="relative py-2">
-                  <span className="absolute left-[30px] top-4 bottom-4 w-px bg-gradient-to-b from-violet-300 to-transparent" />
+                  <span className="absolute left-[30px] top-4 bottom-4 w-px bg-gradient-to-b from-emerald-300 to-transparent" />
                   {upcoming.slice(0, 6).map((s, i) => {
                     const d = s.scheduledAt ? new Date(s.scheduledAt) : null;
                     return (
                       <div key={s._id} className="relative flex items-start gap-3 px-4 py-2.5">
-                        <span className={`relative z-10 mt-1 w-[11px] h-[11px] ml-[2px] rounded-full border-2 border-white shadow ${i === 0 ? 'bg-violet-500' : 'bg-violet-300'}`} />
+                        <span className={`relative z-10 mt-1 w-[11px] h-[11px] ml-[2px] rounded-full border-2 border-white shadow ${i === 0 ? 'bg-emerald-500' : 'bg-emerald-300'}`} />
                         <div className="flex-1 min-w-0">
                           <div className="text-[13px] font-medium text-slate-900 truncate">{s.title}</div>
                           <div className="text-[11px] text-slate-400 flex items-center gap-1.5">
                             {d ? d.toLocaleString('en-NG', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Any time'}
-                            {s.isRecurring && <span className="inline-flex items-center gap-0.5 px-1.5 rounded-full bg-violet-50 text-violet-600 font-medium"><Repeat size={9} /> Weekly</span>}
+                            {s.isRecurring && <span className="inline-flex items-center gap-0.5 px-1.5 rounded-full bg-emerald-50 text-emerald-600 font-medium"><Repeat size={9} /> Weekly</span>}
                           </div>
                         </div>
                       </div>
@@ -230,7 +230,7 @@ export default function PodcastsDesktop({ upcoming, episodes, mixtapes, activeDJ
 
             <button onClick={onStart}
               className="dash-rise group w-full relative overflow-hidden rounded-2xl p-4 text-left text-white transition-transform hover:-translate-y-0.5"
-              style={{ animationDelay: '160ms', background: 'linear-gradient(135deg, #DB2777, #7C3AED)', boxShadow: '0 14px 28px -16px rgba(219,39,119,0.8)' }}>
+              style={{ animationDelay: '160ms', background: 'linear-gradient(135deg, #0D9488, #047857)', boxShadow: '0 14px 28px -16px rgba(13,148,136,0.8)' }}>
               <div className="dash-blob absolute -top-10 -right-10 w-32 h-32 rounded-full blur-2xl" style={{ background: 'rgba(251,207,232,0.45)' }} />
               <div className="relative flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center"><Mic size={18} /></div>

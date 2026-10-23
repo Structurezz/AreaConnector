@@ -12,10 +12,10 @@ import Portal from '../components/ui/Portal';
 import PodcastsDesktop from '../components/PodcastsDesktop';
 import useIsDesktop from '../hooks/useIsDesktop';
 
-const VIOLET      = '#8B5CF6';
-const VIOLET_DARK = '#6D28D9';
-const INDIGO      = '#6366F1';
-const INDIGO_DARK = '#4F46E5';
+const GREEN      = '#10B981';
+const GREEN_DARK = '#059669';
+const TEAL      = '#0D9488';
+const TEAL_DARK = '#0F766E';
 
 const niceDate = (d) => d ? new Date(d).toLocaleString('en-NG', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
 const fmtMin   = (s) => `${Math.round((s || 0) / 60)} min`;
@@ -30,8 +30,8 @@ function AudioPlayer({ item, kind, onClose }) {
 
   const dur     = kind === 'ep' ? (item.durationSec || 0) : (item.totalDurationSec || 0);
   const url     = kind === 'ep' ? item.audioUrl : item.voiceAudioUrl;
-  const color   = kind === 'ep' ? VIOLET      : INDIGO;
-  const colorD  = kind === 'ep' ? VIOLET_DARK : INDIGO_DARK;
+  const color   = kind === 'ep' ? GREEN      : TEAL;
+  const colorD  = kind === 'ep' ? GREEN_DARK : TEAL_DARK;
   const label   = kind === 'ep' ? 'AreaConnect FM Episode' : 'Lounge Mixtape';
 
   useEffect(() => {
@@ -67,9 +67,9 @@ function AudioPlayer({ item, kind, onClose }) {
 
   return (
     <Portal>
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'linear-gradient(180deg, #0F172A, #1E1B4B)', display: 'flex', flexDirection: 'column', color: '#fff' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'linear-gradient(180deg, #0F172A, #022C22)', display: 'flex', flexDirection: 'column', color: '#fff' }}>
       <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', color: '#C4B5FD', textTransform: 'uppercase' }}>{label}</div>
+        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', color: '#A7F3D0', textTransform: 'uppercase' }}>{label}</div>
         <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 10, padding: 8, color: '#fff', cursor: 'pointer' }}><X size={16}/></button>
       </div>
 
@@ -86,14 +86,14 @@ function AudioPlayer({ item, kind, onClose }) {
 
           {kind === 'ep' && (
             <div style={{ textAlign: 'center', marginBottom: 20 }}>
-              <div style={{ width: 110, height: 110, borderRadius: 28, background: `linear-gradient(135deg, ${color}, ${colorD})`, margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 20px 48px rgba(139,92,246,0.5)' }}>
+              <div style={{ width: 110, height: 110, borderRadius: 28, background: `linear-gradient(135deg, ${color}, ${colorD})`, margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 20px 48px rgba(16,185,129,0.5)' }}>
                 <Radio size={44}/>
               </div>
             </div>
           )}
 
-          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', color: '#C4B5FD', textTransform: 'uppercase' }}>{item.hostName}</div>
-          <h2 style={{ fontSize: 22, fontWeight: 800, margin: '4px 0 8px' }}>{item.title}</h2>
+          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', color: '#A7F3D0', textTransform: 'uppercase' }}>{item.hostName}</div>
+          <h2 style={{ fontSize: 22, fontWeight: 800, margin: '4px 0 8px', color: '#fff' }}>{item.title}</h2>
           {kind === 'ep' && item.description && <p style={{ color: '#CBD5E1', fontSize: 13, lineHeight: 1.55, marginBottom: 16 }}>{item.description}</p>}
           {kind === 'mix' && <div style={{ fontSize: 13, color: '#CBD5E1', marginBottom: 16 }}>Now: {np?.title || '—'}{np?.artist && ` · ${np.artist}`}</div>}
 
@@ -192,7 +192,7 @@ export default function Podcasts() {
     <div style={{ maxWidth: 760, margin: '0 auto', padding: '0 4px 40px' }}>
       {/* Hero */}
       <div style={{
-        background: 'linear-gradient(135deg, #4C1D95 0%, #6D28D9 55%, #8B5CF6 100%)',
+        background: 'linear-gradient(135deg, #064E3B 0%, #059669 55%, #10B981 100%)',
         borderRadius: 20, padding: '22px 20px', color: '#fff', marginBottom: 18,
         position: 'relative', overflow: 'hidden',
       }}>
@@ -201,14 +201,14 @@ export default function Podcasts() {
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '5px 11px', borderRadius: 999, background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.25)', fontSize: 10, fontWeight: 800, letterSpacing: '0.14em', marginBottom: 10 }}>
             <Radio size={12}/> PODCAST
           </div>
-          <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em', margin: 0, lineHeight: 1.15 }}>
+          <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em', margin: 0, lineHeight: 1.15, color: '#fff' }}>
             Live rooms, mixtapes, FM shows.
           </h1>
           <p style={{ fontSize: 13, opacity: 0.9, lineHeight: 1.55, marginTop: 8 }}>
             Catch neighbours going live, replay past sets, or start your own — prayer, chat, DJ, podcast.
           </p>
           <button onClick={() => navigate('/podcasts/live')}
-            style={{ marginTop: 14, padding: '10px 18px', borderRadius: 12, border: 'none', background: '#fff', color: VIOLET_DARK, fontWeight: 800, fontSize: 13, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            style={{ marginTop: 14, padding: '10px 18px', borderRadius: 12, border: 'none', background: '#fff', color: GREEN_DARK, fontWeight: 800, fontSize: 13, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
             <Mic size={14}/> Start a live room
           </button>
         </div>
@@ -221,7 +221,7 @@ export default function Podcasts() {
           {/* DJLive handles its own fetch + banner — rendering it here surfaces the estate's current room on this page too */}
           <DJLive />
           {liveFM && !activeDJ && (
-            <div style={{ padding: 14, borderRadius: 14, background: 'linear-gradient(135deg, #4C1D95, #6D28D9)', color: '#fff', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ padding: 14, borderRadius: 14, background: 'linear-gradient(135deg, #064E3B, #059669)', color: '#fff', display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Radio size={18}/>
               </div>
@@ -239,20 +239,20 @@ export default function Podcasts() {
       {upcoming.length > 0 && (
         <div style={{ marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <Calendar size={13} color={VIOLET_DARK}/>
+            <Calendar size={13} color={GREEN_DARK}/>
             <h2 style={{ fontSize: 14, fontWeight: 800, color: '#0F172A', margin: 0 }}>Coming up on AreaConnect FM</h2>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {upcoming.slice(0, 5).map(s => (
               <div key={s._id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: `${VIOLET}18`, color: VIOLET_DARK, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: `${GREEN}18`, color: GREEN_DARK, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Radio size={14}/>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: '#0F172A' }}>{s.title}</div>
                   <div style={{ fontSize: 11, color: '#94A3B8' }}>
                     {s.scheduledAt ? niceDate(s.scheduledAt) : 'Any time'}
-                    {s.isRecurring && <span style={{ marginLeft: 6, padding: '1px 6px', borderRadius: 999, background: '#EDE9FE', color: VIOLET_DARK, fontWeight: 700, fontSize: 10 }}>Recurring</span>}
+                    {s.isRecurring && <span style={{ marginLeft: 6, padding: '1px 6px', borderRadius: 999, background: '#D1FAE5', color: GREEN_DARK, fontWeight: 700, fontSize: 10 }}>Recurring</span>}
                   </div>
                 </div>
               </div>
@@ -265,7 +265,7 @@ export default function Podcasts() {
       {episodes.length > 0 && (
         <div style={{ marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <Radio size={13} color={VIOLET_DARK}/>
+            <Radio size={13} color={GREEN_DARK}/>
             <h2 style={{ fontSize: 14, fontWeight: 800, color: '#0F172A', margin: 0 }}>AreaConnect FM archive</h2>
             <span style={{ fontSize: 11, color: '#94A3B8' }}>· {episodes.length}</span>
           </div>
@@ -273,9 +273,9 @@ export default function Podcasts() {
             {episodes.slice(0, 10).map(ep => (
               <button key={ep._id} onClick={() => setPlaying({ kind: 'ep', item: ep })}
                 style={{ textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12, cursor: 'pointer' }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = VIOLET}
+                onMouseEnter={e => e.currentTarget.style.borderColor = GREEN}
                 onMouseLeave={e => e.currentTarget.style.borderColor = '#E2E8F0'}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: `${VIOLET}18`, color: VIOLET_DARK, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: `${GREEN}18`, color: GREEN_DARK, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Volume2 size={14}/>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -296,18 +296,18 @@ export default function Podcasts() {
       {mixtapes.length > 0 && (
         <div style={{ marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <Headphones size={13} color={INDIGO_DARK}/>
+            <Headphones size={13} color={TEAL_DARK}/>
             <h2 style={{ fontSize: 14, fontWeight: 800, color: '#0F172A', margin: 0 }}>Your estate's archive</h2>
             <span style={{ fontSize: 11, color: '#94A3B8' }}>· {mixtapes.length}</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {mixtapes.map(m => (
               <div key={m._id} style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12 }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = INDIGO}
+                onMouseEnter={e => e.currentTarget.style.borderColor = TEAL}
                 onMouseLeave={e => e.currentTarget.style.borderColor = '#E2E8F0'}>
               <button onClick={() => setPlaying({ kind: 'mix', item: m })}
                 style={{ flex: 1, minWidth: 0, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 4px 10px 12px', background: 'transparent', border: 'none', cursor: 'pointer' }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: `${INDIGO}18`, color: INDIGO_DARK, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: `${TEAL}18`, color: TEAL_DARK, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
                   {m.hostPhoto ? <img src={m.hostPhoto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }}/> : <Play size={14}/>}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -333,7 +333,7 @@ export default function Podcasts() {
       {/* Empty state */}
       {!activeDJ && !liveFM && upcoming.length === 0 && episodes.length === 0 && mixtapes.length === 0 && (
         <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748B' }}>
-          <div style={{ width: 64, height: 64, borderRadius: 20, background: '#EDE9FE', color: VIOLET_DARK, margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 64, height: 64, borderRadius: 20, background: '#D1FAE5', color: GREEN_DARK, margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Radio size={28}/>
           </div>
           <div style={{ fontSize: 16, fontWeight: 800, color: '#0F172A', marginBottom: 6 }}>Nothing on air yet</div>
@@ -341,7 +341,7 @@ export default function Podcasts() {
             Start the first live room — a prayer, a chat, a DJ set — your neighbours will get notified.
           </div>
           <button onClick={() => navigate('/podcasts/live')}
-            style={{ padding: '10px 20px', borderRadius: 12, background: `linear-gradient(135deg, ${VIOLET}, ${VIOLET_DARK})`, color: '#fff', fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            style={{ padding: '10px 20px', borderRadius: 12, background: `linear-gradient(135deg, ${GREEN}, ${GREEN_DARK})`, color: '#fff', fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
             <Mic size={14}/> Start a live room
           </button>
         </div>
