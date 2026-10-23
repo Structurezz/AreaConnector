@@ -3,9 +3,10 @@ import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, UserCheck, Users, Home, Megaphone,
   MessageSquare, Bell, Settings, LogOut, CreditCard,
-  Zap, Crown, Music, Lock, Shield, Scale, Radio, Gift, PhoneCall, ShoppingBag,
+  Zap, Crown, Music, Lock, Shield, Scale, Radio, Gift, PhoneCall, ShoppingBag, UsersRound,
 } from 'lucide-react';
 import { usePlan } from '../../hooks/usePlan';
+import { canOpen } from '../../utils/teamAccess';
 import NotificationBell from '../ui/NotificationBell';
 import EstateSwitcher from '../ui/EstateSwitcher';
 
@@ -37,6 +38,7 @@ const NAV = [
   {
     section: 'Account',
     links: [
+      { to: '/team',     icon: UsersRound, label: 'Team' },
       { to: '/settings', icon: Settings, label: 'Settings' },
     ],
   },
@@ -118,7 +120,9 @@ export default function Sidebar({ mobile = false, onClose }) {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-5">
-        {NAV.map(({ section, links }) => (
+        {NAV.map(({ section, links }) => ({ section, links: links.filter(l => canOpen(user, l.to)) }))
+          .filter(({ links }) => links.length)
+          .map(({ section, links }) => (
           <div key={section}>
             <p className="text-xs font-semibold uppercase tracking-widest px-2 pb-2"
               style={{ color: '#94A3B8', letterSpacing: '0.08em' }}>

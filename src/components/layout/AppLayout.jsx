@@ -5,6 +5,8 @@ import {
   LayoutDashboard, UserCheck, Users, Home, Megaphone, Bell, Settings,
 } from 'lucide-react';
 import Sidebar from './Sidebar';
+import { useAuth } from '../../context/AuthContext';
+import { canOpen } from '../../utils/teamAccess';
 import { Toaster } from 'react-hot-toast';
 import NotificationBell from '../ui/NotificationBell';
 import AlertModal from '../ui/AlertModal';
@@ -25,6 +27,8 @@ const BOTTOM_NAV = [
 
 export default function AppLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user } = useAuth();
+  const bottomNav = BOTTOM_NAV.filter(l => canOpen(user, l.to));
 
   return (
     <NotificationProvider>
@@ -102,7 +106,7 @@ export default function AppLayout({ children }) {
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t"
         style={{ borderTopColor: '#E2E8F0', paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="flex">
-          {BOTTOM_NAV.map(({ to, icon: Icon, label }) => (
+          {bottomNav.map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
               to={to}

@@ -10,6 +10,8 @@ import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import Pagination from '../components/ui/Pagination';
 import DJLive from '../components/DJLive';
+import AnnouncementsDesktop from '../components/announcements/AnnouncementsDesktop';
+import useIsDesktop from '../hooks/useIsDesktop';
 
 const CATEGORY_COLORS = {
   general: 'blue', urgent: 'red', event: 'gold', maintenance: 'yellow',
@@ -26,6 +28,7 @@ export default function ManagerAnnouncements() {
   const [saving, setSaving] = useState(false);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, pages: 1 });
+  const isDesktop = useIsDesktop();
 
   const load = async (p = page) => {
     setLoading(true);
@@ -44,22 +47,29 @@ export default function ManagerAnnouncements() {
 
   useEffect(() => { load(1); }, []);
 
+  // Posts an announcement; returns true on success (the desktop composer resets on it)
+  const postAnnouncement = async (values) => {
+    try {
+      const fd = new FormData();
+      Object.entries(values).forEach(([k, v]) => fd.append(k, v));
+      await announcementAPI.create(fd);
+      toast.success('Announcement posted!');
+      setPage(1); load(1);
+      return true;
+    } catch {
+      toast.error('Failed to post');
+      return false;
+    }
+  };
+
   const handleCreate = async (e) => {
     e.preventDefault();
     setSaving(true);
-    try {
-      const fd = new FormData();
-      Object.entries(form).forEach(([k, v]) => fd.append(k, v));
-      await announcementAPI.create(fd);
-      toast.success('Announcement posted!');
+    if (await postAnnouncement(form)) {
       setShowCreate(false);
       setForm({ title: '', body: '', category: 'general', isPinned: false });
-      load();
-    } catch {
-      toast.error('Failed to post');
-    } finally {
-      setSaving(false);
     }
+    setSaving(false);
   };
 
   const handleDelete = async (id) => {
@@ -81,6 +91,15 @@ export default function ManagerAnnouncements() {
       toast.error('Failed');
     }
   };
+
+  if (isDesktop) return (
+    <AnnouncementsDesktop
+      announcements={announcements} loading={loading}
+      page={page} pagination={pagination} onPage={handlePage}
+      onPost={postAnnouncement} onDelete={handleDelete} onTogglePin={togglePin}
+      onGoLive={() => navigate('/announcements/live')}
+    />
+  );
 
   return (
     <div className="space-y-6 animate-fade-in">

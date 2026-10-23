@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { visitorAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
-import Badge, { visitorStatusBadge } from '../components/ui/Badge';
 import Spinner from '../components/ui/Spinner';
-import Pagination from '../components/ui/Pagination';
+import TablePager from '../components/dashboard/TablePager';
 import InviteForm from '../components/visitors/InviteForm';
-import { VisitorsHero, VisitorsFilters, VisitorCards, CardAction, VisitorsPager } from '../components/visitors/MobileVisitors';
+import { VisitorsHero, VisitorsFilters, VisitorCards, CardAction, VisitorsPager, VISITOR_STATUS, purposeIcon } from '../components/visitors/MobileVisitors';
+import PageHeader, { HEADER_BTN_PRIMARY } from '../components/dashboard/PageHeader';
 import Modal from '../components/ui/Modal';
 import EmptyState from '../components/ui/EmptyState';
 import {
@@ -15,7 +15,7 @@ import {
   Phone, Mail, Calendar, Clock, MapPin, User,
   Package, Wrench, Users, Home, MoreHorizontal,
   FileText, ChevronDown, ChevronUp,
-  Share2, CheckCircle, QrCode, StickyNote, XCircle,
+  Share2, CheckCircle, QrCode, StickyNote, XCircle, ChevronRight,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -327,7 +327,10 @@ function QRCanvas({ value, size = 144 }) {
   return <canvas ref={canvasRef} className="rounded-xl mx-auto" style={{ border: '1px solid #E2E8F0' }} />;
 }
 
-const STATUSES = ['', 'active', 'checked-in', 'checked-out', 'expired', 'blacklisted'];
+
+const STATUS_TABS = [
+  ['', 'All'], ['active', 'Expected'], ['checked-in', 'Inside'], ['checked-out', 'Left'], ['expired', 'Expired'], ['blacklisted', 'Blocked'],
+];
 
 const PURPOSE_CHIPS = [
   { label: 'Visit',       Icon: UserCheck      },
@@ -952,6 +955,7 @@ export default function ManagerVisitors() {
   const [search,        setSearch]        = useState('');
   const [statusFilter,  setStatusFilter]  = useState('');
   const [page,          setPage]          = useState(1);
+  const [limit,         setLimit]         = useState(PAGE_SIZE);
   const [pagination,    setPagination]    = useState({ total: 0, pages: 1 });
   const [showCreate,    setShowCreate]    = useState(false);
   const [passResult,    setPassResult]    = useState(null);
@@ -964,7 +968,7 @@ export default function ManagerVisitors() {
     else setSelectedVisitor(v);
   };
 
-  const load = async (p = page, q = search, status = statusFilter) => {
+  const load = async (p = page, q = search, status = statusFilter, lim = limit) => {
     setLoading(true);
     try {
       const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -972,7 +976,7 @@ export default function ManagerVisitors() {
         ...(status === 'today' ? { date: today.toISOString() } : { status: status || undefined }),
         search: q || undefined,
         page: p,
-        limit: PAGE_SIZE,
+        limit: lim,
       });
       setVisitors(data.data);
       setPagination(data.pagination || { total: data.data.length, pages: 1 });
@@ -982,12 +986,13 @@ export default function ManagerVisitors() {
     } finally { setLoading(false); }
   };
 
-  const handlePage         = (p) => { setPage(p); load(p, search, statusFilter); };
+  const handlePage         = (p) => { setPage(p); load(p, search, statusFilter); document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' }); };
   const handleSearch       = (q) => {
     setSearch(q); setPage(1);
     clearTimeout(searchTimer.current);
     searchTimer.current = setTimeout(() => load(1, q, statusFilter), 300);
   };
+  const handleLimit        = (l) => { setLimit(l); setPage(1); load(1, search, statusFilter, l); };
   const handleStatusChange = (s) => { setStatusFilter(s); setPage(1); load(1, search, s); };
   const pickStatus = (s) => handleStatusChange(s === statusFilter ? '' : s);
   const createPass = () => (window.innerWidth < 1024 ? navigate('/visitors/new') : setShowCreate(true));
@@ -1041,124 +1046,171 @@ export default function ManagerVisitors() {
             );
           }}
         />
-        <VisitorsPager page={page} pages={pagination.pages} total={pagination.total} limit={PAGE_SIZE} onPage={handlePage} accent={ACCENT} />
+        <VisitorsPager page={page} pages={pagination.pages} total={pagination.total} limit={limit} onPage={handlePage} accent={ACCENT} />
       </div>
 
       {/* ── Tablet / desktop ── */}
-      <div className="hidden md:block space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold mb-1" style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>Visitor Log</h1>
-          <p className="text-sm" style={{ color: '#64748B' }}>All visitor records for your estate</p>
-        </div>
-        <button onClick={() => window.innerWidth < 1024 ? navigate('/visitors/new') : setShowCreate(true)} className="btn-primary gap-2">
-          <Plus size={15} /> Create Guest Pass
-        </button>
-      </div>
+      <div className="hidden md:block space-y-5">
+      <PageHeader
+        title="Visitor Log"
+        subtitle="Everyone coming in and out of the estate"
+        actions={
+          <button onClick={createPass} className={HEADER_BTN_PRIMARY}>
+            <Plus size={15} /> Create guest pass
+          </button>
+        }
+        stats={[
+          { label: 'Expected',   value: counts?.active ?? 0,         Icon: Calendar,  color: '#10B981', hint: 'Passes not yet used',    active: statusFilter === 'active',     onClick: () => pickStatus('active') },
+          { label: 'Inside now', value: counts?.['checked-in'] ?? 0, Icon: LogIn,     color: '#0EA5E9', hint: 'Checked in at the gate', active: statusFilter === 'checked-in', onClick: () => pickStatus('checked-in'), pulse: (counts?.['checked-in'] || 0) > 0 },
+          { label: 'Today',      value: counts?.today ?? 0,          Icon: Clock,     color: '#F59E0B', hint: 'Due in today',           active: statusFilter === 'today',      onClick: () => pickStatus('today') },
+          { label: 'All visitors', value: counts?.all ?? 0,          Icon: UserCheck, color: '#8B5CF6', hint: 'Every pass issued',      onClick: () => handleStatusChange('') },
+        ]}
+      />
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#94A3B8' }} />
-          <input className="input-field pl-9" placeholder="Search name, purpose, code…"
+      <div className="dash-rise flex items-center gap-3 flex-wrap" style={{ animationDelay: '420ms' }}>
+        <div className="relative flex-1 min-w-[240px]">
+          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input className="w-full rounded-2xl bg-white border border-slate-200 pl-11 pr-10 py-3 text-sm outline-none transition-all focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+            placeholder="Search name, phone, purpose or code…"
             value={search} onChange={(e) => handleSearch(e.target.value)} />
+          {search && (
+            <button onClick={() => handleSearch('')} aria-label="Clear search" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+              <X size={16} />
+            </button>
+          )}
         </div>
-        <select className="input-field sm:w-44" value={statusFilter}
-          onChange={(e) => handleStatusChange(e.target.value)}>
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s ? s.charAt(0).toUpperCase() + s.slice(1).replace('-', ' ') : 'All statuses'}
-            </option>
-          ))}
-        </select>
+        <div className="flex items-center gap-1 p-1 rounded-2xl bg-white border border-slate-200 overflow-x-auto no-scrollbar">
+          {STATUS_TABS.map(([key, label]) => {
+            const on = statusFilter === key;
+            const n = key === '' ? counts?.all : counts?.[key];
+            return (
+              <button key={key || 'all'} onClick={() => handleStatusChange(key)}
+                className={`flex-shrink-0 inline-flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl transition-all duration-300 ${on ? 'text-white shadow-md' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}
+                style={on ? { background: 'linear-gradient(135deg, #10B981, #047857)', boxShadow: '0 6px 16px -6px rgba(16,185,129,0.6)' } : undefined}>
+                {label}
+                {typeof n === 'number' && (
+                  <span className={`text-[10px] font-black px-1.5 rounded-md tabular-nums ${on ? 'bg-white/25' : 'bg-slate-100 text-slate-500'}`}>{n}</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Table */}
-      <div className="glass-card overflow-hidden">
+      <div className="dash-rise rounded-3xl bg-white border border-slate-200/70 overflow-hidden" style={{ animationDelay: '480ms' }}>
         {loading ? (
-          <div className="flex justify-center p-12"><Spinner /></div>
+          <div className="divide-y divide-slate-100">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 px-6 py-4">
+                <div className="skeleton w-10 h-10 rounded-xl" />
+                <div className="flex-1 space-y-2"><div className="skeleton h-3 w-40 rounded" /><div className="skeleton h-2.5 w-24 rounded" /></div>
+                <div className="skeleton h-6 w-20 rounded-full" />
+              </div>
+            ))}
+          </div>
         ) : visitors.length === 0 ? (
-          <div className="flex flex-col items-center py-16 gap-3">
-            <UserCheck size={40} style={{ color: '#CBD5E1' }} />
-            <p className="font-medium" style={{ color: '#94A3B8' }}>No visitors found</p>
-            <button onClick={() => window.innerWidth < 1024 ? navigate('/visitors/new') : setShowCreate(true)} className="btn-primary gap-2 mt-1">
-              <Plus size={14} /> Create Guest Pass
-            </button>
+          <div className="flex flex-col items-center py-20 gap-3 text-center">
+            <div className="relative w-20 h-20 flex items-center justify-center">
+              <span className="dash-ripple absolute inset-0 rounded-full border-2 border-emerald-200" />
+              <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center">
+                <UserCheck size={28} className="text-emerald-500" />
+              </div>
+            </div>
+            <p className="font-bold text-slate-800 mt-2">{search ? `No visitors match “${search}”` : 'No visitors found'}</p>
+            <p className="text-sm text-slate-400">Guest passes you or residents create will show up here.</p>
+            {!search && (
+              <button onClick={createPass} className="btn-primary gap-2 mt-2">
+                <Plus size={14} /> Create guest pass
+              </button>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr style={{ borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
-                  {['Visitor', 'Host', 'Purpose', 'Expected', 'Code', 'Status', 'Actions'].map((h) => (
-                    <th key={h} className="text-left text-xs font-medium uppercase tracking-wider px-4 py-3"
-                      style={{ color: '#94A3B8' }}>{h}</th>
+                <tr className="bg-slate-50/80 border-b border-slate-100">
+                  {['Visitor', 'Host', 'Purpose', 'Expected', 'Code', 'Status', ''].map((h, i) => (
+                    <th key={i} className={`text-[10px] font-bold uppercase tracking-wider px-5 py-3 text-slate-400 ${i === 6 ? 'text-right' : 'text-left'}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {visitors.map((v) => (
-                  <tr key={v._id}
-                    onClick={() => openVisitor(v)}
-                    style={{ borderTop: '1px solid rgba(0,0,0,0.04)', transition: 'background 0.15s', cursor: 'pointer' }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-sm" style={{ color: '#0F172A' }}>{v.visitorName}</div>
-                      <div className="text-xs" style={{ color: '#94A3B8' }}>{v.visitorPhone || v.visitorEmail || '—'}</div>
-                    </td>
-                    <td className="px-4 py-3 text-sm" style={{ color: '#475569' }}>{v.hostResidentId?.name || 'Manager'}</td>
-                    <td className="px-4 py-3 text-sm max-w-[140px] truncate" style={{ color: '#475569' }}>{v.purpose}</td>
-                    <td className="px-4 py-3 text-sm whitespace-nowrap" style={{ color: '#475569' }}>
-                      {format(new Date(v.expectedDate), 'MMM d, HH:mm')}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="font-mono text-sm tracking-widest" style={{ color: ACCENT }}>{v.visitorCode}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge variant={visitorStatusBadge(v.status)}>{v.status}</Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-                        {v.status === 'active' && (
-                          <button onClick={() => handleCheckIn(v._id)} title="Check in"
-                            className="p-1.5 rounded-lg transition-all"
-                            style={{ color: '#94A3B8' }}
-                            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(16,185,129,0.10)'; e.currentTarget.style.color = '#059669'; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#94A3B8'; }}>
-                            <LogIn size={15} />
-                          </button>
-                        )}
-                        {v.status === 'checked-in' && (
-                          <button onClick={() => handleCheckOut(v._id)} title="Check out"
-                            className="p-1.5 rounded-lg transition-all"
-                            style={{ color: '#94A3B8' }}
-                            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(59,130,246,0.10)'; e.currentTarget.style.color = '#2563EB'; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#94A3B8'; }}>
-                            <LogOut size={15} />
-                          </button>
-                        )}
-                        {!['blacklisted', 'checked-out', 'expired'].includes(v.status) && (
-                          <button onClick={() => handleBlacklist(v._id)} title="Blacklist"
-                            className="p-1.5 rounded-lg transition-all"
-                            style={{ color: '#94A3B8' }}
-                            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.10)'; e.currentTarget.style.color = '#DC2626'; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#94A3B8'; }}>
-                            <Ban size={15} />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {visitors.map((v, i) => {
+                  const st = VISITOR_STATUS[v.status] || VISITOR_STATUS['checked-out'];
+                  const [PIcon, pColor, pBg] = purposeIcon(v.purpose);
+                  const initials = (v.visitorName || '?').split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
+                  return (
+                    <tr key={v._id} onClick={() => openVisitor(v)}
+                      className="dash-rise group cursor-pointer border-t border-slate-100 first:border-0 transition-colors hover:bg-emerald-50/40"
+                      style={{ animationDelay: `${520 + i * 35}ms` }}>
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-[12px] font-bold flex-shrink-0 transition-transform duration-300 group-hover:scale-110"
+                            style={{ background: st.bg, color: st.text }}>{initials}</div>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-sm text-slate-900 truncate">{v.visitorName}</div>
+                            <div className="text-xs text-slate-400 truncate">{v.visitorPhone || v.visitorEmail || '—'}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3.5 text-sm text-slate-600 whitespace-nowrap">{v.hostResidentId?.name || 'Manager'}</td>
+                      <td className="px-5 py-3.5">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold capitalize px-2.5 py-1 rounded-lg max-w-[150px]"
+                          style={{ background: pBg, color: pColor }}>
+                          <PIcon size={12} className="flex-shrink-0" /><span className="truncate">{v.purpose}</span>
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        <div className="text-sm font-medium text-slate-700">{format(new Date(v.expectedDate), 'MMM d')}</div>
+                        <div className="text-xs text-slate-400">{format(new Date(v.expectedDate), 'h:mm a')}</div>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span className="font-mono text-[13px] font-bold tracking-[0.18em] px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700">{v.visitorCode}</span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full whitespace-nowrap"
+                          style={{ background: st.bg, color: st.text }}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${v.status === 'checked-in' ? 'animate-pulse' : ''}`} style={{ background: st.dot }} />
+                          {st.label}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                          {v.status === 'active' && (
+                            <button onClick={() => handleCheckIn(v._id)}
+                              className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-lg text-emerald-700 bg-emerald-50 hover:bg-emerald-500 hover:text-white transition-all">
+                              <LogIn size={13} /> Check in
+                            </button>
+                          )}
+                          {v.status === 'checked-in' && (
+                            <button onClick={() => handleCheckOut(v._id)}
+                              className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-lg text-blue-700 bg-blue-50 hover:bg-blue-500 hover:text-white transition-all">
+                              <LogOut size={13} /> Check out
+                            </button>
+                          )}
+                          {!['blacklisted', 'checked-out', 'expired', 'cancelled'].includes(v.status) && (
+                            <button onClick={() => handleBlacklist(v._id)} title="Blacklist" aria-label="Blacklist"
+                              className="p-1.5 rounded-lg text-slate-300 opacity-0 group-hover:opacity-100 hover:text-red-600 hover:bg-red-50 transition-all">
+                              <Ban size={15} />
+                            </button>
+                          )}
+                          <ChevronRight size={16} className="text-slate-300 transition-transform group-hover:translate-x-0.5" />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
+        {!loading && (
+          <TablePager page={page} pages={pagination.pages} total={pagination.total} limit={limit}
+            onPage={handlePage} onLimit={handleLimit} accent={ACCENT} />
+        )}
       </div>
-
-      <Pagination page={page} pages={pagination.pages} total={pagination.total} limit={PAGE_SIZE} onPage={handlePage} />
       </div>
 
       {/* Create Guest Pass Modal */}

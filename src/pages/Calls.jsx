@@ -5,6 +5,8 @@ import { Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, Search, RefreshCw, Sh
 import BottomSheet from '../components/payments/BottomSheet';
 import { callAPI } from '../api';
 import { useCall } from '../context/CallContext';
+import CallsDesktop from '../components/calls/CallsDesktop';
+import useIsDesktop from '../hooks/useIsDesktop';
 
 // Estate staff calling: managers can call any resident or guard in the
 // estate for free, and see their recent calls (incl. emergency calls in).
@@ -36,6 +38,7 @@ function Avatar({ person, size = 44 }) {
 
 export default function Calls() {
   const { call, startCall } = useCall() || {};
+  const isDesktop = useIsDesktop();
   const [dir, setDir] = useState({ neighbours: [], staff: [] });
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -81,6 +84,10 @@ export default function Calls() {
 
   const findPerson = (id) => dir.neighbours.find((x) => String(x._id) === String(id)) || dir.staff.find((x) => String(x._id) === String(id));
   const missedIn = history.filter((c) => c.direction === 'incoming' && ['missed', 'declined'].includes(c.status) && Date.now() - new Date(c.createdAt) < 86400000).length;
+
+  if (isDesktop) return (
+    <CallsDesktop dir={dir} history={history} loading={loading} onRefresh={load} call={call} startCall={startCall} />
+  );
 
   return (
     <div className="space-y-5 animate-fade-in">

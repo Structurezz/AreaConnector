@@ -38,6 +38,8 @@ export const estateAPI = {
   },
   deleteConstitution: (id) => api.delete(`/estates/${id}/constitution`),
   constitutionFileUrl: (id) => `/estates/${id}/constitution/file`,
+  // The file route needs the auth header, so fetch it as a blob (a plain link can't send it)
+  downloadConstitution: (id) => api.get(`/estates/${id}/constitution/file`, { responseType: 'blob' }),
 };
 
 // Visitors
@@ -145,6 +147,7 @@ export const postAPI = {
 export const loungeAPI = {
   getSession: () => api.get('/lounge'),
   updateMood: (data) => api.patch('/lounge/mood', data),
+  suggest: (data) => api.post('/lounge/suggest', data),
   remove: (suggestionId) => api.delete(`/lounge/suggest/${suggestionId}`),
   resetDefaults: () => api.post('/lounge/reset-defaults'),
 };
@@ -197,6 +200,16 @@ export const paymentAPI = {
   resolveAccount: (data) => api.post('/payments/wallet/resolve', data),
   saveBankAccount: (data) => api.post('/payments/wallet/bank', data),
   withdraw: (data) => api.post('/payments/wallet/withdraw', data),
+};
+
+// Estate manager team (co-managers with limited access)
+export const teamAPI = {
+  options:      ()         => api.get('/team/options'),
+  list:         ()         => api.get('/team'),
+  invite:       (data)     => api.post('/team', data),
+  update:       (id, data) => api.patch(`/team/${id}`, data),
+  resendInvite: (id)       => api.post(`/team/${id}/resend-invite`),
+  remove:       (id)       => api.delete(`/team/${id}`),
 };
 
 // Guards (security staff)

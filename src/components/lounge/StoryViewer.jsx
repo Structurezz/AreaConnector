@@ -55,7 +55,7 @@ export default function StoryViewer({ groups, startIndex, onClose, onSeen, onOpe
             </>
           ) : (
             <div className="absolute inset-0 flex items-center justify-center px-8 text-center text-white text-2xl font-bold"
-              style={{ background: 'linear-gradient(135deg,#312E81,#4F46E5 55%,#818CF8)', whiteSpace: 'pre-wrap' }}>
+              style={{ background: 'linear-gradient(135deg,#022C22,#047857 55%,#34D399)', whiteSpace: 'pre-wrap' }}>
               {post.content}
             </div>
           )}

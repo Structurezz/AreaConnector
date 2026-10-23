@@ -52,7 +52,7 @@ export default function Composer({ open, me, onClose, onPosted, startWithPhoto, 
       footer={
         <button onClick={post} disabled={posting || (!content.trim() && !files.length)}
           className="w-full py-3.5 rounded-xl font-bold text-white disabled:opacity-40 inline-flex items-center justify-center gap-2"
-          style={{ background: 'linear-gradient(90deg,#6366F1,#4F46E5)' }}>
+          style={{ background: 'linear-gradient(90deg,#10B981,#059669)' }}>
           {posting ? <><RefreshCw size={16} className="animate-spin" /> Sharing…</> : isStory ? 'Share to story' : 'Share'}
         </button>
       }>
@@ -78,7 +78,7 @@ export default function Composer({ open, me, onClose, onPosted, startWithPhoto, 
         <div className="flex items-center justify-between border-t border-slate-100 pt-3">
           <button onClick={() => fileRef.current?.click()} disabled={files.length >= 4}
             className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 disabled:opacity-40">
-            <ImagePlus size={20} className="text-indigo-600" /> {files.length ? `Photos ${files.length}/4` : 'Add photos'}
+            <ImagePlus size={20} className="text-emerald-600" /> {files.length ? `Photos ${files.length}/4` : 'Add photos'}
           </button>
           <span className="text-xs text-slate-400">{content.length}/1000</span>
           <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={add} />

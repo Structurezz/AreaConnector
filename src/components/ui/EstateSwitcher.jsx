@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { estateAPI } from '../../api';
 import toast from 'react-hot-toast';
 import { Z_INDEX } from './Portal';
+import { isTeamMember } from '../../utils/teamAccess';
 
 export default function EstateSwitcher({ compact = false }) {
   const { user, estate, switchEstate } = useAuth();
@@ -93,6 +94,9 @@ export default function EstateSwitcher({ compact = false }) {
   if (user?.role !== 'estate_manager') return null;
 
   const activeId = typeof estate === 'object' ? estate?._id?.toString() : estate?.toString();
+
+  // Invited team members belong to one estate and can't add estates
+  if (isTeamMember(user)) return null;
 
   const modal = open && createPortal(
     <div

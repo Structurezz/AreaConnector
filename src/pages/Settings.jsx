@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
+import openConstitution from '../utils/openConstitution';
 import { estateAPI, authAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 import Spinner from '../components/ui/Spinner';
 import ProfileCard from '../components/ProfileCard';
-import { Settings2, Save, ScrollText, Upload, FileText, Trash2, Download, Sparkles, MapPin, Building2, CheckCircle2, KeyRound, Lock, ShieldCheck, ChevronRight } from 'lucide-react';
+import { Settings2, Save, ScrollText, Upload, FileText, Trash2, Download, Sparkles, MapPin, Building2, CheckCircle2, KeyRound, Lock, ShieldCheck, ChevronRight, UsersRound } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { Link, useNavigate } from 'react-router-dom';
+import { hasArea } from '../utils/teamAccess';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -34,6 +36,8 @@ export default function ManagerSettings() {
   const [showPw, setShowPw] = useState(false);
   const [pwSaving, setPwSaving] = useState(false);
   const mustReset = user?.mustChangePassword;
+  // Invited team members without Settings access only see their profile + password
+  const canManage = hasArea(user, 'settings');
 
   const submitPw = async () => {
     if (!pw.next || pw.next.length < 6) { toast.error('New password must be at least 6 characters'); return; }
@@ -111,10 +115,6 @@ export default function ManagerSettings() {
     }
   };
 
-  const downloadUrl = constitution?.hasConstitution
-    ? `${API_BASE}${estateAPI.constitutionFileUrl(estateId)}`
-    : null;
-
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -183,6 +183,7 @@ export default function ManagerSettings() {
 
       <ProfileCard />
 
+      {canManage && (<>
       <div className="glass-card p-6 space-y-1">
         <h2 className="text-base font-semibold mb-4 flex items-center gap-2" style={{ color: '#0F172A' }}>
           <Settings2 size={18} style={{ color: '#10B981' }} /> General Settings
@@ -249,12 +250,12 @@ export default function ManagerSettings() {
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              <a href={downloadUrl} target="_blank" rel="noreferrer"
+              <button type="button" onClick={() => openConstitution(estateId, constitution?.fileName)}
                  className="p-2 rounded-lg transition-all"
                  style={{ background: 'rgba(236,72,153,0.10)', color: '#EC4899' }}
                  title="View / download">
                 <Download size={15} />
-              </a>
+              </button>
               <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
                       className="p-2 rounded-lg transition-all disabled:opacity-50"
                       style={{ background: 'rgba(15,23,42,0.05)', color: '#64748B' }}
@@ -397,6 +398,8 @@ export default function ManagerSettings() {
         </div>
       </div>
 
+      </>)}
+
       {/* ── Change Password ─────────────────────────────────────────── */}
       <div className="glass-card p-6">
         <h2 className="text-base font-semibold mb-4 flex items-center gap-2" style={{ color: '#0F172A' }}>
@@ -449,6 +452,24 @@ export default function ManagerSettings() {
         </div>
       </div>
 
+      {canManage && (<>
+      {/* ── Team ───────────────────────────────────────────────────── */}
+      <Link to="/team"
+        className="glass-card p-4 flex items-center gap-3 transition-all hover:border-brand"
+        style={{ textDecoration: 'none' }}>
+        <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+             style={{ background: 'linear-gradient(135deg,#10B981,#059669)', color: '#fff' }}>
+          <UsersRound size={18} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-bold text-sm" style={{ color: '#0F172A' }}>Team</div>
+          <div className="text-xs mt-0.5" style={{ color: '#64748B' }}>
+            Invite co-managers and choose what each one can access.
+          </div>
+        </div>
+        <ChevronRight size={16} style={{ color: '#94A3B8' }} />
+      </Link>
+
       {/* ── Password reset requests ────────────────────────────────── */}
       <Link to="/settings/password-requests"
         className="glass-card p-4 flex items-center gap-3 transition-all hover:border-brand"
@@ -465,6 +486,7 @@ export default function ManagerSettings() {
         </div>
         <ChevronRight size={16} style={{ color: '#94A3B8' }} />
       </Link>
+      </>)}
     </div>
   );
 }

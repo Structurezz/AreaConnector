@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { courtAPI } from '../api';
 import toast from 'react-hot-toast';
 import Portal from '../components/ui/Portal';
+import useIsDesktop from '../hooks/useIsDesktop';
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
@@ -585,6 +586,216 @@ function VerdictDisplay({ verdict, fine, caseObj, onPayFine, payingFine, user })
   );
 }
 
+// ── Case stage tracker (desktop) ─────────────────────────────────────────────
+
+const STAGES = [
+  { key: 'filed',   label: 'Filed',   icon: FileText },
+  { key: 'hearing', label: 'Hearing', icon: Briefcase },
+  { key: 'jury',    label: 'Jury',    icon: Users },
+  { key: 'verdict', label: 'Verdict', icon: Gavel },
+  { key: 'closed',  label: 'Resolved', icon: CheckCircle2 },
+];
+const STAGE_INDEX = {
+  filed: 0, open: 1, in_hearing: 1, jury_deliberation: 2, judge_deliberation: 3,
+  verdict_delivered: 3, appealing: 3, settled: 4, closed: 4,
+};
+const STAGE_NOW = {
+  filed:              'The case has been filed. It opens automatically: AI lawyers are assigned and a jury is summoned.',
+  open:               'The case is open. Both sides (and their AI lawyers) can now argue and submit evidence.',
+  in_hearing:         'Hearing in progress. Both sides submit arguments and evidence; the jury follows along.',
+  jury_deliberation:  'The jury is voting. When they are done, the judge delivers the verdict.',
+  judge_deliberation: 'The judge is weighing the evidence and the jury\'s view before ruling.',
+  verdict_delivered:  'A verdict has been delivered. Any fine is paid from the wallet, and either side can appeal.',
+  appealing:          'An appeal has been filed and is being reconsidered.',
+  settled:            'Both sides agreed a settlement. The case is resolved.',
+  closed:             'This case is closed and kept in the Hall of Records.',
+};
+
+function StageDots({ status }) {
+  const idx = STAGE_INDEX[status] ?? 0;
+  const done = ['settled', 'closed'].includes(status);
+  return (
+    <div className="flex items-center gap-1">
+      {STAGES.map((s, i) => (
+        <span key={s.key} className="h-1.5 rounded-full transition-all"
+          style={{ width: i === idx && !done ? 18 : 10, background: i < idx || done ? '#10B981' : i === idx ? '#F59E0B' : '#E2E8F0' }} />
+      ))}
+    </div>
+  );
+}
+
+function CaseProgress({ status }) {
+  const idx = STAGE_INDEX[status] ?? 0;
+  const done = ['settled', 'closed'].includes(status);
+  return (
+    <div className="dash-rise rounded-2xl bg-white border border-slate-200/70 px-6 py-5 mb-4">
+      <div className="flex items-center">
+        {STAGES.map((s, i) => {
+          const complete = i < idx || done;
+          const current = i === idx && !done;
+          const Icon = s.icon;
+          return (
+            <div key={s.key} className={`flex items-center ${i < STAGES.length - 1 ? 'flex-1' : ''}`}>
+              <div className="flex flex-col items-center gap-1.5">
+                <div className="relative w-9 h-9 rounded-full flex items-center justify-center transition-all"
+                  style={complete
+                    ? { background: '#10B981', color: '#fff' }
+                    : current ? { background: '#F59E0B', color: '#fff', boxShadow: '0 0 0 4px rgba(245,158,11,0.18)' }
+                    : { background: '#F1F5F9', color: '#94A3B8' }}>
+                  {current && <span className="absolute inset-0 rounded-full animate-ping opacity-30" style={{ background: '#F59E0B' }} />}
+                  {complete ? <CheckCircle2 size={16} /> : <Icon size={15} />}
+                </div>
+                <span className={`text-[11px] font-semibold ${current ? 'text-amber-600' : complete ? 'text-emerald-600' : 'text-slate-400'}`}>{s.label}</span>
+              </div>
+              {i < STAGES.length - 1 && (
+                <div className="flex-1 h-[3px] mx-2 -mt-5 rounded-full overflow-hidden bg-slate-100">
+                  <div className="h-full rounded-full transition-all duration-700" style={{ width: complete ? '100%' : '0%', background: '#10B981' }} />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-4 flex items-start gap-2.5 px-3.5 py-2.5 rounded-xl bg-amber-50/70 border border-amber-100">
+        <Clock size={14} className="text-amber-600 mt-0.5 flex-shrink-0" />
+        <p className="text-[13px] text-slate-700"><span className="font-semibold text-slate-900">What's happening now: </span>{STAGE_NOW[status] || STAGE_NOW.filed}</p>
+      </div>
+    </div>
+  );
+}
+
+// ── "Your next steps" panel (desktop) ────────────────────────────────────────
+
+function NextStepsPanel({ roles, items, blocks, openId, setOpenId }) {
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl bg-white border border-slate-200/70 p-4">
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Your role in this case</div>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {roles.map((r) => (
+            <span key={r.label} className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1 rounded-full" style={{ background: `${r.color}14`, color: r.color }}>
+              <r.icon size={12} /> {r.label}
+            </span>
+          ))}
+        </div>
+        <p className="mt-2 text-[12px] text-slate-500">{roles[0]?.hint}</p>
+      </div>
+
+      <div className="rounded-2xl bg-white border border-slate-200/70 overflow-hidden">
+        <div className="px-4 h-12 flex items-center justify-between border-b border-slate-100">
+          <h3 className="text-[14px] font-semibold text-slate-900">Your next steps</h3>
+          {items.some((i) => i.urgent) && (
+            <span className="text-[11px] font-semibold text-white bg-amber-500 px-2 py-0.5 rounded-full">
+              {items.filter((i) => i.urgent).length} need{items.filter((i) => i.urgent).length === 1 ? 's' : ''} you
+            </span>
+          )}
+        </div>
+        {items.length === 0 ? (
+          <div className="px-4 py-6 text-center">
+            <Eye size={20} className="mx-auto text-slate-300" />
+            <p className="mt-2 text-[13px] font-medium text-slate-700">Nothing for you to do right now</p>
+            <p className="mt-0.5 text-[12px] text-slate-400">Follow the hearing record on the left to see how the case unfolds.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {items.map((it) => {
+              const open = openId === it.id;
+              const Icon = it.icon;
+              return (
+                <div key={it.id}>
+                  <button onClick={() => setOpenId(open ? null : it.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${open ? 'bg-slate-50' : 'hover:bg-slate-50/70'}`}>
+                    <span className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: open ? it.color : `${it.color}14` }}>
+                      <Icon size={15} style={{ color: open ? '#fff' : it.color }} />
+                    </span>
+                    <span className="flex-1 min-w-0">
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-[13px] font-semibold text-slate-900 truncate">{it.title}</span>
+                        {it.urgent && <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 flex-shrink-0">Action needed</span>}
+                      </span>
+                      <span className="block text-[12px] text-slate-500 truncate">{it.desc}</span>
+                    </span>
+                    <ChevronRight size={15} className={`text-slate-400 flex-shrink-0 transition-transform ${open ? 'rotate-90' : ''}`} />
+                  </button>
+                  {open && <div className="px-3 pb-3 bg-slate-50 animate-fade-in">{blocks[it.id]}</div>}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Case list (desktop) ──────────────────────────────────────────────────────
+
+const GUIDE_KEY = 'ac_court_guide_hidden';
+const GUIDE_STEPS = [
+  { icon: FileText,  title: 'File a case',        desc: 'Anyone can file a dispute against a resident or the estate.' },
+  { icon: Briefcase, title: 'Lawyers & jury',      desc: 'AI lawyers are assigned to both sides and 5 residents are summoned as jurors.' },
+  { icon: Eye,       title: 'The hearing',         desc: 'Both sides argue and submit evidence. You can settle at any point.' },
+  { icon: Gavel,     title: 'Verdict',             desc: 'The jury votes, then the judge (AI or you) delivers the verdict.' },
+  { icon: Banknote,  title: 'Pay or appeal',       desc: 'Fines come from the wallet within 7 days, or either side can appeal.' },
+];
+
+function CourtGuide({ onHide }) {
+  return (
+    <div className="dash-rise rounded-2xl bg-white border border-slate-200/70 p-5" style={{ animationDelay: '60ms' }}>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-[14px] font-semibold text-slate-900 flex items-center gap-2">
+          <span className="w-6 h-6 rounded-lg flex items-center justify-center bg-amber-500"><Scale size={12} className="text-white" /></span>
+          How the court works
+        </h2>
+        <button onClick={onHide} className="text-[12px] font-medium text-slate-400 hover:text-slate-700">Got it, hide this</button>
+      </div>
+      <div className="grid grid-cols-5 gap-3">
+        {GUIDE_STEPS.map((s, i) => (
+          <div key={s.title} className="relative rounded-xl border border-slate-100 bg-slate-50/60 p-3.5">
+            <div className="flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-slate-900 text-white text-[11px] font-semibold flex items-center justify-center">{i + 1}</span>
+              <s.icon size={14} className="text-amber-600" />
+            </div>
+            <div className="mt-2 text-[13px] font-semibold text-slate-900">{s.title}</div>
+            <div className="mt-0.5 text-[12px] text-slate-500 leading-snug">{s.desc}</div>
+            {i < GUIDE_STEPS.length - 1 && <ChevronRight size={14} className="absolute -right-[11px] top-1/2 -translate-y-1/2 text-slate-300 z-10" />}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CaseRow({ c, onClick, i }) {
+  const sev = SEVERITY_COLORS[c.severity] || SEVERITY_COLORS.minor;
+  const st = STATUS_META[c.status] || STATUS_META.filed;
+  return (
+    <button onClick={onClick}
+      className="dash-rise group w-full grid grid-cols-[minmax(0,2.2fr)_minmax(0,1.6fr)_150px_90px_100px_20px] gap-4 items-center px-5 py-3.5 text-left border-t border-slate-100 first:border-0 hover:bg-amber-50/30 transition-colors"
+      style={{ animationDelay: `${120 + i * 35}ms` }}>
+      <span className="min-w-0">
+        <span className="block text-[11px] font-mono text-slate-400">{c.caseNumber}</span>
+        <span className="block text-[14px] font-semibold text-slate-900 truncate group-hover:text-amber-700 transition-colors">{c.title}</span>
+        <span className="block text-[12px] text-slate-400 truncate">{TYPE_LABELS[c.type] || c.type}</span>
+      </span>
+      <span className="min-w-0 text-[13px] text-slate-600 truncate">
+        {c.plaintiff?.name || 'Unknown'} <span className="font-bold text-red-500 mx-1">vs</span> {c.defendant?.isEstate ? 'Estate Management' : (c.defendant?.name || 'Unknown')}
+      </span>
+      <span className="space-y-1.5">
+        <StageDots status={c.status} />
+        <span className="block text-[11px] font-semibold" style={{ color: st.color }}>{st.label}</span>
+      </span>
+      <span>
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ color: sev.text, background: sev.bg, border: `1px solid ${sev.border}` }}>
+          {c.severity?.toUpperCase()}
+        </span>
+      </span>
+      <span className="text-[12px] text-slate-500">{new Date(c.filedAt).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+      <ChevronRight size={16} className="text-slate-300 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all" />
+    </button>
+  );
+}
+
 // ── Case detail view ─────────────────────────────────────────────────────────
 
 function CaseDetail({ caseId, onBack, user, isManager }) {
@@ -629,6 +840,8 @@ function CaseDetail({ caseId, onBack, user, isManager }) {
   const [benchDuration, setBenchDuration]         = useState('');
   const [benchOverrideReason, setBenchOverrideReason] = useState('');
   const [submittingBench, setSubmittingBench]     = useState(false);
+  const isDesktop = useIsDesktop();
+  const [openAction, setOpenAction] = useState(undefined); // undefined = auto-open the most urgent step
 
   const proceedingsRef = useRef(null);
   const chatEndRef = useRef(null);
@@ -890,292 +1103,11 @@ function CaseDetail({ caseId, onBack, user, isManager }) {
     { id: 'jury', label: 'Jury', count: c.jury?.members?.length },
   ];
 
-  return (
-    <div>
-      {/* back button */}
-      <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#64748B', fontSize: 13, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', marginBottom: 16, padding: 0 }}>
-        <ArrowLeft size={15} /> Back to Cases
-      </button>
-
-      {/* Case header */}
-      <div style={{ background: 'linear-gradient(135deg,#0F172A,#1E293B)', borderRadius: 18, padding: '22px 24px', marginBottom: 16, border: '1px solid #334155' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-              <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#F59E0B', fontWeight: 700, letterSpacing: '0.05em' }}>{c.caseNumber}</span>
-              <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999,
-                color: sev.text, background: sev.bg + 'cc', border: `1px solid ${sev.border}` }}>
-                {c.severity?.toUpperCase()}
-              </span>
-              <span style={{ fontSize: 11, color: '#64748B' }}>{TYPE_LABELS[c.type]}</span>
-            </div>
-            <div style={{ color: '#F1F5F9', fontSize: 18, fontWeight: 800, marginBottom: 10 }}>{c.title}</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Avatar initials={(c.plaintiff?.name || 'P')[0].toUpperCase()} color="#10B981" size={28} />
-                <div>
-                  <div style={{ color: '#94A3B8', fontSize: 9, fontWeight: 700, textTransform: 'uppercase' }}>Plaintiff</div>
-                  <div style={{ color: '#F1F5F9', fontSize: 12, fontWeight: 600 }}>{c.plaintiff?.name || 'Unknown'}</div>
-                </div>
-              </div>
-              <div style={{ color: '#DC2626', fontWeight: 900, fontSize: 16, padding: '0 8px' }}>VS</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Avatar initials={c.defendant?.isEstate ? 'ES' : (c.defendant?.name || 'D')[0].toUpperCase()} color="#DC2626" size={28} />
-                <div>
-                  <div style={{ color: '#94A3B8', fontSize: 9, fontWeight: 700, textTransform: 'uppercase' }}>Defendant</div>
-                  <div style={{ color: '#F1F5F9', fontSize: 12, fontWeight: 600 }}>{c.defendant?.isEstate ? 'Estate Management' : (c.defendant?.name || 'Unknown')}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-            <StatusBadge status={c.status} />
-            {isManager && ['in_hearing','jury_deliberation','judge_deliberation'].includes(c.status) && !c.verdict?.decision && (
-              <button onClick={deliverVerdict} disabled={deliveringVerdict}
-                style={{ padding: '7px 14px', borderRadius: 10, background: 'linear-gradient(135deg,#B45309,#92400E)', color: '#fff', fontWeight: 700, fontSize: 12, border: 'none', cursor: deliveringVerdict ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-                {deliveringVerdict
-                  ? <><svg className="animate-spin" width={12} height={12} viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" strokeOpacity=".3"/><path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round"/></svg> Deliberating…</>
-                  : <><Scale size={13} /> Deliver Verdict</>}
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Response deadline / default judgment warning */}
-        {c.responseDeadline && !c.verdict?.decision && (
-          <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Clock size={13} color="#D97706" />
-            <span style={{ fontSize: 12, color: '#D97706', fontWeight: 600 }}>
-              Defendant must respond by {new Date(c.responseDeadline).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-            </span>
-          </div>
-        )}
-        {c.defaultJudgmentWarningAt && !c.verdict?.decision && (
-          <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 10, background: 'rgba(220,38,38,0.15)', border: '1px solid #DC262650', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <AlertTriangle size={14} color="#FCA5A5" />
-            <span style={{ fontSize: 12, color: '#FCA5A5', fontWeight: 700 }}>
-              Final warning issued — default judgment pending
-            </span>
-          </div>
-        )}
-
-        {/* Charges */}
-        {c.charges?.length > 0 && (
-          <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid #334155' }}>
-            <div style={{ color: '#94A3B8', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', marginBottom: 6 }}>Charges</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {c.charges.map((ch, i) => (
-                <span key={i} style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 999, background: '#DC262618', color: '#FCA5A5', border: '1px solid #DC262630' }}>
-                  {i + 1}. {ch}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Lawyers panel */}
-        <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid #334155', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          {[
-            { side: 'prosecution', lawyer: prosLawyer, sideColor: '#DC2626', label: 'Prosecution' },
-            { side: 'defense', lawyer: defLawyer, sideColor: '#2563EB', label: 'Defense' },
-          ].map(({ side, lawyer, sideColor, label }) => {
-            const persona = lawyer?.aiPersona ? AI_PERSONAS[lawyer.aiPersona] : null;
-            return (
-              <div key={side} style={{ flex: 1, minWidth: 160, background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '10px 12px', border: `1px solid ${sideColor}30` }}>
-                <div style={{ color: sideColor, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{label} Counsel</div>
-                {persona ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Avatar initials={persona.initials} color={persona.color} size={28} />
-                    <div>
-                      <div style={{ color: '#F1F5F9', fontSize: 11, fontWeight: 700 }}>{persona.name}</div>
-                      <div style={{ color: '#64748B', fontSize: 10 }}>{persona.role} · AI</div>
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ color: '#64748B', fontSize: 11, fontStyle: 'italic' }}>Self-represented</div>
-                )}
-              </div>
-            );
-          })}
-          <div style={{ flex: 1, minWidth: 160, background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '10px 12px', border: '1px solid #B4530930' }}>
-            <div style={{ color: '#B45309', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Presiding Judge</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Avatar initials={JUDGE.initials} color={JUDGE.color} size={28} />
-              <div>
-                <div style={{ color: '#F1F5F9', fontSize: 11, fontWeight: 700 }}>{JUDGE.name}</div>
-                <div style={{ color: '#64748B', fontSize: 10 }}>AI · AreaConnect Court</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Verdict */}
-      {c.verdict?.decision && (
-        <VerdictDisplay verdict={c.verdict} fine={c.fine} caseObj={c} onPayFine={payFine} payingFine={payingFine} user={user} />
-      )}
-
-      {/* Tab navigation */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: '#F8FAFC', borderRadius: 12, padding: 4, border: '1px solid #E2E8F0', overflowX: 'auto' }}>
-        {DETAIL_TABS.map(t => (
-          <button key={t.id} onClick={() => setActiveTab(t.id)}
-            style={{ flex: 1, minWidth: 'fit-content', padding: '8px 12px', borderRadius: 9, fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap',
-              background: activeTab === t.id ? '#fff' : 'transparent',
-              color: activeTab === t.id ? '#0F172A' : '#64748B',
-              boxShadow: activeTab === t.id ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
-            }}>
-            {t.label}{t.count != null ? ` (${t.count})` : ''}
-          </button>
-        ))}
-      </div>
-
-      {/* ── Proceedings tab ── */}
-      {activeTab === 'proceedings' && (
-        <div>
-          {c.plaintiffStatement && (
-            <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Plaintiff's Opening Statement</div>
-              <div style={{ fontSize: 13, color: '#334155', lineHeight: 1.7 }}>{c.plaintiffStatement}</div>
-            </div>
-          )}
-          <div ref={proceedingsRef} style={{ maxHeight: 480, overflowY: 'auto', paddingRight: 4 }}>
-            {c.proceedings?.length === 0
-              ? <div style={{ textAlign: 'center', color: '#94A3B8', padding: '40px 0', fontSize: 13 }}>No proceedings yet. The court is in recess.</div>
-              : c.proceedings.map((p, i) => <ProceedingEntry key={p._id || i} p={p} index={i} />)}
-          </div>
-        </div>
-      )}
-
-      {/* ── My Lawyer tab ── */}
-      {activeTab === 'lawyer' && (isPlaintiff || isDefendant) && (
-        <div style={{ display: 'flex', flexDirection: 'column', height: 520 }}>
-          {/* Lawyer header */}
-          {myLawyerPersona ? (
-            <div style={{ background: myLawyerPersona.color + '10', border: `1px solid ${myLawyerPersona.color}30`, borderRadius: 12, padding: '12px 16px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <Avatar initials={myLawyerPersona.initials} color={myLawyerPersona.color} size={40} />
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 14, color: '#0F172A' }}>{myLawyerPersona.name}</div>
-                <div style={{ fontSize: 12, color: '#64748B' }}>{myLawyerPersona.role} · Private Counsel · AI</div>
-              </div>
-              <div style={{ marginLeft: 'auto', padding: '4px 10px', borderRadius: 999, background: myLawyerPersona.color + '20', border: `1px solid ${myLawyerPersona.color}40` }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: myLawyerPersona.color }}>
-                  {myLawyerSide === 'prosecution' ? 'Your Prosecutor' : 'Your Defender'}
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: '12px 16px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Briefcase size={18} color="#94A3B8" />
-              <span style={{ fontSize: 13, color: '#64748B' }}>No counsel assigned yet. Your case is being processed.</span>
-            </div>
-          )}
-
-          {/* Chat messages */}
-          <div style={{ flex: 1, overflowY: 'auto', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: '14px 16px', marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {myChats.length === 0 ? (
-              <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8, color: '#94A3B8' }}>
-                <Lock size={24} color="#CBD5E1" />
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#64748B' }}>Private & Confidential</div>
-                <div style={{ fontSize: 12, color: '#94A3B8', textAlign: 'center', maxWidth: 260, lineHeight: 1.5 }}>
-                  This chat is between you and your AI counsel only. Start a conversation — ask for strategy, clarification, or guidance on your case.
-                </div>
-              </div>
-            ) : (
-              myChats.map((msg, i) => {
-                const isUser = msg.from === 'user';
-                return (
-                  <div key={i} style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', gap: 8 }}>
-                    {!isUser && myLawyerPersona && (
-                      <Avatar initials={myLawyerPersona.initials} color={myLawyerPersona.color} size={28} />
-                    )}
-                    <div style={{
-                      maxWidth: '75%', padding: '10px 14px', borderRadius: isUser ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
-                      background: isUser ? 'linear-gradient(135deg,#10B981,#059669)' : '#fff',
-                      border: isUser ? 'none' : `1px solid ${myLawyerPersona ? myLawyerPersona.color + '25' : '#E2E8F0'}`,
-                      boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                    }}>
-                      {!isUser && myLawyerPersona && (
-                        <div style={{ fontSize: 10, fontWeight: 700, color: myLawyerPersona.color, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                          {myLawyerPersona.name}
-                        </div>
-                      )}
-                      <div style={{ fontSize: 13, color: isUser ? '#fff' : '#334155', lineHeight: 1.6 }}>{msg.content}</div>
-                      {msg.timestamp && (
-                        <div style={{ fontSize: 10, color: isUser ? 'rgba(255,255,255,0.6)' : '#94A3B8', marginTop: 4, textAlign: isUser ? 'right' : 'left' }}>
-                          {new Date(msg.timestamp).toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                      )}
-                    </div>
-                    {isUser && (
-                      <Avatar initials={(user?.name || 'U')[0].toUpperCase()} color="#10B981" size={28} />
-                    )}
-                  </div>
-                );
-              })
-            )}
-            {chatLoading && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#64748B', fontSize: 12, fontStyle: 'italic' }}>
-                {myLawyerPersona && <Avatar initials={myLawyerPersona.initials} color={myLawyerPersona.color} size={28} />}
-                <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: '14px 14px 14px 4px', padding: '10px 14px' }}>
-                  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                    <svg className="animate-spin" width={12} height={12} viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#94A3B8" strokeWidth="3" strokeOpacity=".3"/><path d="M12 2a10 10 0 0 1 10 10" stroke="#94A3B8" strokeWidth="3" strokeLinecap="round"/></svg>
-                    <span style={{ fontSize: 12, color: '#64748B' }}>Counsel is reviewing your case...</span>
-                  </div>
-                </div>
-              </div>
-            )}
-            <div ref={chatEndRef} />
-          </div>
-
-          {/* Chat input */}
-          <div style={{ display: 'flex', gap: 8 }}>
-            <input
-              className="input-field"
-              placeholder={myLawyerPersona ? `Message ${myLawyerPersona.name}…` : 'Type a message…'}
-              value={chatMsg}
-              onChange={e => setChatMsg(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMsg(); } }}
-              disabled={chatLoading || !myLawyerPersona}
-              style={{ flex: 1 }}
-            />
-            <button onClick={sendChatMsg} disabled={!chatMsg.trim() || chatLoading || !myLawyerPersona}
-              style={{ padding: '0 16px', borderRadius: 10, border: 'none', cursor: chatMsg.trim() && !chatLoading && myLawyerPersona ? 'pointer' : 'not-allowed',
-                background: chatMsg.trim() && !chatLoading && myLawyerPersona ? 'linear-gradient(135deg,#10B981,#059669)' : '#E2E8F0',
-                color: chatMsg.trim() && !chatLoading && myLawyerPersona ? '#fff' : '#94A3B8',
-                display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 13 }}>
-              <Send size={15} />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── Evidence tab ── */}
-      {activeTab === 'evidence' && (
-        <div>
-          {c.evidence?.length === 0
-            ? <div style={{ textAlign: 'center', color: '#94A3B8', padding: '40px 0', fontSize: 13 }}>No evidence on record yet.</div>
-            : c.evidence.map((e, i) => (
-              <div key={i} style={{ background: '#FAFAFA', border: '1px solid #E2E8F0', borderRadius: 12, padding: '14px 16px', marginBottom: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999,
-                    color: e.side === 'prosecution' ? '#DC2626' : e.side === 'defense' ? '#2563EB' : '#64748B',
-                    background: e.side === 'prosecution' ? '#FEF2F2' : e.side === 'defense' ? '#EFF6FF' : '#F1F5F9',
-                  }}>{e.side?.toUpperCase()}</span>
-                  <span style={{ fontWeight: 700, fontSize: 13, color: '#0F172A' }}>{e.label}</span>
-                  <span style={{ fontSize: 11, color: '#94A3B8', marginLeft: 'auto' }}>
-                    {new Date(e.submittedAt).toLocaleDateString('en-NG')}
-                  </span>
-                </div>
-                <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{e.content}</div>
-              </div>
-            ))}
-        </div>
-      )}
-
-      {/* ── Actions tab ── */}
-      {activeTab === 'actions' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
+  // Each action form as its own block: shown together in the Actions tab (phones)
+  // and one-at-a-time in the desktop "Your next steps" panel.
+  const actionBlocks = {
+    bench: (
+      <>
           {/* ── Judge's Bench — Manager controls (only visible to estate managers) ── */}
           {isManager && (
             <div style={{ background: 'linear-gradient(135deg, rgba(236,72,153,0.06), rgba(139,92,246,0.05))',
@@ -1317,6 +1249,10 @@ function CaseDetail({ caseId, onBack, user, isManager }) {
             </div>
           )}
 
+      </>
+    ),
+    counsel: (
+      <>
           {/* Change Counsel (was Hire Lawyer — now always auto-assigned, this is optional upgrade) */}
           {canAct && (isPlaintiff || isDefendant) && (
             <div style={{ background: '#FAFAFA', border: '1px solid #E2E8F0', borderRadius: 14, padding: '16px 18px' }}>
@@ -1368,6 +1304,10 @@ function CaseDetail({ caseId, onBack, user, isManager }) {
             </div>
           )}
 
+      </>
+    ),
+    argue: (
+      <>
           {/* Submit argument */}
           {canAct && (isPlaintiff || isDefendant) && c.status !== 'filed' && (
             <div style={{ background: '#FAFAFA', border: '1px solid #E2E8F0', borderRadius: 14, padding: '16px 18px' }}>
@@ -1393,6 +1333,10 @@ function CaseDetail({ caseId, onBack, user, isManager }) {
             </div>
           )}
 
+      </>
+    ),
+    adjourn: (
+      <>
           {/* Request Adjournment */}
           {canAct && (isPlaintiff || isDefendant) && (
             <div style={{ background: '#FAFAFA', border: '1px solid #E2E8F0', borderRadius: 14, padding: '16px 18px' }}>
@@ -1452,6 +1396,10 @@ function CaseDetail({ caseId, onBack, user, isManager }) {
             </div>
           )}
 
+      </>
+    ),
+    evidence: (
+      <>
           {/* Submit evidence */}
           {canAct && (isPlaintiff || isDefendant || isManager) && (
             <div style={{ background: '#FAFAFA', border: '1px solid #E2E8F0', borderRadius: 14, padding: '16px 18px' }}>
@@ -1480,6 +1428,10 @@ function CaseDetail({ caseId, onBack, user, isManager }) {
             </div>
           )}
 
+      </>
+    ),
+    vote: (
+      <>
           {/* Jury vote */}
           {isJuror && !hasVoted && ['open','in_hearing','jury_deliberation'].includes(c.status) && (
             <div style={{ background: '#F5F3FF', border: '1px solid #DDD6FE', borderRadius: 14, padding: '16px 18px' }}>
@@ -1521,6 +1473,10 @@ function CaseDetail({ caseId, onBack, user, isManager }) {
             </div>
           )}
 
+      </>
+    ),
+    settle: (
+      <>
           {/* Settlement */}
           {canAct && (isPlaintiff || isDefendant) && !['filed'].includes(c.status) && (
             <div style={{ background: '#FAFAFA', border: '1px solid #E2E8F0', borderRadius: 14, padding: '16px 18px' }}>
@@ -1564,6 +1520,10 @@ function CaseDetail({ caseId, onBack, user, isManager }) {
             </div>
           )}
 
+      </>
+    ),
+    appeal: (
+      <>
           {/* Appeal */}
           {(isPlaintiff || isDefendant) && c.status === 'verdict_delivered' && !c.appeal?.filed && (
             <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 14, padding: '16px 18px' }}>
@@ -1589,11 +1549,350 @@ function CaseDetail({ caseId, onBack, user, isManager }) {
             </div>
           )}
 
+      </>
+    ),
+  };
+
+  const party = isPlaintiff || isDefendant;
+  const hearingOn = ['open', 'in_hearing', 'jury_deliberation'].includes(c.status);
+  const awaitingMyAnswer = c.settlement?.status === 'proposed' && party && String(c.settlement.proposedById) !== String(userId);
+  const nextItems = [
+    { id: 'bench', show: isManager, icon: Gavel, color: '#EC4899', title: "Judge's bench",
+      desc: 'Preside yourself, switch AI lawyers on/off, or override the verdict',
+      urgent: ['in_hearing', 'jury_deliberation', 'judge_deliberation'].includes(c.status) && !c.verdict?.decision },
+    { id: 'vote', show: isJuror && (hasVoted || hearingOn), icon: Star, color: '#7C3AED',
+      title: hasVoted ? 'Jury vote cast' : 'Cast your jury vote', desc: hasVoted ? 'Thank you for serving on the jury' : 'You were summoned to this jury',
+      urgent: isJuror && !hasVoted && hearingOn },
+    { id: 'settle', show: canAct && party && c.status !== 'filed', icon: TrendingUp, color: '#7C3AED',
+      title: awaitingMyAnswer ? 'Respond to a settlement offer' : 'Settle out of court', desc: awaitingMyAnswer ? 'The other side proposed terms' : 'Propose terms to end the case early',
+      urgent: awaitingMyAnswer },
+    { id: 'argue', show: canAct && party && c.status !== 'filed', icon: Send, color: '#0F172A',
+      title: 'Make your case', desc: 'Add an argument, rebuttal or cross-examination' },
+    { id: 'evidence', show: canAct && (party || isManager), icon: Upload, color: '#D97706',
+      title: 'Add evidence', desc: 'Put a document, photo description or record on file' },
+    { id: 'counsel', show: canAct && party, icon: Briefcase, color: '#2563EB',
+      title: 'Change your AI lawyer', desc: 'Pick a different counsel style' },
+    { id: 'adjourn', show: canAct && party, icon: Clock, color: '#D97706',
+      title: 'Ask for a pause', desc: 'Request an adjournment of the hearing' },
+    { id: 'appeal', show: party && ((c.status === 'verdict_delivered' && !c.appeal?.filed) || c.appeal?.filed), icon: RotateCcw, color: '#B45309',
+      title: c.appeal?.filed ? 'Your appeal' : 'Appeal the verdict', desc: c.appeal?.filed ? `Status: ${c.appeal.status || 'pending'}` : 'Disagree with the ruling? Ask the judge to reconsider' },
+  ].filter((i) => i.show).sort((a, b) => (b.urgent ? 1 : 0) - (a.urgent ? 1 : 0));
+  const openStep = openAction === undefined ? (nextItems.find((i) => i.urgent)?.id ?? null) : openAction;
+
+  const roles = [
+    isManager   && { label: 'Estate manager', icon: Gavel,     color: '#EC4899', hint: 'You can preside over this case or override the AI judge.' },
+    isPlaintiff && { label: 'Plaintiff',      icon: User,      color: '#059669', hint: 'You filed this case. Make your case, add evidence or settle.' },
+    isDefendant && { label: 'Defendant',      icon: Shield,    color: '#DC2626', hint: 'This case was filed against you. Respond, add evidence or settle.' },
+    isJuror     && { label: 'Juror',          icon: Users,     color: '#7C3AED', hint: 'You were summoned to the jury. Follow the hearing and cast your vote.' },
+  ].filter(Boolean);
+  if (!roles.length) roles.push({ label: 'Observer', icon: Eye, color: '#64748B', hint: 'You are following this case. Only the parties, jurors and the manager can act.' });
+
+  // Desktop folds the Actions tab into the "Your next steps" panel
+  const tabShown = isDesktop && activeTab === 'actions' ? 'proceedings' : activeTab;
+
+  return (
+    <div>
+      {/* back button */}
+      <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#64748B', fontSize: 13, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', marginBottom: 16, padding: 0 }}>
+        <ArrowLeft size={15} /> Back to Cases
+      </button>
+
+      {/* Case header */}
+      <div style={{ background: 'linear-gradient(135deg,#0F172A,#1E293B)', borderRadius: 18, padding: '22px 24px', marginBottom: 16, border: '1px solid #334155' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#F59E0B', fontWeight: 700, letterSpacing: '0.05em' }}>{c.caseNumber}</span>
+              <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999,
+                color: sev.text, background: sev.bg + 'cc', border: `1px solid ${sev.border}` }}>
+                {c.severity?.toUpperCase()}
+              </span>
+              <span style={{ fontSize: 11, color: '#64748B' }}>{TYPE_LABELS[c.type]}</span>
+            </div>
+            <div style={{ color: '#F1F5F9', fontSize: 18, fontWeight: 800, marginBottom: 10 }}>{c.title}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Avatar initials={(c.plaintiff?.name || 'P')[0].toUpperCase()} color="#10B981" size={28} />
+                <div>
+                  <div style={{ color: '#94A3B8', fontSize: 9, fontWeight: 700, textTransform: 'uppercase' }}>Plaintiff</div>
+                  <div style={{ color: '#F1F5F9', fontSize: 12, fontWeight: 600 }}>{c.plaintiff?.name || 'Unknown'}</div>
+                </div>
+              </div>
+              <div style={{ color: '#DC2626', fontWeight: 900, fontSize: 16, padding: '0 8px' }}>VS</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Avatar initials={c.defendant?.isEstate ? 'ES' : (c.defendant?.name || 'D')[0].toUpperCase()} color="#DC2626" size={28} />
+                <div>
+                  <div style={{ color: '#94A3B8', fontSize: 9, fontWeight: 700, textTransform: 'uppercase' }}>Defendant</div>
+                  <div style={{ color: '#F1F5F9', fontSize: 12, fontWeight: 600 }}>{c.defendant?.isEstate ? 'Estate Management' : (c.defendant?.name || 'Unknown')}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+            <StatusBadge status={c.status} />
+            {isManager && ['in_hearing','jury_deliberation','judge_deliberation'].includes(c.status) && !c.verdict?.decision && (
+              <button onClick={deliverVerdict} disabled={deliveringVerdict}
+                style={{ padding: '7px 14px', borderRadius: 10, background: 'linear-gradient(135deg,#B45309,#92400E)', color: '#fff', fontWeight: 700, fontSize: 12, border: 'none', cursor: deliveringVerdict ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                {deliveringVerdict
+                  ? <><svg className="animate-spin" width={12} height={12} viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" strokeOpacity=".3"/><path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round"/></svg> Deliberating…</>
+                  : <><Scale size={13} /> Deliver Verdict</>}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Response deadline / default judgment warning */}
+        {c.responseDeadline && !c.verdict?.decision && (
+          <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Clock size={13} color="#D97706" />
+            <span style={{ fontSize: 12, color: '#D97706', fontWeight: 600 }}>
+              Defendant must respond by {new Date(c.responseDeadline).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </div>
+        )}
+        {c.defaultJudgmentWarningAt && !c.verdict?.decision && (
+          <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 10, background: 'rgba(220,38,38,0.15)', border: '1px solid #DC262650', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <AlertTriangle size={14} color="#FCA5A5" />
+            <span style={{ fontSize: 12, color: '#FCA5A5', fontWeight: 700 }}>
+              Final warning issued — default judgment pending
+            </span>
+          </div>
+        )}
+
+        {/* Charges */}
+        {c.charges?.length > 0 && (
+          <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid #334155' }}>
+            <div style={{ color: '#94A3B8', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', marginBottom: 6 }}>Charges</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {c.charges.map((ch, i) => (
+                <span key={i} style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 999, background: '#DC262618', color: '#FCA5A5', border: '1px solid #DC262630' }}>
+                  {i + 1}. {ch}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Lawyers panel */}
+        <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid #334155', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          {[
+            { side: 'prosecution', lawyer: prosLawyer, sideColor: '#DC2626', label: 'Prosecution' },
+            { side: 'defense', lawyer: defLawyer, sideColor: '#2563EB', label: 'Defense' },
+          ].map(({ side, lawyer, sideColor, label }) => {
+            const persona = lawyer?.aiPersona ? AI_PERSONAS[lawyer.aiPersona] : null;
+            return (
+              <div key={side} style={{ flex: 1, minWidth: 160, background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '10px 12px', border: `1px solid ${sideColor}30` }}>
+                <div style={{ color: sideColor, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{label} Counsel</div>
+                {persona ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Avatar initials={persona.initials} color={persona.color} size={28} />
+                    <div>
+                      <div style={{ color: '#F1F5F9', fontSize: 11, fontWeight: 700 }}>{persona.name}</div>
+                      <div style={{ color: '#64748B', fontSize: 10 }}>{persona.role} · AI</div>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ color: '#64748B', fontSize: 11, fontStyle: 'italic' }}>Self-represented</div>
+                )}
+              </div>
+            );
+          })}
+          <div style={{ flex: 1, minWidth: 160, background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '10px 12px', border: '1px solid #B4530930' }}>
+            <div style={{ color: '#B45309', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Presiding Judge</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Avatar initials={JUDGE.initials} color={JUDGE.color} size={28} />
+              <div>
+                <div style={{ color: '#F1F5F9', fontSize: 11, fontWeight: 700 }}>{JUDGE.name}</div>
+                <div style={{ color: '#64748B', fontSize: 10 }}>AI · AreaConnect Court</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {isDesktop && <CaseProgress status={c.status} />}
+
+      <div className={isDesktop ? 'grid grid-cols-[minmax(0,1fr)_380px] gap-5 items-start' : ''}>
+      <div className="min-w-0">
+      {/* Verdict */}
+      {c.verdict?.decision && (
+        <VerdictDisplay verdict={c.verdict} fine={c.fine} caseObj={c} onPayFine={payFine} payingFine={payingFine} user={user} />
+      )}
+
+      {/* Tab navigation */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: '#F8FAFC', borderRadius: 12, padding: 4, border: '1px solid #E2E8F0', overflowX: 'auto' }}>
+        {DETAIL_TABS.filter(t => !(isDesktop && t.id === 'actions')).map(t => (
+          <button key={t.id} onClick={() => setActiveTab(t.id)}
+            style={{ flex: 1, minWidth: 'fit-content', padding: '8px 12px', borderRadius: 9, fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap',
+              background: tabShown === t.id ? '#fff' : 'transparent',
+              color: tabShown === t.id ? '#0F172A' : '#64748B',
+              boxShadow: tabShown === t.id ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+            }}>
+            {t.label}{t.count != null ? ` (${t.count})` : ''}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Proceedings tab ── */}
+      {tabShown === 'proceedings' && (
+        <div>
+          {c.plaintiffStatement && (
+            <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Plaintiff's Opening Statement</div>
+              <div style={{ fontSize: 13, color: '#334155', lineHeight: 1.7 }}>{c.plaintiffStatement}</div>
+            </div>
+          )}
+          <div ref={proceedingsRef} style={{ maxHeight: 480, overflowY: 'auto', paddingRight: 4 }}>
+            {c.proceedings?.length === 0
+              ? <div style={{ textAlign: 'center', color: '#94A3B8', padding: '40px 0', fontSize: 13 }}>No proceedings yet. The court is in recess.</div>
+              : c.proceedings.map((p, i) => <ProceedingEntry key={p._id || i} p={p} index={i} />)}
+          </div>
+        </div>
+      )}
+
+      {/* ── My Lawyer tab ── */}
+      {tabShown === 'lawyer' && (isPlaintiff || isDefendant) && (
+        <div style={{ display: 'flex', flexDirection: 'column', height: 520 }}>
+          {/* Lawyer header */}
+          {myLawyerPersona ? (
+            <div style={{ background: myLawyerPersona.color + '10', border: `1px solid ${myLawyerPersona.color}30`, borderRadius: 12, padding: '12px 16px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <Avatar initials={myLawyerPersona.initials} color={myLawyerPersona.color} size={40} />
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: '#0F172A' }}>{myLawyerPersona.name}</div>
+                <div style={{ fontSize: 12, color: '#64748B' }}>{myLawyerPersona.role} · Private Counsel · AI</div>
+              </div>
+              <div style={{ marginLeft: 'auto', padding: '4px 10px', borderRadius: 999, background: myLawyerPersona.color + '20', border: `1px solid ${myLawyerPersona.color}40` }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: myLawyerPersona.color }}>
+                  {myLawyerSide === 'prosecution' ? 'Your Prosecutor' : 'Your Defender'}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: '12px 16px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Briefcase size={18} color="#94A3B8" />
+              <span style={{ fontSize: 13, color: '#64748B' }}>No counsel assigned yet. Your case is being processed.</span>
+            </div>
+          )}
+
+          {/* Chat messages */}
+          <div style={{ flex: 1, overflowY: 'auto', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: '14px 16px', marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {myChats.length === 0 ? (
+              <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8, color: '#94A3B8' }}>
+                <Lock size={24} color="#CBD5E1" />
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#64748B' }}>Private & Confidential</div>
+                <div style={{ fontSize: 12, color: '#94A3B8', textAlign: 'center', maxWidth: 260, lineHeight: 1.5 }}>
+                  This chat is between you and your AI counsel only. Start a conversation — ask for strategy, clarification, or guidance on your case.
+                </div>
+              </div>
+            ) : (
+              myChats.map((msg, i) => {
+                const isUser = msg.from === 'user';
+                return (
+                  <div key={i} style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', gap: 8 }}>
+                    {!isUser && myLawyerPersona && (
+                      <Avatar initials={myLawyerPersona.initials} color={myLawyerPersona.color} size={28} />
+                    )}
+                    <div style={{
+                      maxWidth: '75%', padding: '10px 14px', borderRadius: isUser ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+                      background: isUser ? 'linear-gradient(135deg,#10B981,#059669)' : '#fff',
+                      border: isUser ? 'none' : `1px solid ${myLawyerPersona ? myLawyerPersona.color + '25' : '#E2E8F0'}`,
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                    }}>
+                      {!isUser && myLawyerPersona && (
+                        <div style={{ fontSize: 10, fontWeight: 700, color: myLawyerPersona.color, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          {myLawyerPersona.name}
+                        </div>
+                      )}
+                      <div style={{ fontSize: 13, color: isUser ? '#fff' : '#334155', lineHeight: 1.6 }}>{msg.content}</div>
+                      {msg.timestamp && (
+                        <div style={{ fontSize: 10, color: isUser ? 'rgba(255,255,255,0.6)' : '#94A3B8', marginTop: 4, textAlign: isUser ? 'right' : 'left' }}>
+                          {new Date(msg.timestamp).toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      )}
+                    </div>
+                    {isUser && (
+                      <Avatar initials={(user?.name || 'U')[0].toUpperCase()} color="#10B981" size={28} />
+                    )}
+                  </div>
+                );
+              })
+            )}
+            {chatLoading && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#64748B', fontSize: 12, fontStyle: 'italic' }}>
+                {myLawyerPersona && <Avatar initials={myLawyerPersona.initials} color={myLawyerPersona.color} size={28} />}
+                <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: '14px 14px 14px 4px', padding: '10px 14px' }}>
+                  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                    <svg className="animate-spin" width={12} height={12} viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#94A3B8" strokeWidth="3" strokeOpacity=".3"/><path d="M12 2a10 10 0 0 1 10 10" stroke="#94A3B8" strokeWidth="3" strokeLinecap="round"/></svg>
+                    <span style={{ fontSize: 12, color: '#64748B' }}>Counsel is reviewing your case...</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+
+          {/* Chat input */}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              className="input-field"
+              placeholder={myLawyerPersona ? `Message ${myLawyerPersona.name}…` : 'Type a message…'}
+              value={chatMsg}
+              onChange={e => setChatMsg(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMsg(); } }}
+              disabled={chatLoading || !myLawyerPersona}
+              style={{ flex: 1 }}
+            />
+            <button onClick={sendChatMsg} disabled={!chatMsg.trim() || chatLoading || !myLawyerPersona}
+              style={{ padding: '0 16px', borderRadius: 10, border: 'none', cursor: chatMsg.trim() && !chatLoading && myLawyerPersona ? 'pointer' : 'not-allowed',
+                background: chatMsg.trim() && !chatLoading && myLawyerPersona ? 'linear-gradient(135deg,#10B981,#059669)' : '#E2E8F0',
+                color: chatMsg.trim() && !chatLoading && myLawyerPersona ? '#fff' : '#94A3B8',
+                display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 13 }}>
+              <Send size={15} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Evidence tab ── */}
+      {tabShown === 'evidence' && (
+        <div>
+          {c.evidence?.length === 0
+            ? <div style={{ textAlign: 'center', color: '#94A3B8', padding: '40px 0', fontSize: 13 }}>No evidence on record yet.</div>
+            : c.evidence.map((e, i) => (
+              <div key={i} style={{ background: '#FAFAFA', border: '1px solid #E2E8F0', borderRadius: 12, padding: '14px 16px', marginBottom: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999,
+                    color: e.side === 'prosecution' ? '#DC2626' : e.side === 'defense' ? '#2563EB' : '#64748B',
+                    background: e.side === 'prosecution' ? '#FEF2F2' : e.side === 'defense' ? '#EFF6FF' : '#F1F5F9',
+                  }}>{e.side?.toUpperCase()}</span>
+                  <span style={{ fontWeight: 700, fontSize: 13, color: '#0F172A' }}>{e.label}</span>
+                  <span style={{ fontSize: 11, color: '#94A3B8', marginLeft: 'auto' }}>
+                    {new Date(e.submittedAt).toLocaleDateString('en-NG')}
+                  </span>
+                </div>
+                <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{e.content}</div>
+              </div>
+            ))}
+        </div>
+      )}
+
+      {/* ── Actions tab ── */}
+      {tabShown === 'actions' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+          {actionBlocks.bench}
+          {actionBlocks.counsel}
+          {actionBlocks.argue}
+          {actionBlocks.adjourn}
+          {actionBlocks.evidence}
+          {actionBlocks.vote}
+          {actionBlocks.settle}
+          {actionBlocks.appeal}
         </div>
       )}
 
       {/* ── Jury tab ── */}
-      {activeTab === 'jury' && (
+      {tabShown === 'jury' && (
         <div>
           {c.jury?.tally && (c.jury.tally.guilty > 0 || c.jury.tally.notGuilty > 0) && (
             <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
@@ -1641,6 +1940,14 @@ function CaseDetail({ caseId, onBack, user, isManager }) {
             )}
         </div>
       )}
+
+      </div>
+      {isDesktop && (
+        <aside className="sticky top-0">
+          <NextStepsPanel roles={roles} items={nextItems} blocks={actionBlocks} openId={openStep} setOpenId={setOpenAction} />
+        </aside>
+      )}
+      </div>
 
       {/* ── Judge's Bench modal ── */}
       {isManager && showBench && (
@@ -1777,6 +2084,10 @@ export default function Courtroom() {
   const [loading, setLoading]   = useState(true);
   const [residents, setResidents] = useState([]);
   const [selectedCaseId, setSelectedCaseId] = useState(null);
+  const isDesktop = useIsDesktop();
+  const [q, setQ] = useState('');
+  const [guideHidden, setGuideHidden] = useState(() => { try { return localStorage.getItem(GUIDE_KEY) === '1'; } catch { return false; } });
+  const hideGuide = (v) => { setGuideHidden(v); try { localStorage.setItem(GUIDE_KEY, v ? '1' : '0'); } catch {} };
 
   const loadCases = async (statusFilter) => {
     setLoading(true);
@@ -1837,6 +2148,117 @@ export default function Courtroom() {
 
   const activeTabMeta = NAV_TABS.find(t => t.id === tab);
   const showList = tab !== 'file';
+
+  if (isDesktop) {
+    const term = q.trim().toLowerCase();
+    const shown = term
+      ? cases.filter((c) => `${c.caseNumber} ${c.title} ${c.plaintiff?.name || ''} ${c.defendant?.name || ''} ${TYPE_LABELS[c.type] || ''}`.toLowerCase().includes(term))
+      : cases;
+    const activeCount = NAV_TABS[0].getCount(stats);
+    return (
+      <div className="max-w-[1400px] mx-auto space-y-5 pb-10">
+        {/* ── Banner ── */}
+        <div className="dash-rise relative overflow-hidden rounded-2xl px-6 py-5"
+          style={{ background: 'linear-gradient(120deg, #0F172A 0%, #1E293B 55%, #422006 130%)', boxShadow: '0 16px 32px -18px rgba(15,23,42,0.8)' }}>
+          <div className="dash-blob absolute -top-20 right-56 w-56 h-56 rounded-full blur-3xl pointer-events-none" style={{ background: 'rgba(245,158,11,0.22)' }} />
+          <div className="relative flex items-center justify-between gap-6">
+            <div className="flex items-center gap-4 min-w-0">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.35)' }}>
+                <Scale size={22} color="#F59E0B" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-[22px] font-semibold text-white" style={{ letterSpacing: '-0.025em' }}>Estate Court</h1>
+                <p className="text-[13px] text-slate-300">Settle disputes fairly: file a case, let the jury and the judge decide.
+                  {guideHidden && <button onClick={() => hideGuide(false)} className="ml-2 text-amber-400 hover:text-amber-300 font-medium">How it works</button>}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {[
+                ['Active', activeCount, '#FBBF24'],
+                ['In hearing', stats?.byStatus?.in_hearing ?? 0, '#F59E0B'],
+                ['Verdicts', stats?.byStatus?.verdict_delivered ?? 0, '#34D399'],
+                ['Settled', stats?.byStatus?.settled ?? 0, '#A78BFA'],
+              ].map(([label, n, color]) => (
+                <div key={label} className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 min-w-[76px]">
+                  <div className="text-[16px] font-semibold tabular-nums leading-none" style={{ color }}>{n}</div>
+                  <div className="text-[10px] text-slate-400 mt-1">{label}</div>
+                </div>
+              ))}
+              <button onClick={() => setTab('file')}
+                className="ml-1 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[13px] font-semibold text-slate-900 bg-amber-400 hover:bg-amber-300 transition-all hover:-translate-y-0.5"
+                style={{ boxShadow: '0 10px 22px -10px rgba(245,158,11,0.8)' }}>
+                <Plus size={15} /> File a dispute
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {tab === 'file' ? (
+          <div className="dash-rise rounded-2xl bg-white border border-slate-200/70 p-7 max-w-[860px] mx-auto">
+            <div className="flex items-start justify-between gap-4 pb-4 mb-5 border-b border-slate-100">
+              <div>
+                <h2 className="text-[18px] font-semibold text-slate-900">File a dispute</h2>
+                <p className="text-[13px] text-slate-500 mt-0.5">Filing opens the case straight away: AI lawyers are assigned and a jury is summoned.</p>
+              </div>
+              <button onClick={() => setTab('active')} className="btn-outline !text-[13px] !px-3 !py-1.5"><ArrowLeft size={14} /> Back to cases</button>
+            </div>
+            <FileDisputeForm onFiled={() => { setTab('mine'); loadCases('mine'); }} residents={residents} />
+          </div>
+        ) : (
+          <>
+            {!guideHidden && <CourtGuide onHide={() => hideGuide(true)} />}
+
+            <div className="dash-rise flex items-center gap-3" style={{ animationDelay: '100ms' }}>
+              <div className="flex p-1 rounded-xl bg-white border border-slate-200">
+                {NAV_TABS.map((t) => {
+                  const on = tab === t.id;
+                  const n = t.getCount(stats);
+                  return (
+                    <button key={t.id} onClick={() => setTab(t.id)}
+                      className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13px] font-medium transition-all ${on ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>
+                      <t.icon size={14} /> {t.label}
+                      {n != null && n > 0 && <span className={`text-[11px] tabular-nums px-1.5 rounded-md ${on ? 'bg-white/20' : 'bg-slate-100 text-slate-500'}`}>{n}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="relative flex-1 max-w-sm ml-auto">
+                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search case number, title or name…"
+                  className="w-full pl-3.5 pr-3 py-2.5 rounded-xl bg-white border border-slate-200 text-[13px] outline-none focus:border-amber-300 focus:ring-4 focus:ring-amber-100 transition-all" />
+              </div>
+            </div>
+
+            <div className="dash-rise rounded-2xl bg-white border border-slate-200/70 overflow-hidden" style={{ animationDelay: '140ms' }}>
+              <div className="grid grid-cols-[minmax(0,2.2fr)_minmax(0,1.6fr)_150px_90px_100px_20px] gap-4 px-5 py-2.5 bg-slate-50/80 border-b border-slate-100 text-[11px] font-medium text-slate-400">
+                <span>Case</span><span>Parties</span><span>Stage</span><span>Severity</span><span>Filed</span><span />
+              </div>
+              {loading ? (
+                <div className="p-4 space-y-3">{[0, 1, 2, 3].map((k) => <div key={k} className="skeleton h-12 rounded-lg" />)}</div>
+              ) : shown.length === 0 ? (
+                <div className="py-16 text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-slate-100 mx-auto flex items-center justify-center"><Scale size={24} className="text-slate-400" /></div>
+                  <p className="mt-3 text-[14px] font-semibold text-slate-800">
+                    {term ? `No cases match “${q}”` : tab === 'active' ? 'No active cases' : tab === 'mine' ? 'You have no cases' : 'No records yet'}
+                  </p>
+                  <p className="mt-1 text-[13px] text-slate-400">
+                    {term ? 'Try a different search.' : tab === 'active' ? 'The court is in recess. No disputes are open right now.' : tab === 'mine' ? 'Cases you file or are named in will appear here.' : 'Closed and settled cases will be kept here.'}
+                  </p>
+                  {!term && (
+                    <button onClick={() => setTab('file')} className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-semibold text-slate-900 bg-amber-400 hover:bg-amber-300">
+                      <Plus size={14} /> File a dispute
+                    </button>
+                  )}
+                </div>
+              ) : (
+                shown.map((c, i) => <CaseRow key={c._id} c={c} i={i} onClick={() => setSelectedCaseId(c._id)} />)
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="animate-fade-in">

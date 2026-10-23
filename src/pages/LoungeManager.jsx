@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Music, Calendar, BarChart2, Plus, Trash2, X,
@@ -13,6 +13,9 @@ import toast from 'react-hot-toast';
 import DJLive from '../components/DJLive';
 import Portal from '../components/ui/Portal';
 import Feed from '../components/lounge/Feed';
+import { LoungeBanner, LoungeNav, LoungeRightRail, EventsDesktop } from '../components/lounge/LoungeDesktop';
+import useIsDesktop from '../hooks/useIsDesktop';
+import useFillHeight from '../hooks/useFillHeight';
 
 // ── Helpers ────────────────────────────────────────────────────────
 const inputStyle = {
@@ -79,7 +82,7 @@ function ActivitiesTab() {
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">
         <p className="text-sm" style={{ color:'#94A3B8' }}>
-          <span style={{ color:'#6366F1', fontWeight:700 }}>{activities.filter(a=>a.visible).length}</span> visible &nbsp;·&nbsp;
+          <span style={{ color:'#10B981', fontWeight:700 }}>{activities.filter(a=>a.visible).length}</span> visible &nbsp;·&nbsp;
           <span style={{ color:'#F59E0B', fontWeight:700 }}>{activities.filter(a=>a.pinned).length}</span> pinned
         </p>
         <div className="flex gap-2">
@@ -88,7 +91,7 @@ function ActivitiesTab() {
             Reset
           </button>
           <button onClick={() => setShowForm(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-white text-xs font-bold" style={{ background:'#6366F1' }}>
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-white text-xs font-bold" style={{ background:'#10B981' }}>
             <Plus size={13} /> Add
           </button>
         </div>
@@ -109,7 +112,7 @@ function ActivitiesTab() {
         })}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
         {filtered.map(act => {
           const t = typeMap[act.type] || ACTIVITY_TYPES[0];
           return (
@@ -122,7 +125,7 @@ function ActivitiesTab() {
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: t.color+'20', color: t.color }}>{t.label}</span>
                     <span className="text-[10px] px-1.5 py-0.5 rounded-full border" style={{ color:'#94A3B8', borderColor:'#E2E8F0', background:'#fff' }}>{act.day}</span>
                     {act.pinned && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold" style={{ background:'#FFFBEB', color:'#D97706' }}>📌 Pinned</span>}
-                    {act.isCustom && <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background:'#EEF2FF', color:'#6366F1' }}>Custom</span>}
+                    {act.isCustom && <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background:'#ECFDF5', color:'#10B981' }}>Custom</span>}
                   </div>
                   <p className="text-sm font-bold leading-snug mb-1" style={{ color: act.visible ? '#0F172A' : '#94A3B8' }}>{act.title}</p>
                   <p className="text-xs leading-relaxed" style={{ color:'#64748B' }}>{act.desc}</p>
@@ -135,7 +138,7 @@ function ActivitiesTab() {
                   <Pin size={13} />
                 </button>
                 <button onClick={() => toggleVis(act.id)} className="p-1.5 rounded-lg transition-all"
-                  style={act.visible ? { color:'#6366F1', background:'#EEF2FF' } : { color:'#94A3B8' }}>
+                  style={act.visible ? { color:'#10B981', background:'#ECFDF5' } : { color:'#94A3B8' }}>
                   {act.visible ? <Eye size={13} /> : <EyeOff size={13} />}
                 </button>
                 <button onClick={() => remove(act.id)} className="p-1.5 rounded-lg hover:bg-red-50" style={{ color:'#CBD5E1' }}
@@ -193,7 +196,7 @@ function ActivitiesTab() {
               <div className="flex gap-3 pt-1">
                 <button type="button" onClick={() => setShowForm(false)}
                   className="flex-1 py-2.5 rounded-xl text-sm" style={{ background:'#F1F5F9', color:'#475569' }}>Cancel</button>
-                <button type="submit" className="flex-1 py-2.5 rounded-xl text-white text-sm font-bold" style={{ background:'#6366F1' }}>
+                <button type="submit" className="flex-1 py-2.5 rounded-xl text-white text-sm font-bold" style={{ background:'#10B981' }}>
                   Add Activity
                 </button>
               </div>
@@ -217,7 +220,7 @@ const EVENT_CATEGORIES = [
 ];
 const catMap = Object.fromEntries(EVENT_CATEGORIES.map(c => [c.id, c]));
 
-function EventsTab() {
+function EventsTab({ desktop = false, createSignal = 0 }) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -229,6 +232,12 @@ function EventsTab() {
     eventAPI.getAll().then(({data}) => setEvents(data.data)).catch(() => toast.error('Failed to load events')).finally(() => setLoading(false));
   }, []);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { if (createSignal) setShowForm(true); }, [createSignal]);
+
+  const removeEvent = async (id) => {
+    try { await eventAPI.delete(id); setEvents(prev => prev.filter(e => e._id !== id)); toast.success('Removed'); }
+    catch { toast.error('Failed to remove'); }
+  };
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -250,14 +259,16 @@ function EventsTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm" style={{ color:'#94A3B8' }}>{upcoming.length} upcoming · {past.length} past</p>
-        <button onClick={() => setShowForm(true)} className="flex items-center gap-2 px-4 py-2 rounded-xl text-white font-semibold text-sm" style={{ background:'#6366F1' }}>
+        <button onClick={() => setShowForm(true)} className="flex items-center gap-2 px-4 py-2 rounded-xl text-white font-semibold text-sm" style={{ background:'#10B981' }}>
           <Plus size={14} /> New Event
         </button>
       </div>
 
-      {loading ? <div className="flex justify-center py-8"><RefreshCw size={18} className="text-indigo-500 animate-spin" /></div>
+      {loading ? <div className="flex justify-center py-8"><RefreshCw size={18} className="text-emerald-500 animate-spin" /></div>
        : events.length === 0 ? <div className="rounded-2xl p-10 text-center text-sm border" style={{ color:'#94A3B8', borderColor:'#F1F5F9' }}>No events yet. Create the first one!</div>
-       : (
+       : desktop ? (
+        <EventsDesktop upcoming={upcoming} past={past} catMap={catMap} onDelete={removeEvent} onNew={() => setShowForm(true)} />
+       ) : (
         <div className="space-y-3">
           {upcoming.map(ev => {
             const cat = catMap[ev.category] || catMap['general'];
@@ -347,7 +358,7 @@ function EventsTab() {
               </label>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2.5 rounded-xl text-sm" style={{background:'#F1F5F9',color:'#475569'}}>Cancel</button>
-                <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-xl text-white text-sm font-bold flex items-center justify-center gap-2" style={{background:'#6366F1'}}>
+                <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-xl text-white text-sm font-bold flex items-center justify-center gap-2" style={{background:'#10B981'}}>
                   {saving ? <RefreshCw size={13} className="animate-spin" /> : <Calendar size={13} />} Create
                 </button>
               </div>
@@ -361,7 +372,7 @@ function EventsTab() {
 }
 
 // ── Polls Tab ─────────────────────────────────────────────────────
-function PollsTab() {
+function PollsTab({ createSignal = 0 }) {
   const [polls, setPolls] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -371,6 +382,8 @@ function PollsTab() {
   useEffect(() => {
     pollAPI.getAll().then(({data}) => setPolls(data.data)).catch(() => toast.error('Failed')).finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { if (createSignal) setShowForm(true); }, [createSignal]);
 
   const setOption=(i,v)=>setForm(p=>{const o=[...p.options];o[i]=v;return{...p,options:o};});
 
@@ -393,14 +406,14 @@ function PollsTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm" style={{color:'#94A3B8'}}>{polls.length} polls</p>
-        <button onClick={()=>setShowForm(true)} className="flex items-center gap-2 px-4 py-2 rounded-xl text-white font-semibold text-sm" style={{background:'#6366F1'}}>
+        <button onClick={()=>setShowForm(true)} className="flex items-center gap-2 px-4 py-2 rounded-xl text-white font-semibold text-sm" style={{background:'#10B981'}}>
           <Plus size={14} /> New Poll
         </button>
       </div>
-      {loading ? <div className="flex justify-center py-8"><RefreshCw size={18} className="text-indigo-500 animate-spin" /></div>
+      {loading ? <div className="flex justify-center py-8"><RefreshCw size={18} className="text-emerald-500 animate-spin" /></div>
        : polls.length===0 ? <div className="rounded-2xl p-10 text-center text-sm border" style={{color:'#94A3B8',borderColor:'#F1F5F9'}}>No polls yet.</div>
        : (
-        <div className="space-y-3">
+        <div className="space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-4 lg:items-start">
           {polls.map(poll => {
             const total=poll.options.reduce((s,o)=>s+o.votes.length,0);
             const isEnded=!poll.isActive||(poll.endsAt&&new Date()>new Date(poll.endsAt));
@@ -460,12 +473,12 @@ function PollsTab() {
                     {form.options.length>2&&<button type="button" onClick={()=>setForm(p=>({...p,options:p.options.filter((_,j)=>j!==i)}))} style={{color:'#CBD5E1'}}><X size={13}/></button>}
                   </div>
                 ))}
-                {form.options.length<6&&<button type="button" onClick={()=>setForm(p=>({...p,options:[...p.options,'']}))} className="text-xs flex items-center gap-1" style={{color:'#6366F1'}}><Plus size={11}/> Add option</button>}
+                {form.options.length<6&&<button type="button" onClick={()=>setForm(p=>({...p,options:[...p.options,'']}))} className="text-xs flex items-center gap-1" style={{color:'#10B981'}}><Plus size={11}/> Add option</button>}
               </div>
               <div><label className="text-xs block mb-1 font-medium" style={{color:'#64748B'}}>End Date (optional)</label><input type="datetime-local" value={form.endsAt} onChange={e=>setForm(p=>({...p,endsAt:e.target.value}))} style={inputStyle}/></div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={()=>setShowForm(false)} className="flex-1 py-2.5 rounded-xl text-sm" style={{background:'#F1F5F9',color:'#475569'}}>Cancel</button>
-                <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-xl text-white text-sm font-bold" style={{background:'#6366F1'}}>
+                <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-xl text-white text-sm font-bold" style={{background:'#10B981'}}>
                   {saving?<RefreshCw size={13} className="animate-spin"/>:'Create Poll'}
                 </button>
               </div>
@@ -522,7 +535,7 @@ function MusicTab() {
 
       {/* ── Go Live / Live DJ hero ─────────────────────────────── */}
       <div className="rounded-2xl p-5 relative overflow-hidden"
-        style={{ background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 50%, #4338CA 100%)', color: '#fff' }}>
+        style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 50%, #047857 100%)', color: '#fff' }}>
         <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full opacity-20" style={{ background: 'rgba(255,255,255,0.4)' }} />
         <div className="relative flex items-center gap-4 flex-wrap">
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.3)' }}>
@@ -545,7 +558,7 @@ function MusicTab() {
           </div>
           <button onClick={()=>navigate('/lounge/dj')}
             className="px-4 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 whitespace-nowrap"
-            style={{ background: '#fff', color: '#4338CA' }}>
+            style={{ background: '#fff', color: '#047857' }}>
             {activeDJ && activeDJ.hostUserId === user?._id
               ? <><Radio size={14}/> Open decks</>
               : <><Mic size={14}/> Go live</>}
@@ -557,14 +570,14 @@ function MusicTab() {
       {mixtapes.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <Headphones size={14} className="text-indigo-500" />
+            <Headphones size={14} className="text-emerald-500" />
             <h3 className="text-sm font-bold" style={{ color: '#0F172A' }}>Mixtape Archive</h3>
             <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: '#94A3B8', background: '#F1F5F9' }}>{mixtapes.length}</span>
           </div>
           <div className="space-y-2">
             {mixtapes.slice(0, 5).map(m => (
               <div key={m._id} className="rounded-xl p-3 flex items-center gap-3 border" style={{ background:'#fff', borderColor:'#F1F5F9' }}>
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(99,102,241,0.12)', color: '#4F46E5' }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(16,185,129,0.12)', color: '#059669' }}>
                   <Play size={14} />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -588,7 +601,7 @@ function MusicTab() {
       <div className="flex items-center gap-2 flex-wrap">
         <button onClick={async()=>{const next=!session?.isAutoDJ;const{data}=await loungeAPI.updateMood({isAutoDJ:next});setSession(data.data);toast.success(`AutoDJ ${next?'on':'off'}`);}}
           className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border"
-          style={session?.isAutoDJ?{color:'#EC4899',borderColor:'rgba(236,72,153,0.4)',background:'rgba(236,72,153,0.08)'}:{color:'#94A3B8',borderColor:'#E2E8F0',background:'#F8FAFC'}}>
+          style={session?.isAutoDJ?{color:'#059669',borderColor:'rgba(16,185,129,0.4)',background:'rgba(16,185,129,0.08)'}:{color:'#94A3B8',borderColor:'#E2E8F0',background:'#F8FAFC'}}>
           <Shuffle size={12}/> AutoDJ {session?.isAutoDJ?'On':'Off'}
         </button>
         <button onClick={load} style={{color:'#94A3B8'}}><RefreshCw size={14}/></button>
@@ -613,7 +626,7 @@ function MusicTab() {
                     <p className="text-sm font-semibold truncate" style={{color:'#0F172A'}}>{t.title}</p>
                     <p className="text-xs mt-0.5" style={{color:'#94A3B8'}}>{t.artist||t.suggestedBy?.name||'Resident'} · {t.votes?.length||0} votes</p>
                   </div>
-                  <a href={`https://youtube.com/watch?v=${t.videoId}`} target="_blank" rel="noopener noreferrer" className="p-1.5 flex-shrink-0" style={{color:'#CBD5E1'}} onMouseEnter={e=>e.currentTarget.style.color='#EC4899'} onMouseLeave={e=>e.currentTarget.style.color='#CBD5E1'}><Music size={13}/></a>
+                  <a href={`https://youtube.com/watch?v=${t.videoId}`} target="_blank" rel="noopener noreferrer" className="p-1.5 flex-shrink-0" style={{color:'#CBD5E1'}} onMouseEnter={e=>e.currentTarget.style.color='#059669'} onMouseLeave={e=>e.currentTarget.style.color='#CBD5E1'}><Music size={13}/></a>
                   <button onClick={()=>handleRemove(t._id)} className="p-1.5 rounded-lg hover:bg-red-50 flex-shrink-0" style={{color:'#CBD5E1'}} onMouseEnter={e=>e.currentTarget.style.color='#EF4444'} onMouseLeave={e=>e.currentTarget.style.color='#CBD5E1'}><Trash2 size={13}/></button>
                 </div>
               ))}
@@ -632,11 +645,11 @@ function MusicTab() {
 
 // ── Main ──────────────────────────────────────────────────────────
 const TABS = [
-  { key:'feed',       Icon:Activity,  label:'Feed',       color:'#6366F1' },
-  { key:'events',     Icon:Calendar,  label:'Events',     color:'#0EA5E9' },
-  { key:'activities', Icon:Zap,       label:'Activities', color:'#8B5CF6' },
-  { key:'polls',      Icon:BarChart2, label:'Polls',      color:'#10B981' },
-  { key:'music',      Icon:Music,     label:'Music',      color:'#EC4899' },
+  { key:'feed',       Icon:Activity,  label:'Feed',       color:'#10B981' },
+  { key:'events',     Icon:Calendar,  label:'Events',     color:'#0D9488' },
+  { key:'activities', Icon:Zap,       label:'Activities', color:'#059669' },
+  { key:'polls',      Icon:BarChart2, label:'Polls',      color:'#16A34A' },
+  { key:'music',      Icon:Music,     label:'Music',      color:'#047857' },
 ];
 
 // ── Friday countdown ──────────────────────────────────────────────
@@ -674,6 +687,39 @@ export default function LoungeManager() {
   const isFridayNight = now.getDay() === 5 && now.getHours() >= 18;
   const countdown     = useCountdown(getNextFriday().getTime());
   const pad           = n => String(n).padStart(2, '0');
+  const isDesktop     = useIsDesktop();
+  const [createSignal, setCreateSignal] = useState({ events: 0, polls: 0 });
+  const createIn = (key) => { setTab(key); setCreateSignal(c => ({ ...c, [key]: c[key] + 1 })); };
+  const shellRef    = useRef(null);
+  const centreRef   = useRef(null);
+  const shellHeight = useFillHeight(shellRef, isDesktop);
+  const switchTab   = (key) => { setTab(key); centreRef.current?.scrollTo({ top: 0 }); };
+
+  // Desktop: banner + side rails stay put; only the centre column scrolls.
+  if (isDesktop) return (
+    <div ref={shellRef} className="max-w-[1400px] mx-auto flex flex-col gap-5 overflow-hidden"
+      style={{ height: shellHeight ?? 'calc(100vh - 4rem)' }}>
+      <div className="flex-none"><LoungeBanner isFridayNight={isFridayNight} countdown={countdown} /></div>
+      <div className="flex-1 min-h-0 grid grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)_300px] gap-6">
+        <div className="h-full min-h-0 overflow-y-auto no-scrollbar">
+          <LoungeNav tabs={TABS} tab={tab} onTab={switchTab} onCreate={(key) => { createIn(key); centreRef.current?.scrollTo({ top: 0 }); }} />
+        </div>
+        <div ref={centreRef} data-lounge-scroll
+          className={`h-full min-h-0 min-w-0 overflow-y-auto overscroll-contain pr-1 pb-8 ${tab === 'feed' ? '' : 'xl:col-span-2'}`}>
+          {tab === 'feed'       && <Feed me={user} />}
+          {tab === 'events'     && <EventsTab desktop createSignal={createSignal.events} />}
+          {tab === 'activities' && <ActivitiesTab />}
+          {tab === 'polls'      && <PollsTab createSignal={createSignal.polls} />}
+          {tab === 'music'      && <MusicTab />}
+        </div>
+        {tab === 'feed' && (
+          <div className="hidden xl:block h-full min-h-0 overflow-y-auto no-scrollbar pb-2">
+            <LoungeRightRail onTab={switchTab} catMap={catMap} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div className="animate-fade-in pb-12 -mt-4 md:-mt-6 lg:-mt-8">
@@ -681,7 +727,7 @@ export default function LoungeManager() {
       <div className="sticky -top-4 md:-top-6 lg:-top-8 z-30 -mx-4 md:-mx-6 lg:-mx-8 px-4 md:px-6 lg:px-8 pt-3 pb-2 bg-white/90 backdrop-blur-xl border-b border-slate-100">
         <div className="flex items-center justify-between gap-3 max-w-[960px] mx-auto">
           <h1 className="text-[26px] font-black tracking-tight leading-none"
-            style={{ background: 'linear-gradient(90deg,#6366F1,#4F46E5)', WebkitBackgroundClip: 'text', color: 'transparent' }}>
+            style={{ background: 'linear-gradient(90deg,#10B981,#059669)', WebkitBackgroundClip: 'text', color: 'transparent' }}>
             Lounge
           </h1>
           {isFridayNight ? (
@@ -701,7 +747,7 @@ export default function LoungeManager() {
             return (
               <button key={key} onClick={() => setTab(key)}
                 className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-semibold whitespace-nowrap transition-all shrink-0 ${active ? 'text-white shadow-sm' : 'text-slate-600 bg-slate-100 hover:bg-slate-200'}`}
-                style={active ? { background: 'linear-gradient(90deg,#6366F1,#4F46E5)' } : undefined}>
+                style={active ? { background: 'linear-gradient(90deg,#10B981,#059669)' } : undefined}>
                 <Icon size={15} /> {label}
               </button>
             );

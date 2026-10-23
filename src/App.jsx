@@ -11,6 +11,8 @@ import PlanGate from './components/ui/PlanGate';
 import SubscriptionWall from './components/ui/SubscriptionWall';
 import { LoadingScreen } from './components/ui/Spinner';
 import { usePlan } from './hooks/usePlan';
+import { canOpen, isTeamMember } from './utils/teamAccess';
+import Team from './pages/Team';
 import { Toaster } from 'react-hot-toast';
 
 import Login from './pages/Login';
@@ -32,6 +34,7 @@ import Upgrade from './pages/Upgrade';
 import LoungeManager from './pages/LoungeManager';
 import DJConsole from './pages/DJConsole';
 import Podcasts from './pages/Podcasts';
+import PodcastStudio from './pages/PodcastStudio';
 import AnnouncementBroadcast from './pages/AnnouncementBroadcast';
 import Guards from './pages/Guards';
 import GuardDetail from './pages/GuardDetail';
@@ -55,8 +58,26 @@ function RequireManager({ children, allowWhenBlocked = false }) {
       </div>
     );
   }
-  if (user.estateId && !localStorage.getItem(`onboarding_done_${user._id}`)) {
+  const member = isTeamMember(user);
+  // Estate setup is the owner's job — invited team members skip onboarding
+  if (!member && user.estateId && !localStorage.getItem(`onboarding_done_${user._id}`)) {
     return <Navigate to="/onboarding" replace />;
+  }
+  // Invited members sign in with a temporary password and must set their own first
+  if (member && user.mustChangePassword && location.pathname !== '/settings') {
+    return <Navigate to="/settings" replace />;
+  }
+  if (!canOpen(user, location.pathname)) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center py-24 px-6">
+          <div className="glass-card p-8 max-w-sm text-center">
+            <p className="font-semibold mb-2" style={{ color: '#0F172A' }}>You don't have access to this page</p>
+            <p className="text-sm" style={{ color: '#64748B' }}>Ask your estate manager to give you access from the Team page.</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
   }
   // Show suspension wall but keep the sidebar (with estate switcher) accessible
   if (isBlocked && !allowWhenBlocked) {
@@ -90,12 +111,14 @@ function AppRoutes() {
       <Route path="/chat" element={<RequireManager><PlanGate feature="communityChat" featureName="Community Chat"><Chat /></PlanGate></RequireManager>} />
       <Route path="/payments" element={<RequireManager><PlanGate feature="paymentSystem" featureName="Payments"><Payments /></PlanGate></RequireManager>} />
       <Route path="/alerts" element={<RequireManager><PlanGate feature="securityPortal" featureName="Security & Alerts"><Alerts /></PlanGate></RequireManager>} />
+      <Route path="/team" element={<RequireManager><Team /></RequireManager>} />
       <Route path="/settings" element={<RequireManager allowWhenBlocked><Settings /></RequireManager>} />
       <Route path="/settings/password-requests" element={<RequireManager><PasswordRequests /></RequireManager>} />
       <Route path="/upgrade" element={<RequireManager allowWhenBlocked><Upgrade /></RequireManager>} />
       <Route path="/lounge" element={<RequireManager><PlanGate feature="residentLounge" featureName="Lounge & Events"><LoungeManager /></PlanGate></RequireManager>} />
       <Route path="/lounge/dj" element={<RequireManager><PlanGate feature="residentLounge" featureName="Lounge & Events"><DJConsole /></PlanGate></RequireManager>} />
       <Route path="/podcasts" element={<RequireManager><PlanGate feature="residentLounge" featureName="Podcast"><Podcasts /></PlanGate></RequireManager>} />
+      <Route path="/podcasts/live" element={<RequireManager><PlanGate feature="residentLounge" featureName="Podcast"><PodcastStudio /></PlanGate></RequireManager>} />
       <Route path="/guards" element={<RequireManager><Guards /></RequireManager>} />
       <Route path="/calls" element={<RequireManager><Calls /></RequireManager>} />
       <Route path="/marketplace" element={<RequireManager><PlanGate feature="marketplace" featureName="Marketplace"><Marketplace /></PlanGate></RequireManager>} />

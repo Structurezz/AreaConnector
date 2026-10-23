@@ -12,6 +12,8 @@ import { visitorStatusBadge } from '../components/ui/Badge';
 import Badge from '../components/ui/Badge';
 import Spinner from '../components/ui/Spinner';
 import EstateMap from '../components/EstateMap';
+import DesktopDashboard from '../components/dashboard/DesktopDashboard';
+import useIsDesktop from '../hooks/useIsDesktop';
 import { format } from 'date-fns';
 
 function greeting() {
@@ -29,6 +31,7 @@ export default function ManagerDashboard() {
   const [announcements, setAnnouncements] = useState([]);
   const [estate, setEstate]           = useState(null);
   const [loading, setLoading]         = useState(true);
+  const isDesktop = useIsDesktop();
 
   const estateId = user?.estateId?._id || user?.estateId;
 
@@ -41,14 +44,16 @@ export default function ManagerDashboard() {
     ];
     if (estateId) calls.push(estateAPI.getOne(estateId));
 
-    Promise.all(calls).then((results) => {
-      const [s, v, a, n, e] = results;
-      setStats(s.data.data);
-      setRecentVisitors(v.data.data);
-      setOpenAlerts(a.data.data);
-      setAnnouncements(n.data.data);
-      if (e) setEstate(e.data.data);
-    }).catch(console.error).finally(() => setLoading(false));
+    // allSettled: team members without e.g. Security access get a 403 for that
+    // section only — the rest of the dashboard still loads.
+    Promise.allSettled(calls).then((results) => {
+      const [s, v, a, n, e] = results.map(r => (r.status === 'fulfilled' ? r.value.data.data : undefined));
+      if (s) setStats(s);
+      setRecentVisitors(v || []);
+      setOpenAlerts(a || []);
+      setAnnouncements(n || []);
+      if (e) setEstate(e);
+    }).finally(() => setLoading(false));
   }, [estateId]);
 
   if (loading) return (
@@ -59,6 +64,19 @@ export default function ManagerDashboard() {
     ? user.estateId.name
     : 'Your Estate';
   const firstName = user?.name?.split(' ')[0] || 'Manager';
+
+  if (isDesktop) return (
+    <DesktopDashboard
+      user={user}
+      stats={stats}
+      recentVisitors={recentVisitors}
+      openAlerts={openAlerts}
+      announcements={announcements}
+      estate={estate}
+      estateName={estateName}
+      firstName={firstName}
+    />
+  );
 
   return (
     <div className="space-y-6 animate-fade-in">

@@ -8,6 +8,7 @@ import {
 import BottomSheet from '../components/payments/BottomSheet';
 import { marketAdminAPI } from '../api';
 import { useCall } from '../context/CallContext';
+import useIsDesktop from '../hooks/useIsDesktop';
 
 // Estate manager's control room for the residents' marketplace:
 // approve/reject listings, act on reports, suspend sellers, set price rules.
@@ -126,6 +127,58 @@ function ListingRow({ l, median, actions }) {
   );
 }
 
+// Desktop: image-first product card with the same actions as ListingRow
+function ListingCard({ l, median, actions, i = 0 }) {
+  const s = l.sellerId || {};
+  const [open, setOpen] = useState(false);
+  const over = median && l.price > median ? Math.round((l.price / median) * 10) / 10 : null;
+  const flagged = l.flags?.length > 0 && l.status === 'pending_approval';
+  return (
+    <div className="dash-tile dash-rise group rounded-2xl bg-white border border-slate-200/70 overflow-hidden flex flex-col" style={{ animationDelay: `${60 + i * 40}ms` }}>
+      <button onClick={() => setOpen((o) => !o)} className="relative block w-full aspect-[4/3] bg-slate-100 overflow-hidden text-left">
+        {l.images?.[0]
+          ? <img src={img(l.images[0])} alt="" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+          : <span className="absolute inset-0 flex items-center justify-center text-5xl">{CAT[l.category]?.emoji || '📦'}</span>}
+        <span className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/45 to-transparent" />
+        <span className="absolute left-2.5 top-2.5"><Pill status={l.status} /></span>
+        {l.images?.length > 1 && <span className="absolute right-2.5 top-2.5 text-[10px] font-semibold text-white bg-black/40 px-1.5 py-0.5 rounded-full">1/{l.images.length}</span>}
+        <span className="absolute left-3 bottom-2.5 text-white text-[18px] font-bold drop-shadow">{naira(l.price)}</span>
+        {l.reportCount > 0 && <span className="absolute right-2.5 bottom-2.5 inline-flex items-center gap-1 text-[10px] font-bold text-white bg-red-500 px-1.5 py-0.5 rounded-full"><Flag size={10} /> {l.reportCount}</span>}
+      </button>
+      <div className="p-3.5 flex-1 flex flex-col">
+        <div className="text-[11px] text-slate-400">{CAT[l.category]?.emoji} {CAT[l.category]?.label} · {ago(l.createdAt)}</div>
+        <p className="mt-0.5 text-[14px] font-semibold text-slate-900 line-clamp-1">{l.title}</p>
+        {median && <p className={`text-[12px] ${over >= 2 ? 'text-red-600 font-semibold' : 'text-slate-400'}`}>Typical {naira(median)}{over >= 1.5 ? ` · ${over}× higher` : ''}</p>}
+        <div className="mt-1.5 flex items-center gap-1.5 text-[12px] text-slate-500 min-w-0">
+          <span className="truncate">{s.name || 'Resident'}</span> <Rating r={l.sellerRating} />
+        </div>
+        {flagged && (
+          <div className="mt-2 space-y-1">
+            {l.flags.map((f, k) => <p key={k} className="text-[11px] rounded-lg bg-amber-50 text-amber-800 px-2 py-1 flex gap-1"><AlertTriangle size={12} className="shrink-0 mt-px" /><span><b>{FLAG[f.type] || f.type}</b>{f.detail ? ` — ${f.detail}` : ''}</span></p>)}
+          </div>
+        )}
+        {l.moderation?.reason && ['rejected', 'removed'].includes(l.status) && (
+          <p className="mt-2 text-[11px] text-slate-500 rounded-lg bg-slate-50 px-2 py-1">Reason: {l.moderation.reason}</p>
+        )}
+        {open && (
+          <div className="mt-2 pt-2 border-t border-slate-100 space-y-1.5 animate-fade-in">
+            {l.images?.length > 1 && <div className="flex gap-1.5 overflow-x-auto no-scrollbar">{l.images.map((src, k) => <img key={k} src={img(src)} alt="" className="w-14 h-14 rounded-lg object-cover shrink-0" />)}</div>}
+            <p className="text-[12px] text-slate-600 line-clamp-5" style={{ whiteSpace: 'pre-wrap' }}>{l.description}</p>
+            <p className="text-[11px] text-slate-400 flex flex-wrap gap-x-2.5">
+              <span className="inline-flex items-center gap-1"><Eye size={11} /> {l.views || 0} views</span>
+              {l.isNegotiable && <span>Negotiable</span>}
+              {l.priceHistory?.length > 1 && <span>{l.priceHistory.map((p) => naira(p.price)).join(' → ')}</span>}
+              {s.phone && <span>{s.phone}</span>}
+            </p>
+          </div>
+        )}
+        <button onClick={() => setOpen((o) => !o)} className="mt-1.5 self-start text-[11px] font-medium text-emerald-600 hover:text-emerald-700">{open ? 'Hide details' : 'Details'}</button>
+        {actions && <div className="mt-auto pt-3 flex flex-wrap gap-1.5 [&>button]:flex-1">{actions}</div>}
+      </div>
+    </div>
+  );
+}
+
 const Btn = ({ tone = 'slate', children, ...p }) => {
   const t = { green: 'bg-emerald-600 text-white hover:bg-emerald-700', red: 'bg-red-50 text-red-700 hover:bg-red-100', slate: 'bg-slate-100 text-slate-700 hover:bg-slate-200' }[tone];
   return <button {...p} className={`inline-flex items-center justify-center gap-1.5 px-3 sm:px-3.5 py-2.5 sm:py-2 rounded-xl text-sm font-semibold whitespace-nowrap active:scale-[0.98] transition disabled:opacity-40 ${t}`}>{children}</button>;
@@ -212,6 +265,9 @@ const TABS = [
 
 export default function Marketplace() {
   const { startCall } = useCall() || {};
+  const isDesktop = useIsDesktop();
+  const Listing = isDesktop ? ListingCard : ListingRow;
+  const listGrid = isDesktop ? 'grid grid-cols-2 xl:grid-cols-3 gap-4' : 'grid lg:grid-cols-2 gap-3';
   const [tab, setTab] = useState('queue');
   const [stats, setStats] = useState(null);
   const [queue, setQueue] = useState(null); // null = not loaded yet
@@ -297,52 +353,8 @@ export default function Marketplace() {
     { k: stats.disputes ? 'Disputes' : 'Sold value', v: stats.disputes || `₦${Number(stats.soldValue || 0).toLocaleString('en-NG')}`, onClick: () => { setOrderStatus(stats.disputes ? 'disputed' : 'completed'); go('orders'); }, alert: stats.disputes > 0 },
   ] : [];
 
-  return (
-    <div className="space-y-4 sm:space-y-5 animate-fade-in">
-      {/* Overview — every tile jumps to the matching list */}
-      <div className="rounded-3xl p-4 sm:p-6 text-white relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #064E3B 0%, #047857 55%, #10B981 100%)' }}>
-        <div className="absolute -top-16 -right-10 w-52 h-52 rounded-full bg-white/10 pointer-events-none" />
-        <div className="relative flex items-center gap-3">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-lg sm:text-xl font-bold flex items-center gap-2"><ShoppingBag size={19} /> Marketplace</h1>
-            <p className="text-xs text-emerald-50/80 mt-0.5 flex items-center gap-1.5"><ShieldCheck size={12} /> Keep your residents' market fair and safe</p>
-          </div>
-          <button onClick={() => { load(); loadStats(); }} aria-label="Refresh" className="w-10 h-10 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 shrink-0">
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-          </button>
-        </div>
-        <div className="relative grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
-          {(stats ? TILES : Array.from({ length: 4 }, (_, i) => ({ k: i }))).map((t) => (
-            <button key={t.k} onClick={t.onClick} disabled={!stats}
-              className={`text-left rounded-2xl px-3 py-2.5 transition-colors active:scale-[0.98] ${t.alert ? 'bg-white text-emerald-900' : 'bg-white/10 hover:bg-white/15'}`}>
-              <p className={`text-[11px] flex items-center justify-between ${t.alert ? 'text-emerald-700 font-semibold' : 'text-emerald-100/80'}`}>
-                {stats ? t.k : '…'} {stats && <ChevronRight size={13} className="opacity-60" />}
-              </p>
-              <p className="text-lg font-bold leading-tight">{stats ? t.v : '—'}</p>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Sticky section switcher: icon grid on phones, labelled pills on larger screens */}
-      <div className="sticky -top-4 md:-top-6 lg:-top-8 z-20 -mx-4 px-4 md:mx-0 md:px-0 py-2 bg-[#F8FAFC]/95 backdrop-blur">
-        <nav className="grid grid-cols-6 gap-1 p-1 rounded-2xl bg-white border border-slate-200 shadow-sm">
-          {TABS.map(({ id, label, short, icon: Icon }) => {
-            const active = tab === id;
-            return (
-              <button key={id} onClick={() => go(id)} aria-current={active ? 'page' : undefined}
-                className={`relative flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-sm font-semibold transition-colors ${active ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>
-                <Icon size={18} className="sm:w-4 sm:h-4" />
-                <span className="sm:hidden">{short}</span><span className="hidden sm:inline">{label}</span>
-                {badges[id] > 0 && (
-                  <span className={`absolute top-1 right-1.5 sm:static min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center ${active ? 'bg-white text-emerald-700' : 'bg-red-500 text-white'}`}>{badges[id]}</span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
-      </div>
-
+  const body = (
+    <>
       <SectionHead title={current.label} hint={current.hint} busy={loading} />
 
 
@@ -350,9 +362,9 @@ export default function Marketplace() {
         <AllClear title="All caught up" body="Listings held for price checks, reports or approval show up here."
           next={stats?.openReports ? { label: `Review ${stats.openReports} open report${stats.openReports > 1 ? 's' : ''}`, onClick: () => go('reports') } : null} />
       ) : (
-        <div className={`grid lg:grid-cols-2 gap-3 transition-opacity ${loading ? 'opacity-60' : ''}`}>
-          {queue.map((l) => (
-            <ListingRow key={l._id} l={l} median={medians[l.category]} actions={<>
+        <div className={`${listGrid} transition-opacity ${loading ? 'opacity-60' : ''}`}>
+          {queue.map((l, i) => (
+            <Listing key={l._id} i={i} l={l} median={medians[l.category]} actions={<>
               <Btn tone="green" onClick={() => approve(l)}><Check size={16} /> Approve</Btn>
               <Btn tone="red" onClick={() => reject(l)}><X size={16} /> Reject</Btn>
               <Btn onClick={() => remove(l)}><Trash2 size={15} /> Remove</Btn>
@@ -374,9 +386,9 @@ export default function Marketplace() {
             </button>
           )}
           {all === null ? <Skeleton /> : (all.length === 0 ? <AllClear icon={ShoppingBag} title="No listings" body="Nothing matches this filter." /> : (
-            <div className={`grid lg:grid-cols-2 gap-3 transition-opacity ${loading ? 'opacity-60' : ''}`}>
-              {all.map((l) => (
-                <ListingRow key={l._id} l={l} median={medians[l.category]} actions={
+            <div className={`${listGrid} transition-opacity ${loading ? 'opacity-60' : ''}`}>
+              {all.map((l, i) => (
+                <Listing key={l._id} i={i} l={l} median={medians[l.category]} actions={
                   ['active', 'sold'].includes(l.status) ? <Btn tone="red" onClick={() => remove(l)}><Trash2 size={15} /> Take down</Btn>
                   : l.status === 'pending_approval' ? <><Btn tone="green" onClick={() => approve(l)}><Check size={16} /> Approve</Btn><Btn tone="red" onClick={() => reject(l)}><X size={16} /> Reject</Btn></>
                   : <Btn tone="green" onClick={() => restore(l)}><RotateCcw size={15} /> Restore</Btn>
@@ -488,13 +500,128 @@ export default function Marketplace() {
       ))}
 
       {tab === 'rules' && <Rules settings={settings} onSaved={(s) => setSettings((x) => ({ ...s, medians: x.medians }))} />}
-
+    </>
+  );
+  const sheets = (
+    <>
       <SellerSheet seller={sellerOpen} onClose={() => setSellerOpen(null)}
         onCall={() => { startCall?.({ _id: sellerOpen._id, ...sellerOpen.user }); setSellerOpen(null); }}
         onListings={() => { setSellerFilter({ _id: sellerOpen._id, name: sellerOpen.user.name.split(' ')[0] }); setSellerOpen(null); go('listings', 'all'); }}
         onSuspend={() => { const s = sellerOpen; setSellerOpen(null); suspend(s); }}
         onLift={() => { const s = sellerOpen; setSellerOpen(null); act(() => marketAdminAPI.unsuspend(s._id), 'Suspension lifted').catch(() => {}); }} />
       <ReasonSheet ask={ask} onClose={() => setAsk(null)} />
+    </>
+  );
+
+  if (isDesktop) return (
+    <div className="max-w-[1400px] mx-auto space-y-5 pb-10">
+      {/* ── Banner ── */}
+      <div className="dash-rise relative overflow-hidden rounded-2xl px-6 py-5"
+        style={{ background: 'linear-gradient(120deg, #022C22 0%, #064E3B 50%, #047857 100%)', boxShadow: '0 16px 32px -18px rgba(4,120,87,0.75)' }}>
+        <div className="dash-blob absolute -top-20 right-72 w-56 h-56 rounded-full blur-3xl pointer-events-none" style={{ background: 'rgba(52,211,153,0.22)' }} />
+        <div className="relative flex items-center justify-between gap-6">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/10 border border-white/15 flex-shrink-0"><ShoppingBag size={22} className="text-emerald-300" /></div>
+            <div className="min-w-0">
+              <h1 className="text-[22px] font-semibold text-white" style={{ letterSpacing: '-0.025em' }}>Marketplace</h1>
+              <p className="text-[13px] text-emerald-100/75 flex items-center gap-1.5"><ShieldCheck size={13} /> Keep your residents' market fair and safe</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {(stats ? TILES : Array.from({ length: 4 }, (_, i) => ({ k: i }))).map((t) => (
+              <button key={t.k} onClick={t.onClick} disabled={!stats}
+                className={`text-left min-w-[96px] px-3 py-2 rounded-xl border transition-all hover:-translate-y-0.5 ${t.alert ? 'bg-white text-emerald-900 border-white' : 'bg-white/10 border-white/15 text-white hover:bg-white/15'}`}>
+                <div className="text-[16px] font-semibold tabular-nums leading-none">{stats ? t.v : '—'}</div>
+                <div className={`text-[10px] mt-1 ${t.alert ? 'text-emerald-700 font-semibold' : 'text-emerald-100/70'}`}>{stats ? t.k : '…'}</div>
+              </button>
+            ))}
+            <button onClick={() => { load(); loadStats(); }} aria-label="Refresh" className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/10 border border-white/15 text-white hover:bg-white/20">
+              <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-[230px_minmax(0,1fr)] gap-5 items-start">
+        {/* ── Section rail ── */}
+        <nav className="sticky top-0 dash-rise rounded-2xl bg-white border border-slate-200/70 p-2" style={{ animationDelay: '60ms' }}>
+          {TABS.map(({ id, label, icon: Icon, hint }) => {
+            const on = tab === id;
+            return (
+              <button key={id} onClick={() => go(id)} aria-current={on ? 'page' : undefined}
+                className={`group relative w-full flex items-start gap-3 px-3 py-2.5 rounded-xl text-left transition-all ${on ? 'bg-emerald-50' : 'hover:bg-slate-50'}`}>
+                {on && <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-emerald-500" />}
+                <span className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${on ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700'}`}>
+                  <Icon size={14} />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className={`flex items-center justify-between text-[13px] ${on ? 'font-semibold text-slate-900' : 'font-medium text-slate-700'}`}>
+                    {label}
+                    {badges[id] > 0 && <span className="min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center bg-red-500 text-white">{badges[id]}</span>}
+                  </span>
+                  <span className="block text-[11px] text-slate-400 leading-snug mt-0.5">{hint}</span>
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* ── Section content ── */}
+        <div className="min-w-0 space-y-4">{body}</div>
+      </div>
+      {sheets}
+    </div>
+  );
+
+  return (
+    <div className="space-y-4 sm:space-y-5 animate-fade-in">
+      {/* Overview — every tile jumps to the matching list */}
+      <div className="rounded-3xl p-4 sm:p-6 text-white relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #064E3B 0%, #047857 55%, #10B981 100%)' }}>
+        <div className="absolute -top-16 -right-10 w-52 h-52 rounded-full bg-white/10 pointer-events-none" />
+        <div className="relative flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2"><ShoppingBag size={19} /> Marketplace</h1>
+            <p className="text-xs text-emerald-50/80 mt-0.5 flex items-center gap-1.5"><ShieldCheck size={12} /> Keep your residents' market fair and safe</p>
+          </div>
+          <button onClick={() => { load(); loadStats(); }} aria-label="Refresh" className="w-10 h-10 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 shrink-0">
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+          </button>
+        </div>
+        <div className="relative grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
+          {(stats ? TILES : Array.from({ length: 4 }, (_, i) => ({ k: i }))).map((t) => (
+            <button key={t.k} onClick={t.onClick} disabled={!stats}
+              className={`text-left rounded-2xl px-3 py-2.5 transition-colors active:scale-[0.98] ${t.alert ? 'bg-white text-emerald-900' : 'bg-white/10 hover:bg-white/15'}`}>
+              <p className={`text-[11px] flex items-center justify-between ${t.alert ? 'text-emerald-700 font-semibold' : 'text-emerald-100/80'}`}>
+                {stats ? t.k : '…'} {stats && <ChevronRight size={13} className="opacity-60" />}
+              </p>
+              <p className="text-lg font-bold leading-tight">{stats ? t.v : '—'}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Sticky section switcher: icon grid on phones, labelled pills on larger screens */}
+      <div className="sticky -top-4 md:-top-6 lg:-top-8 z-20 -mx-4 px-4 md:mx-0 md:px-0 py-2 bg-[#F8FAFC]/95 backdrop-blur">
+        <nav className="grid grid-cols-6 gap-1 p-1 rounded-2xl bg-white border border-slate-200 shadow-sm">
+          {TABS.map(({ id, label, short, icon: Icon }) => {
+            const active = tab === id;
+            return (
+              <button key={id} onClick={() => go(id)} aria-current={active ? 'page' : undefined}
+                className={`relative flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-sm font-semibold transition-colors ${active ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>
+                <Icon size={18} className="sm:w-4 sm:h-4" />
+                <span className="sm:hidden">{short}</span><span className="hidden sm:inline">{label}</span>
+                {badges[id] > 0 && (
+                  <span className={`absolute top-1 right-1.5 sm:static min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center ${active ? 'bg-white text-emerald-700' : 'bg-red-500 text-white'}`}>{badges[id]}</span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+
+      {body}
+
+      {sheets}
     </div>
   );
 }

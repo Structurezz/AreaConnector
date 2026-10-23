@@ -9,6 +9,8 @@ import { djAPI, podcastAPI } from '../api';
 import { useSocket } from '../context/SocketContext';
 import DJLive from '../components/DJLive';
 import Portal from '../components/ui/Portal';
+import PodcastsDesktop from '../components/PodcastsDesktop';
+import useIsDesktop from '../hooks/useIsDesktop';
 
 const VIOLET      = '#8B5CF6';
 const VIOLET_DARK = '#6D28D9';
@@ -135,6 +137,7 @@ export default function Podcasts() {
   const [liveFM, setLiveFM]     = useState(null);
   const [playing, setPlaying]   = useState(null); // { kind: 'ep'|'mix', item }
   const [deleting, setDeleting] = useState(null);
+  const isDesktop = useIsDesktop();
 
   // Managers can remove any recording from the estate's archive (server allows host or manager).
   const deleteMixtape = async (m) => {
@@ -172,6 +175,19 @@ export default function Podcasts() {
     return () => { u1 && u1(); u2 && u2(); u3 && u3(); u4 && u4(); };
   }, [subscribe]);
 
+  if (isDesktop) return (
+    <>
+      <PodcastsDesktop
+        upcoming={upcoming} episodes={episodes} mixtapes={mixtapes}
+        activeDJ={activeDJ} liveFM={liveFM} deleting={deleting}
+        onPlay={(kind, item) => setPlaying({ kind, item })}
+        onDeleteMixtape={deleteMixtape}
+        onStart={() => navigate('/podcasts/live')}
+      />
+      {playing && <AudioPlayer item={playing.item} kind={playing.kind} onClose={() => setPlaying(null)} />}
+    </>
+  );
+
   return (
     <div style={{ maxWidth: 760, margin: '0 auto', padding: '0 4px 40px' }}>
       {/* Hero */}
@@ -191,7 +207,7 @@ export default function Podcasts() {
           <p style={{ fontSize: 13, opacity: 0.9, lineHeight: 1.55, marginTop: 8 }}>
             Catch neighbours going live, replay past sets, or start your own — prayer, chat, DJ, podcast.
           </p>
-          <button onClick={() => navigate('/lounge/dj')}
+          <button onClick={() => navigate('/podcasts/live')}
             style={{ marginTop: 14, padding: '10px 18px', borderRadius: 12, border: 'none', background: '#fff', color: VIOLET_DARK, fontWeight: 800, fontSize: 13, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
             <Mic size={14}/> Start a live room
           </button>
@@ -324,7 +340,7 @@ export default function Podcasts() {
           <div style={{ fontSize: 13, color: '#64748B', maxWidth: 300, margin: '0 auto 16px' }}>
             Start the first live room — a prayer, a chat, a DJ set — your neighbours will get notified.
           </div>
-          <button onClick={() => navigate('/lounge/dj')}
+          <button onClick={() => navigate('/podcasts/live')}
             style={{ padding: '10px 20px', borderRadius: 12, background: `linear-gradient(135deg, ${VIOLET}, ${VIOLET_DARK})`, color: '#fff', fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
             <Mic size={14}/> Start a live room
           </button>

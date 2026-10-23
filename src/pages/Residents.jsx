@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { residentAPI, unitAPI } from '../api';
 import Spinner from '../components/ui/Spinner';
@@ -7,10 +7,13 @@ import Modal from '../components/ui/Modal';
 import {
   Users, Search, Plus, UserX, UserCheck,
   MailPlus, Upload, CheckCircle, AlertCircle, X, ChevronLeft,
+  Home, Building2, DoorOpen, ChevronRight, Mail, Phone,
 } from 'lucide-react';
+import PageHeader, { HEADER_BTN_PRIMARY, HEADER_BTN_GHOST } from '../components/dashboard/PageHeader';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import Pagination from '../components/ui/Pagination';
+import TablePager from '../components/dashboard/TablePager';
 
 // ── Bulk CSV parser: "Name, email, phone?, unitNumber?" lines ─────────────────
 function parseBulkText(raw) {
@@ -172,7 +175,7 @@ function ResidentDrawer({ resident, units, onToggle, onAssignUnit, onClose }) {
   );
 }
 
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 20;
 
 export default function ManagerResidents() {
   const [residents, setResidents]   = useState([]);
@@ -180,7 +183,9 @@ export default function ManagerResidents() {
   const [loading, setLoading]       = useState(true);
   const [search, setSearch]         = useState('');
   const [page, setPage]             = useState(1);
+  const [limit, setLimit]           = useState(PAGE_SIZE);
   const [pagination, setPagination] = useState({ total: 0, pages: 1 });
+  const [totalAll, setTotalAll]     = useState(0);
 
   // modals
   const [showAdd, setShowAdd]             = useState(false);
@@ -197,15 +202,17 @@ export default function ManagerResidents() {
   const [selected, setSelected] = useState(null);
   const navigate = useNavigate();
 
-  const load = async (p = page, q = search) => {
+  const load = async (p = page, q = search, lim = limit) => {
     setLoading(true);
     try {
       const [r, u] = await Promise.all([
-        residentAPI.getAll({ page: p, limit: PAGE_SIZE, search: q || undefined }),
+        residentAPI.getAll({ page: p, limit: lim, search: q || undefined }),
         unitAPI.getAll(),
       ]);
       setResidents(r.data.data);
-      setPagination(r.data.pagination || { total: r.data.data.length, pages: 1 });
+      const pg = r.data.pagination || { total: r.data.data.length, pages: 1 };
+      setPagination(pg);
+      if (!q) setTotalAll(pg.total);
       setUnits(u.data.data);
     } catch {
       toast.error('Failed to load residents');
@@ -214,7 +221,8 @@ export default function ManagerResidents() {
     }
   };
 
-  const handlePage   = (p) => { setPage(p); load(p, search); };
+  const handlePage   = (p) => { setPage(p); load(p, search); document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const handleLimit  = (l) => { setLimit(l); setPage(1); load(1, search, l); };
   const handleSearch = (q) => { setSearch(q); setPage(1); load(1, q); };
 
   useEffect(() => { load(1, ''); }, []);
@@ -301,95 +309,234 @@ export default function ManagerResidents() {
 
   const parsedPreview = parseBulkText(bulkText);
 
+  const unitStats = useMemo(() => {
+    let occupied = 0, capacity = 0, housed = 0;
+    for (const u of units) {
+      const n = (u.residentIds || []).length;
+      if (n > 0) occupied++;
+      housed += n;
+      capacity += u.maxOccupants || 7;
+    }
+    return { total: units.length, occupied, open: Math.max(0, capacity - housed) };
+  }, [units]);
+
+  const openResident = (r) => {
+    if (window.innerWidth < 640) navigate(`/residents/${r._id}`, { state: { resident: r, units } });
+    else setSelected(r);
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
 
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900" style={{ letterSpacing: '-0.03em' }}>Residents</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-sub)' }}>{pagination.total} registered residents</p>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={() => setShowBulk(true)} className="btn-outline gap-2">
-            <Upload size={14} /> Bulk Invite
-          </button>
-          <button onClick={() => setShowInvite(true)} className="btn-outline gap-2">
-            <MailPlus size={14} /> Invite
-          </button>
-          <button onClick={() => setShowAdd(true)} className="btn-primary gap-2">
-            <Plus size={14} /> Add Resident
-          </button>
-        </div>
-      </div>
+      {/* ── Desktop ── */}
+      <div className="hidden lg:block space-y-5">
+        <PageHeader
+          title="Residents"
+          subtitle="Everyone who calls the estate home"
+          actions={<>
+            <button onClick={() => setShowBulk(true)} className={HEADER_BTN_GHOST}><Upload size={14} /> Bulk invite</button>
+            <button onClick={() => setShowInvite(true)} className={HEADER_BTN_GHOST}><MailPlus size={14} /> Invite</button>
+            <button onClick={() => setShowAdd(true)} className={HEADER_BTN_PRIMARY}><Plus size={15} /> Add resident</button>
+          </>}
+          stats={[
+            { label: 'Residents',   value: totalAll,           Icon: Users,     color: '#6366F1', hint: 'Registered members' },
+            { label: 'Apartments',  value: unitStats.total,    Icon: Building2, color: '#8B5CF6', hint: 'Units in the estate' },
+            { label: 'Occupied',    value: unitStats.occupied, Icon: Home,      color: '#10B981', hint: 'Units with residents' },
+            { label: 'Open spaces', value: unitStats.open,     Icon: DoorOpen,  color: '#F59E0B', hint: 'Room left across units' },
+          ]}
+        />
 
-      {/* Search */}
-      <div className="relative">
-        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-dim)' }} />
-        <input className="input-field pl-9" placeholder="Search by name or email…"
-          value={search} onChange={e => handleSearch(e.target.value)} />
-      </div>
+        <div className="dash-rise relative" style={{ animationDelay: '420ms' }}>
+          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input className="w-full rounded-2xl bg-white border border-slate-200 pl-11 pr-10 py-3 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
+            placeholder="Search by name or email…"
+            value={search} onChange={e => handleSearch(e.target.value)} />
+          {search && (
+            <button onClick={() => handleSearch('')} aria-label="Clear search" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+              <X size={16} />
+            </button>
+          )}
+        </div>
 
-      {/* Table */}
-      <div className="glass-card overflow-hidden">
-        {loading ? (
-          <div className="flex justify-center p-12"><Spinner /></div>
-        ) : residents.length === 0 ? (
-          <EmptyState icon={Users} title="No residents found" />
-        ) : (
-          <div>
-            {residents.map((r, i) => (
-              <div key={r._id}
-                className="flex items-center gap-4 px-5 py-4 transition-colors"
-                style={{ borderTop: i > 0 ? '1px solid rgba(0,0,0,0.06)' : 'none', cursor: 'pointer' }}
-                onClick={() => {
-                  if (window.innerWidth < 640) navigate(`/residents/${r._id}`, { state: { resident: r, units } });
-                  else setSelected(r);
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                {r.profilePhoto ? (
-                  <img src={r.profilePhoto} alt=""
-                    className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-                    style={{ border: '1px solid rgba(16,185,129,0.25)' }} />
-                ) : (
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
-                    style={{ background: 'rgba(16,185,129,0.12)', color: '#34D399', border: '1px solid rgba(16,185,129,0.2)' }}>
-                    {r.name[0]?.toUpperCase()}
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-slate-900 text-sm flex items-center gap-2">
-                    {r.name}
-                    {!r.isActive && <span className="badge badge-red">Suspended</span>}
-                  </div>
-                  <div className="text-xs mt-0.5" style={{ color: 'var(--text-dim)' }}>
-                    {r.email}{r.phone ? ` · ${r.phone}` : ''}
-                  </div>
+        <div className="dash-rise rounded-3xl bg-white border border-slate-200/70 overflow-hidden" style={{ animationDelay: '480ms' }}>
+          {loading ? (
+            <div className="divide-y divide-slate-100">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4 px-6 py-4">
+                  <div className="skeleton w-11 h-11 rounded-full" />
+                  <div className="flex-1 space-y-2"><div className="skeleton h-3 w-44 rounded" /><div className="skeleton h-2.5 w-28 rounded" /></div>
+                  <div className="skeleton h-6 w-24 rounded-full" />
                 </div>
-                <div className="text-sm hidden sm:block" style={{ color: 'var(--text-dim)' }}>
-                  {r.unitId
-                    ? (r.unitId.block ? `Block ${r.unitId.block} · Apt ${r.unitId.unitNumber}` : `Apt ${r.unitId.unitNumber}`)
-                    : <span style={{ color: 'var(--text-dim)', fontStyle: 'italic' }}>No apartment</span>}
+              ))}
+            </div>
+          ) : residents.length === 0 ? (
+            <div className="flex flex-col items-center py-20 gap-3 text-center">
+              <div className="relative w-20 h-20 flex items-center justify-center">
+                <span className="dash-ripple absolute inset-0 rounded-full border-2 border-indigo-200" />
+                <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center">
+                  <Users size={28} className="text-indigo-500" />
                 </div>
-                <button onClick={(e) => { e.stopPropagation(); handleToggle(r); }}
-                  className="p-2 rounded-lg transition-all flex-shrink-0"
-                  title={r.isActive ? 'Suspend' : 'Activate'}
-                  style={{ color: '#94A3B8' }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.color = r.isActive ? '#F87171' : '#34D399';
-                    e.currentTarget.style.background = r.isActive ? 'rgba(239,68,68,0.1)' : 'rgba(52,211,153,0.1)';
-                  }}
-                  onMouseLeave={e => { e.currentTarget.style.color = '#94A3B8'; e.currentTarget.style.background = 'transparent'; }}>
-                  {r.isActive ? <UserX size={15} /> : <UserCheck size={15} />}
-                </button>
               </div>
-            ))}
-          </div>
-        )}
+              <p className="font-bold text-slate-800 mt-2">{search ? `No residents match “${search}”` : 'No residents yet'}</p>
+              <p className="text-sm text-slate-400">Invite residents and they'll appear here.</p>
+              {!search && (
+                <button onClick={() => setShowInvite(true)} className="btn-primary gap-2 mt-2"><MailPlus size={14} /> Send an invite</button>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-[2fr_1.6fr_1.2fr_0.9fr_auto] gap-4 px-6 py-3 bg-slate-50/80 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                <span>Resident</span><span>Contact</span><span>Apartment</span><span>Status</span><span className="w-[92px]" />
+              </div>
+              {residents.map((r, i) => (
+                <div key={r._id} onClick={() => openResident(r)}
+                  className="dash-rise group grid grid-cols-[2fr_1.6fr_1.2fr_0.9fr_auto] gap-4 items-center px-6 py-3.5 border-t border-slate-100 first-of-type:border-0 cursor-pointer transition-colors hover:bg-indigo-50/40"
+                  style={{ animationDelay: `${520 + i * 35}ms` }}>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="relative flex-shrink-0">
+                      {r.profilePhoto ? (
+                        <img src={r.profilePhoto} alt="" className="w-11 h-11 rounded-full object-cover ring-2 ring-white shadow transition-transform duration-300 group-hover:scale-110" />
+                      ) : (
+                        <div className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm text-white shadow transition-transform duration-300 group-hover:scale-110"
+                          style={{ background: `linear-gradient(135deg, hsl(${(r.name.charCodeAt(0) * 37) % 360} 70% 62%), hsl(${(r.name.charCodeAt(0) * 37 + 40) % 360} 70% 48%))` }}>
+                          {r.name.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase()}
+                        </div>
+                      )}
+                      <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white ${r.isActive ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-semibold text-sm text-slate-900 truncate">{r.name}</div>
+                      {r.createdAt && <div className="text-[11px] text-slate-400">Joined {format(new Date(r.createdAt), 'MMM yyyy')}</div>}
+                    </div>
+                  </div>
+                  <div className="min-w-0 space-y-0.5">
+                    <div className="text-xs text-slate-600 truncate flex items-center gap-1.5"><Mail size={11} className="text-slate-300 flex-shrink-0" />{r.email}</div>
+                    {r.phone && <div className="text-xs text-slate-400 truncate flex items-center gap-1.5"><Phone size={11} className="text-slate-300 flex-shrink-0" />{r.phone}</div>}
+                  </div>
+                  <div>
+                    {r.unitId ? (
+                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg bg-violet-50 text-violet-700">
+                        <Home size={12} />{r.unitId.block ? `${r.unitId.block} · ` : ''}Apt {r.unitId.unitNumber}
+                      </span>
+                    ) : (
+                      <span className="text-xs italic text-slate-400">No apartment</span>
+                    )}
+                  </div>
+                  <div>
+                    <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full ${r.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${r.isActive ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                      {r.isActive ? 'Active' : 'Suspended'}
+                    </span>
+                  </div>
+                  <div className="w-[92px] flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
+                    <button onClick={() => handleToggle(r)} title={r.isActive ? 'Suspend' : 'Activate'} aria-label={r.isActive ? 'Suspend' : 'Activate'}
+                      className={`p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-all ${r.isActive ? 'text-slate-400 hover:text-red-600 hover:bg-red-50' : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'}`}>
+                      {r.isActive ? <UserX size={15} /> : <UserCheck size={15} />}
+                    </button>
+                    <ChevronRight size={16} className="text-slate-300 transition-transform group-hover:translate-x-0.5" />
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+          {!loading && (
+            <TablePager page={page} pages={pagination.pages} total={pagination.total} limit={limit}
+              onPage={handlePage} onLimit={handleLimit} accent="#6366F1" />
+          )}
+        </div>
       </div>
 
-      <Pagination page={page} pages={pagination.pages} total={pagination.total} limit={PAGE_SIZE} onPage={handlePage} />
+      {/* ── Phone / tablet ── */}
+      <div className="lg:hidden space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900" style={{ letterSpacing: '-0.03em' }}>Residents</h1>
+            <p className="text-sm mt-0.5" style={{ color: 'var(--text-sub)' }}>{pagination.total} registered residents</p>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => setShowBulk(true)} className="btn-outline gap-2">
+              <Upload size={14} /> Bulk Invite
+            </button>
+            <button onClick={() => setShowInvite(true)} className="btn-outline gap-2">
+              <MailPlus size={14} /> Invite
+            </button>
+            <button onClick={() => setShowAdd(true)} className="btn-primary gap-2">
+              <Plus size={14} /> Add Resident
+            </button>
+          </div>
+        </div>
+  
+        {/* Search */}
+        <div className="relative">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-dim)' }} />
+          <input className="input-field pl-9" placeholder="Search by name or email…"
+            value={search} onChange={e => handleSearch(e.target.value)} />
+        </div>
+  
+        {/* Table */}
+        <div className="glass-card overflow-hidden">
+          {loading ? (
+            <div className="flex justify-center p-12"><Spinner /></div>
+          ) : residents.length === 0 ? (
+            <EmptyState icon={Users} title="No residents found" />
+          ) : (
+            <div>
+              {residents.map((r, i) => (
+                <div key={r._id}
+                  className="flex items-center gap-4 px-5 py-4 transition-colors"
+                  style={{ borderTop: i > 0 ? '1px solid rgba(0,0,0,0.06)' : 'none', cursor: 'pointer' }}
+                  onClick={() => {
+                    if (window.innerWidth < 640) navigate(`/residents/${r._id}`, { state: { resident: r, units } });
+                    else setSelected(r);
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                  {r.profilePhoto ? (
+                    <img src={r.profilePhoto} alt=""
+                      className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                      style={{ border: '1px solid rgba(16,185,129,0.25)' }} />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
+                      style={{ background: 'rgba(16,185,129,0.12)', color: '#34D399', border: '1px solid rgba(16,185,129,0.2)' }}>
+                      {r.name[0]?.toUpperCase()}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-slate-900 text-sm flex items-center gap-2">
+                      {r.name}
+                      {!r.isActive && <span className="badge badge-red">Suspended</span>}
+                    </div>
+                    <div className="text-xs mt-0.5" style={{ color: 'var(--text-dim)' }}>
+                      {r.email}{r.phone ? ` · ${r.phone}` : ''}
+                    </div>
+                  </div>
+                  <div className="text-sm hidden sm:block" style={{ color: 'var(--text-dim)' }}>
+                    {r.unitId
+                      ? (r.unitId.block ? `Block ${r.unitId.block} · Apt ${r.unitId.unitNumber}` : `Apt ${r.unitId.unitNumber}`)
+                      : <span style={{ color: 'var(--text-dim)', fontStyle: 'italic' }}>No apartment</span>}
+                  </div>
+                  <button onClick={(e) => { e.stopPropagation(); handleToggle(r); }}
+                    className="p-2 rounded-lg transition-all flex-shrink-0"
+                    title={r.isActive ? 'Suspend' : 'Activate'}
+                    style={{ color: '#94A3B8' }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.color = r.isActive ? '#F87171' : '#34D399';
+                      e.currentTarget.style.background = r.isActive ? 'rgba(239,68,68,0.1)' : 'rgba(52,211,153,0.1)';
+                    }}
+                    onMouseLeave={e => { e.currentTarget.style.color = '#94A3B8'; e.currentTarget.style.background = 'transparent'; }}>
+                    {r.isActive ? <UserX size={15} /> : <UserCheck size={15} />}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="lg:hidden">
+        <Pagination page={page} pages={pagination.pages} total={pagination.total} limit={limit} onPage={handlePage} />
+      </div>
 
       {/* ── Single Invite Modal ─────────────────────────────────── */}
       <Modal open={showInvite} onClose={() => setShowInvite(false)} title="Send Invitation">
