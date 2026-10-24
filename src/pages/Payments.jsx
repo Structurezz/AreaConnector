@@ -390,9 +390,14 @@ export default function ManagerPayments() {
 
           {wallet && (
             <div className="flex flex-wrap gap-x-5 gap-y-1 mt-3 text-xs text-emerald-50/80">
-              <span className="inline-flex items-center gap-1"><ArrowDownLeft size={13} /> In {shown(wallet.collected)}</span>
-              <span className="inline-flex items-center gap-1"><ArrowUpRight size={13} /> Out {shown(wallet.withdrawn)}</span>
+              <span className="inline-flex items-center gap-1"><ArrowDownLeft size={13} /> Paid in-app {shown(wallet.collected)}</span>
+              <span className="inline-flex items-center gap-1"><ArrowUpRight size={13} /> Withdrawn {shown(wallet.withdrawn)}</span>
             </div>
+          )}
+          {wallet?.collectedOffline > 0 && (
+            <p className="mt-2 text-[11px] leading-snug text-emerald-50/70">
+              {shown(wallet.collectedOffline)} was paid outside the app (cash or bank transfer). It counts as paid for the resident, but it isn't in your wallet, so it can't be withdrawn.
+            </p>
           )}
 
           {/* Payout account strip */}
