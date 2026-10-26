@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom';
 import {
   UserCheck, Bell, Home, Megaphone, ArrowRight, ArrowUpRight, ShieldCheck, ShieldAlert,
   Plus, UsersRound, LogIn, UserPlus, Users, MapPin, Activity, Zap,
+  Wallet, Shield, CalendarDays, BarChart3, Clock, AlertTriangle,
 } from 'lucide-react';
-import { format, subDays, formatDistanceToNow } from 'date-fns';
-import { visitorAPI } from '../../api';
+import { format, subDays, formatDistanceToNow, isAfter, startOfDay } from 'date-fns';
+import { visitorAPI, paymentAPI, guardAPI, eventAPI, pollAPI } from '../../api';
 import { VISITOR_STATUS } from '../visitors/MobileVisitors';
 import EstateMap from '../EstateMap';
 import useCountUp from '../../hooks/useCountUp';
@@ -318,6 +319,157 @@ function QuickActions() {
   );
 }
 
+// Money, guards and community data — each part fails independently (team members may lack access)
+function useExtras() {
+  const [x, setX] = useState({ loading: true });
+  useEffect(() => {
+    Promise.allSettled([paymentAPI.getStats(), paymentAPI.getWallet(), guardAPI.getAll({ limit: 50 }), eventAPI.getAll(), pollAPI.getAll()])
+      .then(([ps, w, g, e, p]) => {
+        const val = (r) => (r.status === 'fulfilled' ? r.value.data : null);
+        setX({
+          loading: false,
+          pay: val(ps)?.data || null,
+          wallet: val(w)?.data || null,
+          guards: val(g)?.data || null,
+          guardTotal: val(g)?.pagination?.total,
+          events: val(e)?.data || null,
+          polls: val(p)?.data || null,
+        });
+      });
+  }, []);
+  return x;
+}
+
+const naira = (n) => `₦${Math.round(n || 0).toLocaleString()}`;
+
+function FinanceCard({ pay, wallet, loading }) {
+  if (!loading && !pay && !wallet) return null;
+  return (
+    <div className={`${CARD} h-full flex flex-col`} style={delay(7)}>
+      <CardHead title="Estate money" Icon={Wallet} color="#0EA5E9" right={<HeadLink to="/payments">Payments</HeadLink>} />
+      <div className="p-5 flex-1 flex flex-col">
+        <p className="text-[12px] text-slate-500">Available to withdraw</p>
+        <p className="mt-1 text-[28px] font-semibold text-slate-900 tabular-nums leading-none" style={{ letterSpacing: '-0.03em' }}>
+          {loading ? <span className="skeleton inline-block w-32 h-7 rounded" /> : naira(wallet?.balance)}
+        </p>
+        <p className="mt-1.5 text-[11.5px] text-slate-400">Paid online through AreaConnect · {naira(wallet?.collectedOffline)} recorded offline</p>
+        <div className="mt-4 grid grid-cols-2 gap-2.5">
+          {[
+            ['This month', naira(pay?.thisMonth), '#10B981'],
+            ['All time', naira(pay?.totalCollected), '#6366F1'],
+            ['Pending', pay?.pending ?? 0, '#F59E0B'],
+            ['Overdue', pay?.overdue ?? 0, (pay?.overdue || 0) > 0 ? '#EF4444' : '#94A3B8'],
+          ].map(([l, v, c]) => (
+            <div key={l} className="rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5">
+              <p className="text-[11px] text-slate-500 flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full" style={{ background: c }} />{l}</p>
+              <p className="mt-0.5 text-[15px] font-semibold text-slate-900 tabular-nums">{v}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-auto pt-4 flex gap-2">
+          <Link to="/payments" className="flex-1 text-center text-[12.5px] font-semibold px-3 py-2 rounded-xl text-white bg-emerald-600 hover:bg-emerald-700 transition-colors" style={{ textDecoration: 'none' }}>Withdraw</Link>
+          <Link to="/payments" className="flex-1 text-center text-[12.5px] font-medium px-3 py-2 rounded-xl text-slate-700 border border-slate-200 hover:bg-slate-50 transition-colors" style={{ textDecoration: 'none' }}>
+            {pay?.activeSchedules ?? 0} active dues
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GuardsCard({ guards, total }) {
+  if (!guards) return null;
+  const online = (g) => g.lastSeen && Date.now() - new Date(g.lastSeen).getTime() < 15 * 60000;
+  const sorted = [...guards].sort((a, b) => Number(online(b)) - Number(online(a)));
+  const on = guards.filter(online).length;
+  return (
+    <div className={CARD} style={delay(9)}>
+      <CardHead title="Security team" Icon={Shield} color="#0F766E" right={<HeadLink to="/guards">Guards</HeadLink>} />
+      <div className="px-5 pt-3 pb-1 flex items-baseline gap-2">
+        <span className="text-[22px] font-semibold text-slate-900 tabular-nums">{on}</span>
+        <span className="text-[12px] text-slate-500">of {total ?? guards.length} active in the last 15 min</span>
+      </div>
+      <div className="px-3 pb-3">
+        {!guards.length && <p className="px-2 py-3 text-[12.5px] text-slate-400">No guards yet — invite them from the Guards page.</p>}
+        {sorted.slice(0, 4).map((g) => (
+          <Link key={g._id} to={`/guards/${g._id}`} className="flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-slate-50" style={{ textDecoration: 'none' }}>
+            <span className="relative">
+              {g.profilePhoto
+                ? <img src={g.profilePhoto} alt="" className="w-8 h-8 rounded-full object-cover" />
+                : <span className="w-8 h-8 rounded-full bg-teal-50 text-teal-700 text-[12px] font-semibold flex items-center justify-center">{g.name?.[0]?.toUpperCase()}</span>}
+              <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white ${online(g) ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-[12.5px] font-medium text-slate-800 truncate">{g.name}</span>
+              <span className="block text-[11px] text-slate-400 truncate">{online(g) ? 'Active now' : g.lastSeen ? `Seen ${formatDistanceToNow(new Date(g.lastSeen))} ago` : 'Not signed in yet'}</span>
+            </span>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CommunityCard({ events, polls }) {
+  if (!events && !polls) return null;
+  const upcoming = (events || []).filter((e) => e.isActive !== false && isAfter(new Date(e.date), startOfDay(new Date()))).sort((a, b) => new Date(a.date) - new Date(b.date)).slice(0, 3);
+  const live = (polls || []).filter((p) => p.isActive !== false && (!p.endsAt || isAfter(new Date(p.endsAt), new Date()))).slice(0, 2);
+  return (
+    <div className="grid grid-cols-2 gap-5">
+      <div className={CARD} style={delay(12)}>
+        <CardHead title="Upcoming events" Icon={CalendarDays} color="#EC4899" right={<HeadLink to="/announcements">Community</HeadLink>} />
+        <div className="p-3">
+          {!upcoming.length && <p className="px-2 py-4 text-[12.5px] text-slate-400">No upcoming events. Residents love a Friday hangout.</p>}
+          {upcoming.map((e) => (
+            <div key={e._id} className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-slate-50">
+              <span className="w-11 text-center rounded-xl border border-pink-100 bg-pink-50/60 py-1 leading-none flex-shrink-0">
+                <span className="block text-[9.5px] uppercase font-semibold text-pink-500">{format(new Date(e.date), 'MMM')}</span>
+                <span className="block text-[16px] font-semibold text-slate-900">{format(new Date(e.date), 'd')}</span>
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="block text-[13px] font-medium text-slate-800 truncate">{e.title}</span>
+                <span className="block text-[11.5px] text-slate-400 truncate">{[e.time, e.location].filter(Boolean).join(' · ') || format(new Date(e.date), 'EEEE')}</span>
+              </span>
+              <span className="text-[11.5px] text-slate-500 tabular-nums whitespace-nowrap">{e.rsvps?.length || 0} going</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className={CARD} style={delay(13)}>
+        <CardHead title="Live polls" Icon={BarChart3} color="#6366F1" right={<HeadLink to="/announcements">Polls</HeadLink>} />
+        <div className="p-4 space-y-4">
+          {!live.length && <p className="px-1 py-3 text-[12.5px] text-slate-400">No open polls right now.</p>}
+          {live.map((p) => {
+            const totalVotes = p.options.reduce((t, o) => t + (o.votes?.length || 0), 0);
+            return (
+              <div key={p._id}>
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-[13px] font-medium text-slate-800 line-clamp-1">{p.question}</p>
+                  <span className="text-[11px] text-slate-400 whitespace-nowrap">{totalVotes} votes</span>
+                </div>
+                <div className="mt-2 space-y-1.5">
+                  {p.options.slice(0, 3).map((o, k) => {
+                    const pct = totalVotes ? Math.round(((o.votes?.length || 0) / totalVotes) * 100) : 0;
+                    return (
+                      <div key={k} className="relative h-7 rounded-lg bg-slate-50 border border-slate-100 overflow-hidden">
+                        <div className="absolute inset-y-0 left-0 bg-indigo-100 transition-all" style={{ width: `${pct}%` }} />
+                        <div className="relative h-full px-2.5 flex items-center justify-between text-[12px]">
+                          <span className="text-slate-700 truncate">{o.text}</span>
+                          <span className="font-semibold text-slate-900 tabular-nums">{pct}%</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Page ───────────────────────────────────────────────────────────── */
 
 export default function DesktopDashboard({ stats, recentVisitors, openAlerts, announcements, estate, estateName, firstName }) {
@@ -326,6 +478,7 @@ export default function DesktopDashboard({ stats, recentVisitors, openAlerts, an
   const spark = useMemo(() => week?.map((d) => d.count), [week]);
   const s = stats || {};
   const alertsOpen = s.openAlerts || 0;
+  const x = useExtras();
 
   return (
     <div className="max-w-[1400px] mx-auto space-y-5">
@@ -384,13 +537,23 @@ export default function DesktopDashboard({ stats, recentVisitors, openAlerts, an
       </div>
 
       {/* ── Stats ── */}
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-6 gap-4">
         <Stat i={0} label="Residents"      value={s.totalResidents || 0} Icon={UsersRound} color="#6366F1" to="/residents" sub="Active members" />
-        <Stat i={1} label="Units"          value={s.totalUnits || 0}     Icon={Home}       color="#8B5CF6" to="/units"     sub="Homes in the estate" />
+        <Stat i={1} label="Units"          value={s.totalUnits || 0}     Icon={Home}       color="#8B5CF6" to="/units"     sub={s.totalUnits ? `${Math.round(((s.totalResidents || 0) / s.totalUnits) * 100)}% occupied` : 'Homes in the estate'} />
         <Stat i={2} label="Visitors today" value={s.todaysVisitors || 0} Icon={UserCheck}  color="#10B981" to="/visitors"  spark={spark} />
         <Stat i={3} label="Inside now"     value={s.activeVisitors || 0} Icon={LogIn}      color="#0EA5E9" to="/visitors"  sub="Checked in at the gate" live={(s.activeVisitors || 0) > 0} />
         <Stat i={4} label="Open alerts"    value={alertsOpen}            Icon={Bell}       color={alertsOpen > 0 ? '#EF4444' : '#F59E0B'} to="/alerts"
           sub={alertsOpen > 0 ? 'Needs attention' : 'Nothing pending'} live={alertsOpen > 0} />
+        <Stat i={5} label="Overdue dues"   value={x.pay?.overdue || 0}   Icon={AlertTriangle} color={(x.pay?.overdue || 0) > 0 ? '#F97316' : '#14B8A6'} to="/payments"
+          sub={x.pay ? `${x.pay.pending || 0} pending payments` : 'Payments'} />
+      </div>
+
+      {/* ── Map + money ── */}
+      <div className="grid grid-cols-12 gap-5 items-stretch">
+        <div className="col-span-8 dash-rise" style={delay(6)}>
+          <EstateMap name={estate?.name || estateName} address={estate?.address} location={estate?.location} height={330} variant="card" />
+        </div>
+        <div className="col-span-4"><FinanceCard pay={x.pay} wallet={x.wallet} loading={x.loading} /></div>
       </div>
 
       {/* ── Traffic + Security ── */}
@@ -403,15 +566,14 @@ export default function DesktopDashboard({ stats, recentVisitors, openAlerts, an
       <div className="grid grid-cols-12 gap-5 items-start">
         <div className="col-span-8"><RecentVisitors visitors={recentVisitors} /></div>
         <div className="col-span-4 space-y-5">
+          <GuardsCard guards={x.guards} total={x.guardTotal} />
           <Notices items={announcements} />
           <QuickActions />
         </div>
       </div>
 
-      {/* ── Map ── */}
-      <div className="dash-rise" style={delay(11)}>
-        <EstateMap name={estate?.name || estateName} address={estate?.address} location={estate?.location} height={260} variant="card" />
-      </div>
+      {/* ── Community ── */}
+      <CommunityCard events={x.events} polls={x.polls} />
     </div>
   );
 }

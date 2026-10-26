@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, X, Plus, Check, Building2, Loader2, ArrowRight } from 'lucide-react';
+import { ChevronDown, ChevronsUpDown, X, Plus, Check, Building2, Loader2, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { estateAPI } from '../../api';
 import toast from 'react-hot-toast';
 import { Z_INDEX } from './Portal';
 import { isTeamMember } from '../../utils/teamAccess';
 
-export default function EstateSwitcher({ compact = false }) {
+export default function EstateSwitcher({ compact = false, variant = 'inline' }) {
   const { user, estate, switchEstate } = useAuth();
   const [open, setOpen] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
@@ -18,6 +18,7 @@ export default function EstateSwitcher({ compact = false }) {
   const [adding, setAdding] = useState(false);
 
   const currentName = typeof estate === 'object' ? estate?.name : 'My Estate';
+  const currentCode = typeof estate === 'object' ? estate?.estateCode : '';
 
   // Close on Escape
   useEffect(() => {
@@ -309,6 +310,31 @@ export default function EstateSwitcher({ compact = false }) {
     </div>,
     document.body
   );
+
+  // Full-width card used in the sidebar header
+  if (variant === 'card') {
+    return (
+      <>
+        <button onClick={openModal} title="Switch estate"
+          className="group w-full flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-all"
+          style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#A7F3D0'; e.currentTarget.style.background = '#F0FDF4'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.background = '#F8FAFC'; }}>
+          <span className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#ECFDF5', color: '#059669', border: '1px solid #D1FAE5' }}>
+            <Building2 size={15} />
+          </span>
+          <span className="flex-1 min-w-0 leading-tight">
+            <span className="block text-[13px] font-semibold truncate" style={{ color: '#0F172A' }}>{currentName || 'My Estate'}</span>
+            <span className="block text-[11px] truncate" style={{ color: '#94A3B8' }}>{currentCode ? `Code ${currentCode} · Switch` : 'Switch estate'}</span>
+          </span>
+          <span className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 bg-white" style={{ border: '1px solid #E2E8F0', color: '#475569' }}>
+            <ChevronsUpDown size={13} />
+          </span>
+        </button>
+        {modal}
+      </>
+    );
+  }
 
   return (
     <>

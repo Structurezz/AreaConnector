@@ -7,7 +7,6 @@ import {
 import Sidebar from './Sidebar';
 import { useAuth } from '../../context/AuthContext';
 import { canOpen } from '../../utils/teamAccess';
-import { Toaster } from 'react-hot-toast';
 import NotificationBell from '../ui/NotificationBell';
 import AlertModal from '../ui/AlertModal';
 import EstateSwitcher from '../ui/EstateSwitcher';
@@ -124,23 +123,6 @@ export default function AppLayout({ children }) {
           ))}
         </div>
       </nav>
-
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          style: {
-            background: '#FFFFFF',
-            color: '#0F172A',
-            border: '1px solid #E2E8F0',
-            borderRadius: '12px',
-            fontSize: '0.875rem',
-            boxShadow: '0 8px 24px rgba(15,23,42,0.12)',
-            padding: '0.75rem 1rem',
-          },
-          success: { iconTheme: { primary: '#10B981', secondary: '#FFFFFF' } },
-          error:   { iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' } },
-        }}
-      />
     </div>
     </NotificationProvider>
   );

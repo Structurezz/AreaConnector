@@ -3,10 +3,10 @@ import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, UserCheck, Users, Home, Megaphone,
   MessageSquare, Bell, Settings, LogOut, CreditCard,
-  Zap, Crown, Music, Lock, Shield, Scale, Radio, Gift, PhoneCall, ShoppingBag, UsersRound,
+  Zap, Crown, Music, Lock, Shield, Scale, Radio, Gift, PhoneCall, ShoppingBag, UsersRound, Building2,
 } from 'lucide-react';
 import { usePlan } from '../../hooks/usePlan';
-import { canOpen } from '../../utils/teamAccess';
+import { canOpen, isTeamMember } from '../../utils/teamAccess';
 import NotificationBell from '../ui/NotificationBell';
 import EstateSwitcher from '../ui/EstateSwitcher';
 
@@ -45,7 +45,7 @@ const NAV = [
 ];
 
 export default function Sidebar({ mobile = false, onClose }) {
-  const { user, logout } = useAuth();
+  const { user, estate, logout } = useAuth();
   const navigate = useNavigate();
   const { planName, planColor, status, isComp, can } = usePlan();
   const estateName =
@@ -64,7 +64,7 @@ export default function Sidebar({ mobile = false, onClose }) {
     <aside
       className="flex flex-col h-full overflow-hidden"
       style={{
-        width: mobile ? '17rem' : '15.5rem',
+        width: mobile ? '18rem' : '17rem',
         background: '#FFFFFF',
         borderRight: '1px solid #E2E8F0',
       }}>
@@ -82,10 +82,10 @@ export default function Sidebar({ mobile = false, onClose }) {
               </svg>
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-sm font-semibold truncate leading-tight" style={{ color: '#0F172A', letterSpacing: '-0.03em' }}>
+              <div className="text-[15px] font-semibold truncate leading-tight" style={{ color: '#0F172A', letterSpacing: '-0.03em' }}>
                 Area<span style={{ color: '#10B981' }}>Connect</span>
               </div>
-              <EstateSwitcher />
+              <div className="text-[11px] truncate" style={{ color: '#94A3B8' }}>Estate manager</div>
             </div>
           </Link>
           <NavLink to="/calls" aria-label="Calls" onClick={onClose}
@@ -96,8 +96,18 @@ export default function Sidebar({ mobile = false, onClose }) {
           <NotificationBell />
         </div>
 
+        {/* Estate switcher */}
+        <div className="mt-3.5">
+          {isTeamMember(user) || user?.role !== 'estate_manager' ? (
+            <div className="flex items-center gap-2.5 rounded-xl px-2.5 py-2" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+              <span className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#ECFDF5', color: '#059669' }}><Building2 size={15} /></span>
+              <span className="text-[13px] font-semibold truncate" style={{ color: '#0F172A' }}>{typeof estate === 'object' ? estate?.name : 'My Estate'}</span>
+            </div>
+          ) : <EstateSwitcher variant="card" />}
+        </div>
+
         {/* Plan badge */}
-        <div className="flex items-center gap-2 mt-3 flex-wrap">
+        <div className="flex items-center gap-2 mt-2.5 flex-wrap">
           <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full"
             style={{ background: planColor + '18', color: planColor, border: `1px solid ${planColor}30` }}>
             {planName}
