@@ -6,6 +6,8 @@ import BottomSheet from '../components/payments/BottomSheet';
 import SidePanel from '../components/payments/SidePanel';
 import WithdrawSheet, { Row } from '../components/payments/WithdrawSheet';
 import BankSheet from '../components/payments/BankSheet';
+import PaymentsDesktop from '../components/payments/PaymentsDesktop';
+import useIsDesktop from '../hooks/useIsDesktop';
 import {
   Wallet, Plus, TrendingUp, Clock, AlertCircle, CheckCircle2,
   ChevronRight, ChevronLeft, ShieldCheck, Wrench, Gift, FileText,
@@ -122,6 +124,7 @@ export default function ManagerPayments() {
   const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('bills'); // bills | withdrawals | paystack
+  const isDesktop = useIsDesktop();
 
   // Collection (drill-down inside the Bills tab)
   const [selectedSchedule, setSelectedSchedule] = useState(null);
@@ -356,6 +359,21 @@ export default function ManagerPayments() {
 
   return (
     <div className="space-y-5 animate-fade-in">
+      {isDesktop ? (
+        <PaymentsDesktop
+          stats={stats} schedules={schedules} wallet={wallet} walletLoading={walletLoading}
+          hideBalance={hideBalance} toggleHide={toggleHide}
+          refreshAll={() => { loadData(); loadWallet(); if (tab === 'paystack') loadLedger(); }}
+          tab={tab} setTab={setTab} selectedSchedule={selectedSchedule} setSelectedSchedule={setSelectedSchedule}
+          collectionPayments={collectionPayments} collectionLoading={collectionLoading} openCollection={openCollection}
+          ledger={ledger} ledgerLoading={ledgerLoading} unlinkedCount={unlinkedCount} hasBank={hasBank} bankName={bankName}
+          startWithdraw={startWithdraw} openBank={() => setShowBank(true)} openCreate={() => setShowCreate(true)}
+          openManual={(x) => { setShowManual(x); setManualForm({ method: 'cash', notes: '', paidAt: '' }); }}
+          handleWaive={handleWaive} handleReconcile={handleReconcile} reconciling={reconciling}
+          openInvoice={setInvoicePaymentId} openWithdrawal={setWithdrawalDetail} openAttachModal={openAttachModal}
+        />
+      ) : (
+      <>
       {/* Desktop: online-banking layout — account column on the left,
           transactions on the right. Phones stack everything in one column. */}
       <div className="space-y-5 xl:space-y-0 xl:grid xl:grid-cols-[minmax(360px,420px)_1fr] xl:gap-6 xl:items-start">
@@ -701,6 +719,9 @@ export default function ManagerPayments() {
 
       </section>
       </div>
+
+      </>
+      )}
 
       {/* ── Sheets ── */}
       <WithdrawSheet
