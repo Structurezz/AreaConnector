@@ -418,8 +418,12 @@ export default function Register() {
   const [done, setDone]   = useState({ estateName: '', estateCode: '', billingLabel: '' });
   const { register } = useAuth();
 
-  const [account, setAccount] = useState({ name: '', email: '', phone: '', password: '', confirm: '' });
-  const [estate, setEstate]   = useState({ estateName: '', estateAddress: '' });
+  // Admin invitations arrive with the manager's details pre-filled
+  const [account, setAccount] = useState({
+    name: searchParams.get('name') || '', email: searchParams.get('email') || '',
+    phone: searchParams.get('phone') || '', password: '', confirm: '',
+  });
+  const [estate, setEstate]   = useState({ estateName: searchParams.get('estate') || '', estateAddress: searchParams.get('address') || '' });
   const [billingCycle, setBillingCycle] = useState('monthly');
 
   // Pre-select plan from ?plan= URL param; default to free trial
@@ -445,6 +449,7 @@ export default function Register() {
         billingModel: selectedPlan.billingModel,
         cycle,
       };
+      if (searchParams.get('invite')) payload.inviteToken = searchParams.get('invite');
       if (selectedPlan.isTrial) payload.trialDays = 14;
 
       const user = await register(payload);
