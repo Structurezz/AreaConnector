@@ -265,7 +265,7 @@ function ProductPreview() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[11px] text-white/45">{greet}</p>
-            <p className="text-[15px] font-semibold text-white" style={{ color: '#fff' }}>Pilot Crescent Estate</p>
+            <p className="text-[15px] font-semibold text-white" style={{ color: '#fff' }}>Greenfield Estate</p>
           </div>
           <span className="flex items-center gap-1.5 text-[11px] text-emerald-300">
             <span className="relative flex w-2 h-2"><span className="absolute inset-0 rounded-full bg-emerald-400" style={{ animation: 'dlPing 1.6s ease-out infinite' }} /><span className="relative w-2 h-2 rounded-full bg-emerald-400" /></span>
