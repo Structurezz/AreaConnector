@@ -7,6 +7,7 @@ import {
 import EstateMap from '../EstateMap';
 import useCountUp from '../../hooks/useCountUp';
 import { canOpen, hasArea } from '../../utils/teamAccess';
+import { CampaignBanner } from '../campaigns/CampaignSlots';
 
 const greeting = () => {
   const h = new Date().getHours();
@@ -167,6 +168,8 @@ export default function MobileDashboard({ user, stats, recentVisitors, openAlert
           )
         )}
       </section>
+
+      <CampaignBanner />
 
       {/* Quick actions */}
       {actions.length > 0 && (

@@ -10,6 +10,7 @@ import { visitorAPI, paymentAPI, guardAPI, eventAPI, pollAPI } from '../../api';
 import { VISITOR_STATUS } from '../visitors/MobileVisitors';
 import EstateMap from '../EstateMap';
 import useCountUp from '../../hooks/useCountUp';
+import { CampaignBanner } from '../campaigns/CampaignSlots';
 
 function greeting() {
   const h = new Date().getHours();
@@ -535,6 +536,8 @@ export default function DesktopDashboard({ stats, recentVisitors, openAlerts, an
           </div>
         </div>
       </div>
+
+      <CampaignBanner />
 
       {/* ── Stats ── */}
       <div className="grid grid-cols-6 gap-4">

@@ -284,3 +284,11 @@ export const marketAdminAPI = {
   settings:  () => api.get('/marketplace/admin/settings'),
   saveSettings: (data) => api.put('/marketplace/admin/settings', data),
 };
+
+// Platform campaigns (in-app modal / dashboard banner)
+export const campaignAPI = {
+  getActive: (placement) => api.get('/campaigns/active', { params: { placement } }),
+  markSeen:  (id) => api.post(`/campaigns/${id}/seen`),
+  dismiss:   (id) => api.post(`/campaigns/${id}/dismiss`),
+  click:     (id) => api.post(`/campaigns/${id}/click`),
+};

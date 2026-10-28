@@ -6,6 +6,7 @@ import Spinner from '../components/ui/Spinner';
 import DesktopDashboard from '../components/dashboard/DesktopDashboard';
 import MobileDashboard from '../components/dashboard/MobileDashboard';
 import useIsDesktop from '../hooks/useIsDesktop';
+import { CampaignModal } from '../components/campaigns/CampaignSlots';
 
 export default function ManagerDashboard() {
   const { user } = useAuth();
@@ -50,6 +51,8 @@ export default function ManagerDashboard() {
   const firstName = user?.name?.split(' ')[0] || 'Manager';
 
   if (isDesktop) return (
+    <>
+    <CampaignModal />
     <DesktopDashboard
       user={user}
       stats={stats}
@@ -60,9 +63,12 @@ export default function ManagerDashboard() {
       estateName={estateName}
       firstName={firstName}
     />
+    </>
   );
 
   return (
+    <>
+    <CampaignModal />
     <MobileDashboard
       user={user}
       stats={stats}
@@ -73,5 +79,6 @@ export default function ManagerDashboard() {
       estateName={estateName}
       firstName={firstName}
     />
+    </>
   );
 }
