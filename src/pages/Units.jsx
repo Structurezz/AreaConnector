@@ -1,17 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
 import { unitAPI, residentAPI } from '../api';
 import Spinner from '../components/ui/Spinner';
-import EmptyState from '../components/ui/EmptyState';
-import Modal from '../components/ui/Modal';
+import SidePanel from '../components/payments/SidePanel';
+import useCountUp from '../hooks/useCountUp';
 import {
-  Home, Plus, Trash2, Users, X, ChevronLeft, UserPlus, UserMinus,
-  Search, CheckCircle2, AlertCircle, Wallet, Clock, Building2, Store, Briefcase,
+  Home, Plus, Trash2, Users, UserPlus, UserMinus, Search, CheckCircle2, AlertCircle, Wallet, Clock, Building2, Store,
+  Briefcase, LayoutGrid, Rows3, Map as MapIcon, Pencil, Layers, ArrowRight, X, Check, Sparkles, DoorOpen, ListPlus,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const TYPE_ICONS = { apartment: Building2, house: Home, shop: Store, office: Briefcase };
-const NGN = (n) => `₦${(n || 0).toLocaleString()}`;
-// ₦1.25m / ₦480k — for tight stat chips.
+const TYPES = [
+  { v: 'apartment', label: 'Apartment', icon: Building2 },
+  { v: 'house',     label: 'House',     icon: Home },
+  { v: 'shop',      label: 'Shop',      icon: Store },
+  { v: 'office',    label: 'Office',    icon: Briefcase },
+];
+const TYPE_ICON = Object.fromEntries(TYPES.map((t) => [t.v, t.icon]));
+const NGN = (n) => `₦${Math.round(n || 0).toLocaleString()}`;
 const NGN_SHORT = (n) => {
   const v = n || 0;
   if (v >= 1e6) return `₦${(v / 1e6).toFixed(v >= 1e7 ? 0 : 2).replace(/\.?0+$/, '')}m`;
@@ -19,727 +24,670 @@ const NGN_SHORT = (n) => {
   return `₦${v}`;
 };
 const shortDate = (d) => new Date(d).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' });
+const occ = (u) => (u.residentIds || []).filter((r) => r?._id);
 
-// What a unit's dues actually look like, from its residents' real bills
-// (server: utils/unitDues). `u.dues` is always present from the API.
+// What a unit's dues look like, from its residents' real bills (server: utils/unitDues)
 function duesView(u) {
   const d = u.dues || { status: 'no_bills' };
   const owedTotal = d.outstanding > d.overdueAmount ? ` · ${NGN(d.outstanding)} owed in total` : '';
   switch (d.status) {
-    case 'overdue': return {
-      tone: 'red', Icon: AlertCircle,
-      label: `${NGN(d.overdueAmount)} overdue`,
-      detail: `${d.overdueCount} bill${d.overdueCount > 1 ? 's' : ''} past due${owedTotal}`,
-    };
-    case 'owing': return {
-      tone: 'amber', Icon: Clock,
-      label: `${NGN(d.outstanding)} owing`,
-      detail: d.nextDue ? `Next: ${d.nextDue.title}, due ${shortDate(d.nextDue.dueDate)}` : `${d.owingCount} unpaid bill${d.owingCount > 1 ? 's' : ''}`,
-    };
-    case 'clear': return {
-      tone: 'green', Icon: CheckCircle2,
-      label: 'All bills paid',
-      detail: d.lastPaidAt ? `Last paid ${shortDate(d.lastPaidAt)} · ${NGN(d.paidThisYear)} this year` : `${d.paidCount} bill${d.paidCount === 1 ? '' : 's'} paid`,
-    };
-    case 'exempt': return { tone: 'slate', Icon: Wallet, label: 'Exempt from dues', detail: 'Marked exempt by management' };
-    case 'no_residents': return { tone: 'slate', Icon: Wallet, label: 'No residents to bill', detail: 'Assign residents to start billing' };
-    default: return { tone: 'slate', Icon: Wallet, label: 'No bills issued yet', detail: 'Create a payment schedule to bill residents' };
+    case 'overdue': return { key: 'overdue', tone: 'red', Icon: AlertCircle, label: `${NGN(d.overdueAmount)} overdue`, detail: `${d.overdueCount} bill${d.overdueCount > 1 ? 's' : ''} past due${owedTotal}` };
+    case 'owing': return { key: 'owing', tone: 'amber', Icon: Clock, label: `${NGN(d.outstanding)} owing`, detail: d.nextDue ? `Next: ${d.nextDue.title}, due ${shortDate(d.nextDue.dueDate)}` : `${d.owingCount} unpaid bill${d.owingCount > 1 ? 's' : ''}` };
+    case 'clear': return { key: 'clear', tone: 'green', Icon: CheckCircle2, label: 'All bills paid', detail: d.lastPaidAt ? `Last paid ${shortDate(d.lastPaidAt)} · ${NGN(d.paidThisYear)} this year` : `${d.paidCount} bill${d.paidCount === 1 ? '' : 's'} paid` };
+    case 'exempt': return { key: 'exempt', tone: 'slate', Icon: Wallet, label: 'Exempt from dues', detail: 'Marked exempt by management' };
+    case 'no_residents': return { key: 'none', tone: 'slate', Icon: Wallet, label: 'No residents to bill', detail: 'Assign residents to start billing' };
+    default: return { key: 'none', tone: 'slate', Icon: Wallet, label: 'No bills yet', detail: 'Create a bill on the Payments page' };
   }
 }
 const TONE = {
-  red:   { fg: '#DC2626', strong: '#B91C1C', bg: 'rgba(239,68,68,0.06)',  bd: 'rgba(239,68,68,0.20)',  chip: 'rgba(239,68,68,0.14)' },
-  amber: { fg: '#D97706', strong: '#B45309', bg: 'rgba(245,158,11,0.07)', bd: 'rgba(245,158,11,0.25)', chip: 'rgba(245,158,11,0.16)' },
-  green: { fg: '#10B981', strong: '#059669', bg: 'rgba(16,185,129,0.06)', bd: 'rgba(16,185,129,0.20)', chip: 'rgba(16,185,129,0.14)' },
-  slate: { fg: '#94A3B8', strong: '#64748B', bg: 'rgba(148,163,184,0.08)', bd: 'rgba(148,163,184,0.25)', chip: 'rgba(148,163,184,0.16)' },
+  red:   { fg: '#DC2626', strong: '#B91C1C', bg: '#FEF2F2', bd: '#FECACA', tile: '#F87171' },
+  amber: { fg: '#D97706', strong: '#B45309', bg: '#FFFBEB', bd: '#FDE68A', tile: '#FBBF24' },
+  green: { fg: '#10B981', strong: '#047857', bg: '#ECFDF5', bd: '#A7F3D0', tile: '#34D399' },
+  slate: { fg: '#94A3B8', strong: '#64748B', bg: '#F8FAFC', bd: '#E2E8F0', tile: '#CBD5E1' },
 };
 
-function Avatar({ resident, size = 28, ring = true }) {
+function Avatar({ r, size = 26, ring = true }) {
   const cls = `rounded-full flex-shrink-0 object-cover ${ring ? 'ring-2 ring-white' : ''}`;
-  const style = { width: size, height: size };
-  return resident?.profilePhoto ? (
-    <img src={resident.profilePhoto} alt="" className={cls} style={style} title={resident.name} />
-  ) : (
-    <div className={`rounded-full flex items-center justify-center font-bold flex-shrink-0 ${ring ? 'ring-2 ring-white' : ''}`}
-      style={{
-        ...style,
-        background: 'linear-gradient(135deg, rgba(16,185,129,0.16), rgba(4,120,87,0.10))',
-        color: '#047857',
-        fontSize: Math.round(size * 0.4),
-      }}
-      title={resident?.name}>
-      {(resident?.name || '?')[0]?.toUpperCase()}
-    </div>
-  );
+  return r?.profilePhoto
+    ? <img src={r.profilePhoto} alt="" className={cls} style={{ width: size, height: size }} title={r.name} />
+    : <span className={`${cls} flex items-center justify-center font-bold text-emerald-700`} title={r?.name}
+        style={{ width: size, height: size, fontSize: Math.round(size * 0.4), background: 'linear-gradient(135deg, #D1FAE5, #ECFDF5)' }}>{(r?.name || '?')[0]?.toUpperCase()}</span>;
 }
 
-// Small dot-row occupancy indicator (nicer than a plain bar for capacity ≤ 12)
-function OccupancyDots({ count, max }) {
-  const capped = Math.min(max, 12);
+/* ── Stat card (dashboard style: tinted gradient + count-up) ─────────── */
+function Stat({ i, label, value, display, Icon, color, sub, children }) {
+  const n = useCountUp(typeof value === 'number' ? value : 0);
   return (
-    <div className="flex items-center gap-1">
-      {Array.from({ length: capped }).map((_, i) => (
-        <span key={i}
-          className="rounded-full flex-shrink-0"
-          style={{
-            width: 6, height: 6,
-            background: i < count
-              ? (count >= max ? '#EF4444' : '#10B981')
-              : '#E2E8F0',
-          }} />
-      ))}
+    <div className="dash-rise relative overflow-hidden rounded-2xl p-4 border min-w-0" style={{ animationDelay: `${i * 60}ms`, background: `linear-gradient(140deg, ${color}17 0%, #FFFFFF 55%)`, borderColor: `${color}2E` }}>
+      <span className="absolute -bottom-8 -right-8 w-24 h-24 rounded-full pointer-events-none" style={{ background: `${color}12` }} />
+      <div className="relative flex items-center justify-between">
+        <span className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${color}, ${color}CC)`, boxShadow: `0 6px 14px -6px ${color}` }}><Icon size={15} className="text-white" /></span>
+        {children}
+      </div>
+      <div className="relative mt-3 text-[24px] font-semibold leading-none text-slate-900 tabular-nums" style={{ letterSpacing: '-0.03em' }}>{display ?? n}</div>
+      <div className="relative mt-1 text-[12px] font-medium text-slate-500">{label}</div>
+      {sub && <div className="relative mt-0.5 text-[11px] text-slate-400 truncate">{sub}</div>}
     </div>
   );
 }
 
-function StatChip({ label, value, tone = 'default' }) {
-  const tones = {
-    default: { bg: 'rgba(15,23,42,0.05)',   color: '#0F172A', border: 'rgba(15,23,42,0.06)' },
-    green:   { bg: 'rgba(16,185,129,0.08)', color: '#047857', border: 'rgba(16,185,129,0.20)' },
-    amber:   { bg: 'rgba(217,119,6,0.08)',  color: '#B45309', border: 'rgba(217,119,6,0.20)' },
-    red:     { bg: 'rgba(239,68,68,0.08)',  color: '#DC2626', border: 'rgba(239,68,68,0.20)' },
-  }[tone];
+function MiniRing({ pct, color }) {
+  const r = 13, c = 2 * Math.PI * r;
   return (
-    <div className="rounded-xl px-3 py-2 flex flex-col"
-      style={{ background: tones.bg, border: `1px solid ${tones.border}` }}>
-      <span className="text-lg font-black leading-none" style={{ color: tones.color }}>{value}</span>
-      <span className="text-[10px] font-semibold uppercase tracking-wider mt-1" style={{ color: tones.color, opacity: 0.8 }}>{label}</span>
-    </div>
+    <svg width="34" height="34" className="-rotate-90"><circle cx="17" cy="17" r={r} fill="none" stroke="#E2E8F0" strokeWidth="4" />
+      <circle cx="17" cy="17" r={r} fill="none" stroke={color} strokeWidth="4" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - pct / 100)} style={{ transition: 'stroke-dashoffset .8s ease' }} /></svg>
   );
 }
 
-function UnitCard({ u, onOpen }) {
-  const occupants = (u.residentIds || []).filter(r => r?._id);
-  const count = occupants.length;
+/* ── Grid card ─────────────────────────────────────────────────────── */
+function UnitCard({ u, onOpen, i }) {
+  const people = occ(u);
+  const count = people.length;
   const max = u.maxOccupants || 7;
-  const isFull = count >= max;
+  const full = count >= max;
   const dues = duesView(u);
   const tone = TONE[dues.tone];
-  const TypeIcon = TYPE_ICONS[u.type] || Building2;
-
+  const TypeIcon = TYPE_ICON[u.type] || Building2;
+  const state = count === 0 ? ['Vacant', '#94A3B8', '#F1F5F9'] : full ? ['Full', '#DC2626', '#FEF2F2'] : ['Occupied', '#047857', '#ECFDF5'];
   return (
-    <button
-      onClick={onOpen}
-      className="glass-card p-4 relative overflow-hidden text-left transition-all group hover:-translate-y-0.5"
-      style={{
-        border: '1px solid rgba(15,23,42,0.06)',
-        boxShadow: '0 1px 2px rgba(15,23,42,0.03)',
-      }}
-      onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 12px 28px rgba(15,23,42,0.10)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 1px 2px rgba(15,23,42,0.03)'; }}
-    >
-      {/* Corner tint reflects occupancy state */}
-      <span className="absolute -top-8 -right-8 w-24 h-24 rounded-full pointer-events-none opacity-70"
-        style={{
-          background: isFull
-            ? 'radial-gradient(circle at top right, rgba(239,68,68,0.16), transparent 65%)'
-            : count > 0
-              ? 'radial-gradient(circle at top right, rgba(16,185,129,0.16), transparent 65%)'
-              : 'radial-gradient(circle at top right, rgba(148,163,184,0.14), transparent 65%)',
-        }} />
+    <button onClick={onOpen} className="dash-tile dash-rise group text-left rounded-2xl bg-white border border-slate-200/80 p-4 relative overflow-hidden hover:-translate-y-0.5 hover:shadow-lg transition-all"
+      style={{ animationDelay: `${Math.min(i, 12) * 30}ms` }}>
+      <span className="absolute left-0 top-0 bottom-0 w-1" style={{ background: tone.tile }} />
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:-rotate-6" style={{ background: 'linear-gradient(135deg, #10B981, #047857)', boxShadow: '0 6px 14px -8px #047857' }}>
+            <TypeIcon size={16} className="text-white" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[16px] font-semibold text-slate-900 leading-tight truncate" style={{ letterSpacing: '-0.02em' }}>{u.unitNumber}</p>
+            <p className="text-[11px] text-slate-400 capitalize">{u.block ? `Block ${u.block} · ` : ''}{u.type}</p>
+          </div>
+        </div>
+        <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1" style={{ background: state[2], color: state[1] }}>
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: state[1] }} />{state[0]}
+        </span>
+      </div>
 
-      {/* Header */}
-      <div className="relative flex items-start justify-between mb-3">
+      <div className="mt-3 flex items-center gap-2">
+        <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full transition-all" style={{ width: `${(count / max) * 100}%`, background: full ? '#F87171' : '#10B981' }} /></div>
+        <span className="text-[11.5px] font-semibold text-slate-700 tabular-nums">{count}<span className="text-slate-400 font-normal">/{max}</span></span>
+      </div>
+
+      <div className="mt-3 min-h-[26px] flex items-center">
+        {count > 0 ? (
+          <>
+            <div className="flex -space-x-2">{people.slice(0, 4).map((r) => <Avatar key={r._id} r={r} />)}</div>
+            <span className="ml-2 text-[11.5px] text-slate-500 truncate">{count > 4 ? `+${count - 4} more` : people.map((r) => r.name?.split(' ')[0]).join(', ')}</span>
+          </>
+        ) : <span className="text-[11.5px] text-slate-300 flex items-center gap-1.5"><UserPlus size={12} /> Assign residents</span>}
+      </div>
+
+      <div className="mt-3 rounded-xl px-2.5 py-2 flex items-center gap-2" style={{ background: tone.bg }}>
+        <dues.Icon size={13} style={{ color: tone.fg }} className="flex-shrink-0" />
         <div className="min-w-0">
-          <div className="flex items-baseline gap-2">
-            {u.block && (
-              <span className="text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md"
-                style={{ background: 'rgba(16,185,129,0.10)', color: '#047857' }}>
-                {u.block}
-              </span>
-            )}
-            <span className="text-lg sm:text-xl font-black text-slate-900" style={{ letterSpacing: '-0.02em' }}>
-              {u.unitNumber}
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 mt-1 text-[11px] font-medium capitalize" style={{ color: '#94A3B8' }}>
-            <TypeIcon size={11} /> {u.type}
-          </div>
+          <p className="text-[12px] font-semibold truncate" style={{ color: tone.strong }}>{dues.label}</p>
+          <p className="text-[10.5px] text-slate-500 truncate">{dues.detail}</p>
         </div>
-        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full flex items-center gap-1 flex-shrink-0"
-          style={{
-            background: count > 0 ? (isFull ? 'rgba(239,68,68,0.10)' : 'rgba(16,185,129,0.10)') : 'rgba(148,163,184,0.14)',
-            color: count > 0 ? (isFull ? '#DC2626' : '#047857') : '#64748B',
-          }}>
-          <span className="w-1.5 h-1.5 rounded-full"
-            style={{ background: count > 0 ? (isFull ? '#EF4444' : '#10B981') : '#94A3B8' }} />
-          {count > 0 ? (isFull ? 'Full' : 'Occupied') : 'Vacant'}
-        </span>
-      </div>
-
-      {/* Occupancy */}
-      <div className="relative flex items-center justify-between mb-3">
-        <OccupancyDots count={count} max={max} />
-        <span className="text-xs font-bold" style={{ color: '#334155' }}>
-          {count}<span className="opacity-40 font-medium">/{max}</span>
-        </span>
-      </div>
-
-      {/* Avatar stack */}
-      {count > 0 ? (
-        <div className="relative flex items-center mb-3 min-h-[28px]">
-          <div className="flex -space-x-2">
-            {occupants.slice(0, 4).map((r) => (
-              <Avatar key={r._id} resident={r} size={26} />
-            ))}
-          </div>
-          {count > 4 && (
-            <span className="ml-2 text-[11px] font-semibold" style={{ color: '#64748B' }}>
-              +{count - 4} more
-            </span>
-          )}
-        </div>
-      ) : (
-        <div className="relative mb-3 min-h-[28px] flex items-center text-[11px]" style={{ color: '#CBD5E1' }}>
-          <UserPlus size={12} className="mr-1.5" /> Assign residents
-        </div>
-      )}
-
-      {/* Dues footer */}
-      <div className="relative pt-3 min-w-0" style={{ borderTop: '1px solid rgba(15,23,42,0.05)' }}>
-        <div className="flex items-center gap-1.5 text-xs font-semibold">
-          <dues.Icon size={12} style={{ color: tone.fg, flexShrink: 0 }} />
-          <span className="truncate" style={{ color: tone.strong }}>{dues.label}</span>
-        </div>
-        <div className="text-[11px] mt-0.5 truncate" style={{ color: '#94A3B8' }}>{dues.detail}</div>
       </div>
     </button>
   );
 }
 
-function UnitDrawer({ unit, allResidents, onAddResident, onRemoveResident, onDelete, onClose }) {
-  const [addResidentId, setAddResidentId] = useState('');
-  const [saving, setSaving] = useState(false);
+/* ── Unit detail side panel ────────────────────────────────────────── */
+function UnitPanel({ unit, allResidents, onAddResident, onRemoveResident, onDelete, onSaved, onClose }) {
+  const [addId, setAddId] = useState('');
+  const [q, setQ] = useState('');
+  const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({});
+  useEffect(() => { setAddId(''); setQ(''); setConfirmDelete(false); setEditing(false); if (unit) setForm({ unitNumber: unit.unitNumber, block: unit.block || '', type: unit.type }); }, [unit?._id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { setAddResidentId(''); setConfirmDelete(false); }, [unit?._id]);
-
-  if (!unit) return null;
   const u = unit;
-  const occupants = (u.residentIds || []).filter(r => r?._id);
-  const count = occupants.length;
-  const max = u.maxOccupants || 7;
-  const pct = Math.round((count / max) * 100);
-  const occupantIds = new Set(occupants.map(r => r._id));
-  const available = (allResidents || []).filter(r => !occupantIds.has(r._id));
-  const TypeIcon = TYPE_ICONS[u.type] || Building2;
-  const dues = duesView(u);
-  const tone = TONE[dues.tone];
-  const d = u.dues || {};
+  const people = u ? occ(u) : [];
+  const count = people.length;
+  const max = u?.maxOccupants || 7;
+  const ids = new Set(people.map((r) => r._id));
+  const available = (allResidents || []).filter((r) => !ids.has(r._id) && (!q || `${r.name} ${r.email || ''}`.toLowerCase().includes(q.toLowerCase())));
+  const dues = u ? duesView(u) : null;
+  const tone = dues ? TONE[dues.tone] : TONE.slate;
+  const d = u?.dues || {};
+  const TypeIcon = TYPE_ICON[u?.type] || Building2;
 
-  const handleAdd = async () => {
-    if (!addResidentId) return;
-    setSaving(true);
-    try {
-      await onAddResident(addResidentId, u._id);
-      setAddResidentId('');
-    } finally {
-      setSaving(false);
-    }
+  const add = async (id) => { setBusy(true); try { await onAddResident(id, u._id); setAddId(''); } finally { setBusy(false); } };
+  const save = async () => {
+    if (!form.unitNumber?.trim()) return toast.error('Unit number is required');
+    setBusy(true);
+    try { await unitAPI.update(u._id, { unitNumber: form.unitNumber.trim(), block: form.block.trim(), type: form.type }); toast.success('Unit updated'); setEditing(false); onSaved(u._id); }
+    catch (err) { toast.error(err.response?.data?.message || 'Update failed'); }
+    finally { setBusy(false); }
   };
 
   return (
-    <>
-      <div className="fixed inset-x-0 top-14 bottom-0 lg:top-0 z-40 bg-slate-900/30 backdrop-blur-sm lg:bg-transparent lg:backdrop-blur-none animate-fade-in" onClick={onClose} />
-      <div className="fixed inset-x-0 top-14 bottom-0 sm:inset-x-auto sm:right-0 sm:left-auto sm:w-[400px] lg:top-0 z-50 flex flex-col bg-white shadow-2xl overflow-hidden animate-slide-in"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-
-        {/* Header */}
-        <div className="flex items-center gap-3 px-4 py-3.5 sm:px-5"
-          style={{ borderBottom: '1px solid rgba(15,23,42,0.06)' }}>
-          <button onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors sm:hidden">
-            <ChevronLeft size={20} />
-          </button>
-          <span className="text-[10px] font-black uppercase tracking-widest flex-1" style={{ color: '#94A3B8' }}>
-            Unit Details
-          </span>
-          <button onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors hidden sm:block">
-            <X size={16} />
-          </button>
+    <SidePanel open={!!u} onClose={onClose}
+      title={u ? `${u.block ? `Block ${u.block} · ` : ''}Unit ${u.unitNumber}` : ''}
+      subtitle={u ? `${u.type?.[0]?.toUpperCase()}${u.type?.slice(1)} · ${count}/${max} occupants` : ''}
+      footer={u && (confirmDelete ? (
+        <div className="flex gap-2">
+          <button onClick={() => setConfirmDelete(false)} className="flex-1 h-10 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600">Cancel</button>
+          <button onClick={() => { onDelete(u._id); onClose(); }} className="flex-1 h-10 rounded-xl text-sm font-semibold text-white bg-red-500">Delete unit</button>
         </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto">
-          {/* Hero */}
-          <div className="relative px-5 pt-5 pb-6 overflow-hidden"
-            style={{
-              background: count > 0
-                ? 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(255,255,255,0) 60%)'
-                : 'linear-gradient(135deg, rgba(148,163,184,0.10) 0%, rgba(255,255,255,0) 60%)',
-              borderBottom: '1px solid rgba(15,23,42,0.05)',
-            }}>
-            <div className="flex items-start justify-between mb-3">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{
-                  background: 'linear-gradient(135deg, #10B981, #047857)',
-                  boxShadow: '0 6px 14px -6px rgba(4,120,87,0.55)',
-                }}>
-                <TypeIcon size={20} color="#fff" />
-              </div>
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full flex items-center gap-1"
-                style={{
-                  background: count > 0 ? 'rgba(16,185,129,0.12)' : 'rgba(148,163,184,0.15)',
-                  color: count > 0 ? '#047857' : '#64748B',
-                }}>
-                <span className="w-1.5 h-1.5 rounded-full"
-                  style={{ background: count > 0 ? '#10B981' : '#94A3B8' }} />
-                {count >= max ? 'Full' : count > 0 ? 'Occupied' : 'Vacant'}
-              </span>
-            </div>
-            <div className="flex items-baseline gap-2">
-              {u.block && (
-                <span className="text-sm font-bold" style={{ color: '#059669' }}>Block {u.block}</span>
-              )}
-              <span className="text-3xl font-black text-slate-900" style={{ letterSpacing: '-0.02em' }}>
-                {u.unitNumber}
-              </span>
-            </div>
-            <div className="text-xs capitalize mt-1 font-medium" style={{ color: '#64748B' }}>
-              {u.type}
+      ) : (
+        <div className="flex gap-2">
+          <button onClick={() => setEditing((e) => !e)} className="flex-1 h-10 rounded-xl text-sm font-semibold border border-slate-200 text-slate-700 flex items-center justify-center gap-1.5 hover:bg-slate-50"><Pencil size={14} /> {editing ? 'Close edit' : 'Edit unit'}</button>
+          <button onClick={() => setConfirmDelete(true)} className="h-10 px-4 rounded-xl text-sm font-semibold border border-red-200 text-red-600 bg-red-50 flex items-center gap-1.5"><Trash2 size={14} /> Delete</button>
+        </div>
+      ))}>
+      {u && (
+        <div className="space-y-5 -mt-1">
+          {/* Identity */}
+          <div className="flex items-center gap-3">
+            <span className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #10B981, #047857)', boxShadow: '0 8px 18px -10px #047857' }}><TypeIcon size={21} className="text-white" /></span>
+            <div className="flex-1 min-w-0">
+              <p className="text-[22px] font-semibold text-slate-900 leading-tight" style={{ letterSpacing: '-0.02em' }}>{u.unitNumber}</p>
+              <p className="text-[12px] text-slate-500 capitalize">{u.block ? `Block ${u.block} · ` : ''}{u.type}</p>
             </div>
           </div>
 
-          {/* Content */}
-          <div className="p-5 space-y-5">
-            {/* Occupancy card */}
-            <div className="rounded-2xl p-4"
-              style={{ background: '#F8FAFC', border: '1px solid rgba(15,23,42,0.06)' }}>
-              <div className="flex items-center justify-between mb-2.5">
-                <span className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5"
-                  style={{ color: '#64748B' }}>
-                  <Users size={11} /> Occupancy
-                </span>
-                <span className="text-sm font-black" style={{ color: '#0F172A' }}>
-                  {count}<span className="opacity-40 font-medium">/{max}</span>
-                </span>
+          {editing && (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-4 space-y-3">
+              <p className="text-[12px] font-semibold text-emerald-800 flex items-center gap-1.5"><Pencil size={13} /> Edit unit</p>
+              <div className="grid grid-cols-2 gap-2.5">
+                <label><span className="text-[11.5px] text-slate-500">Unit number</span><input className="input-field mt-1" value={form.unitNumber} onChange={(e) => setForm({ ...form, unitNumber: e.target.value })} /></label>
+                <label><span className="text-[11.5px] text-slate-500">Block</span><input className="input-field mt-1" value={form.block} onChange={(e) => setForm({ ...form, block: e.target.value })} placeholder="Optional" /></label>
               </div>
-              <div className="h-1.5 rounded-full overflow-hidden mb-2" style={{ background: '#E2E8F0' }}>
-                <div className="h-full rounded-full transition-all duration-500"
-                  style={{
-                    width: `${pct}%`,
-                    background: count >= max ? '#EF4444' : count > 0 ? '#10B981' : '#CBD5E1',
-                  }} />
+              <div className="grid grid-cols-4 gap-1.5">
+                {TYPES.map(({ v, label, icon: I }) => (
+                  <button key={v} type="button" onClick={() => setForm({ ...form, type: v })}
+                    className={`rounded-xl border py-2 flex flex-col items-center gap-1 text-[11px] font-medium ${form.type === v ? 'border-emerald-500 bg-white text-emerald-700 ring-2 ring-emerald-500/10' : 'border-slate-200 text-slate-500 bg-white'}`}><I size={15} />{label}</button>
+                ))}
               </div>
-              <div className="text-[11px]" style={{ color: '#94A3B8' }}>
-                {count >= max ? 'Unit is at full capacity' : `${max - count} slot${max - count !== 1 ? 's' : ''} available`}
-              </div>
+              <button onClick={save} disabled={busy} className="btn-primary w-full justify-center gap-1.5"><Check size={14} /> Save changes</button>
             </div>
-
-            {/* Dues card */}
-            <div className="rounded-2xl overflow-hidden" style={{ background: tone.bg, border: `1px solid ${tone.bd}` }}>
-              <div className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: tone.chip }}>
-                  <dues.Icon size={16} style={{ color: tone.strong }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: tone.strong }}>Dues</div>
-                  <div className="text-sm font-bold" style={{ color: '#0F172A' }}>{dues.label}</div>
-                  <div className="text-[11px]" style={{ color: '#64748B' }}>{dues.detail}</div>
-                </div>
-              </div>
-              {d.billsIssued > 0 && (
-                <dl className="grid grid-cols-2 gap-px text-xs" style={{ background: tone.bd, borderTop: `1px solid ${tone.bd}` }}>
-                  {[
-                    ['Outstanding', NGN(d.outstanding)],
-                    ['Overdue', d.overdueCount ? `${NGN(d.overdueAmount)} · ${d.overdueCount} bill${d.overdueCount > 1 ? 's' : ''}` : 'None'],
-                    [`Paid in ${new Date().getFullYear()}`, NGN(d.paidThisYear)],
-                    ['Last payment', d.lastPaidAt ? new Date(d.lastPaidAt).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'],
-                  ].map(([k, v]) => (
-                    <div key={k} className="bg-white px-3 py-2.5">
-                      <dt style={{ color: '#94A3B8' }}>{k}</dt>
-                      <dd className="font-semibold mt-0.5" style={{ color: '#0F172A' }}>{v}</dd>
-                    </div>
-                  ))}
-                </dl>
-              )}
-              {d.nextDue && (
-                <div className="px-4 py-2.5 text-[11px] bg-white" style={{ color: '#475569', borderTop: `1px solid ${tone.bd}` }}>
-                  Next bill: <strong>{d.nextDue.title}</strong> · {NGN(d.nextDue.amount)} due {new Date(d.nextDue.dueDate).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' })}
-                </div>
-              )}
-            </div>
-
-            {/* Add resident */}
-            <div>
-              <div className="text-[10px] font-black uppercase tracking-widest mb-2.5 flex items-center gap-1.5"
-                style={{ color: '#64748B' }}>
-                <UserPlus size={11} /> Assign a resident
-              </div>
-              {count >= max ? (
-                <div className="text-xs px-3 py-2.5 rounded-xl text-center font-medium"
-                  style={{ background: 'rgba(239,68,68,0.06)', color: '#DC2626', border: '1px solid rgba(239,68,68,0.15)' }}>
-                  Unit is at max capacity ({max}/{max})
-                </div>
-              ) : available.length === 0 ? (
-                <div className="text-xs px-3 py-2.5 rounded-xl text-center"
-                  style={{ background: '#F8FAFC', color: '#94A3B8', border: '1px solid rgba(15,23,42,0.05)' }}>
-                  All residents already assigned to units
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <select className="input-field text-sm flex-1" value={addResidentId}
-                    onChange={e => setAddResidentId(e.target.value)}>
-                    <option value="">Select resident…</option>
-                    {available.map(r => (
-                      <option key={r._id} value={r._id}>{r.name}</option>
-                    ))}
-                  </select>
-                  <button onClick={handleAdd} disabled={!addResidentId || saving}
-                    className="px-4 rounded-xl transition-all flex-shrink-0 flex items-center gap-1.5 text-sm font-bold text-white"
-                    style={{
-                      background: !addResidentId ? '#CBD5E1' : 'linear-gradient(135deg, #10B981, #047857)',
-                      opacity: !addResidentId ? 0.7 : 1,
-                      boxShadow: !addResidentId ? 'none' : '0 4px 12px rgba(16,185,129,0.35)',
-                    }}>
-                    <UserPlus size={14} /> Add
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Occupants */}
-            <div>
-              <div className="text-[10px] font-black uppercase tracking-widest mb-2.5 flex items-center gap-1.5"
-                style={{ color: '#64748B' }}>
-                <Users size={11} /> Occupants · {count}
-              </div>
-              {count === 0 ? (
-                <div className="text-xs text-center py-8 px-4 rounded-2xl"
-                  style={{ background: '#F8FAFC', color: '#94A3B8', border: '1px dashed rgba(15,23,42,0.08)' }}>
-                  No residents assigned yet
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {occupants.map((r) => (
-                    <div key={r._id}
-                      className="flex items-center gap-3 p-2.5 rounded-xl transition-all"
-                      style={{ background: '#F8FAFC', border: '1px solid rgba(15,23,42,0.05)' }}>
-                      <Avatar resident={r} size={36} ring={false} />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-semibold truncate" style={{ color: '#0F172A' }}>{r.name || '—'}</div>
-                        {r.email && (
-                          <div className="text-[11px] truncate" style={{ color: '#94A3B8' }}>{r.email}</div>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => onRemoveResident(r._id)}
-                        className="p-1.5 rounded-lg transition-all flex-shrink-0"
-                        title="Remove from unit"
-                        style={{ color: '#CBD5E1' }}
-                        onMouseEnter={e => { e.currentTarget.style.color = '#EF4444'; e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.color = '#CBD5E1'; e.currentTarget.style.background = 'transparent'; }}>
-                        <UserMinus size={14} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="p-4" style={{ borderTop: '1px solid rgba(15,23,42,0.06)' }}>
-          {confirmDelete ? (
-            <div className="flex items-center gap-2">
-              <button onClick={() => setConfirmDelete(false)}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
-                style={{ background: '#F1F5F9', color: '#64748B' }}>
-                Cancel
-              </button>
-              <button
-                onClick={() => { onDelete(u._id); onClose(); }}
-                className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white"
-                style={{ background: '#EF4444', boxShadow: '0 4px 12px rgba(239,68,68,0.35)' }}>
-                Confirm delete
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setConfirmDelete(true)}
-              className="w-full py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all"
-              style={{ background: 'rgba(239,68,68,0.06)', color: '#DC2626', border: '1px solid rgba(239,68,68,0.15)' }}>
-              <Trash2 size={13} /> Delete unit
-            </button>
           )}
+
+          {/* Occupancy */}
+          <div className="rounded-2xl border border-slate-200/80 p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-[12px] font-semibold text-slate-600 flex items-center gap-1.5"><Users size={13} /> Occupancy</span>
+              <span className="text-[13px] font-semibold text-slate-900 tabular-nums">{count}<span className="text-slate-400 font-normal">/{max}</span></span>
+            </div>
+            <div className="mt-2.5 flex gap-1">
+              {Array.from({ length: max }).map((_, k) => <span key={k} className="flex-1 h-2 rounded-full" style={{ background: k < count ? (count >= max ? '#F87171' : '#10B981') : '#E2E8F0' }} />)}
+            </div>
+            <p className="mt-2 text-[11.5px] text-slate-400">{count >= max ? 'Unit is at full capacity' : `${max - count} space${max - count === 1 ? '' : 's'} left`}</p>
+          </div>
+
+          {/* Dues */}
+          <div className="rounded-2xl overflow-hidden border" style={{ borderColor: tone.bd }}>
+            <div className="p-4 flex items-center gap-3" style={{ background: tone.bg }}>
+              <span className="w-10 h-10 rounded-xl bg-white flex items-center justify-center"><dues.Icon size={17} style={{ color: tone.strong }} /></span>
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: tone.strong }}>Dues</p>
+                <p className="text-[14px] font-semibold text-slate-900">{dues.label}</p>
+                <p className="text-[11.5px] text-slate-500">{dues.detail}</p>
+              </div>
+            </div>
+            {d.billsIssued > 0 && (
+              <dl className="grid grid-cols-2 gap-px bg-slate-100 text-[12px]">
+                {[
+                  ['Outstanding', NGN(d.outstanding)],
+                  ['Overdue', d.overdueCount ? `${NGN(d.overdueAmount)} · ${d.overdueCount}` : 'None'],
+                  [`Paid in ${new Date().getFullYear()}`, NGN(d.paidThisYear)],
+                  ['Last payment', d.lastPaidAt ? new Date(d.lastPaidAt).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'],
+                ].map(([k, v]) => (
+                  <div key={k} className="bg-white px-3 py-2.5"><dt className="text-slate-400">{k}</dt><dd className="font-semibold text-slate-900 mt-0.5 tabular-nums">{v}</dd></div>
+                ))}
+              </dl>
+            )}
+            {d.nextDue && <p className="px-4 py-2.5 text-[11.5px] text-slate-600 bg-white border-t border-slate-100">Next bill: <b>{d.nextDue.title}</b> · {NGN(d.nextDue.amount)} due {shortDate(d.nextDue.dueDate)}</p>}
+          </div>
+
+          {/* Occupants */}
+          <div>
+            <p className="text-[12px] font-semibold text-slate-600 mb-2 flex items-center gap-1.5"><Users size={13} /> Residents · {count}</p>
+            {!count ? (
+              <div className="text-[12px] text-center py-6 rounded-2xl border border-dashed border-slate-200 text-slate-400">Nobody lives here yet</div>
+            ) : (
+              <div className="space-y-1.5">
+                {people.map((r) => (
+                  <div key={r._id} className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                    <Avatar r={r} size={34} ring={false} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-semibold text-slate-900 truncate">{r.name}</p>
+                      <p className="text-[11px] text-slate-400 truncate">{r.email || r.phone || ''}</p>
+                    </div>
+                    <button onClick={() => onRemoveResident(r._id)} title="Remove from unit" className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50"><UserMinus size={15} /></button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Assign */}
+          <div>
+            <p className="text-[12px] font-semibold text-slate-600 mb-2 flex items-center gap-1.5"><UserPlus size={13} /> Add a resident</p>
+            {count >= max ? (
+              <p className="text-[12px] px-3 py-2.5 rounded-xl text-center bg-red-50 text-red-600 border border-red-100">This unit is full ({max}/{max})</p>
+            ) : (
+              <div className="rounded-2xl border border-slate-200/80 overflow-hidden">
+                <div className="flex items-center gap-2 px-3 h-10 border-b border-slate-100 bg-slate-50">
+                  <Search size={14} className="text-slate-400" />
+                  <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search residents" className="flex-1 bg-transparent outline-none text-[13px]" />
+                </div>
+                <div className="max-h-56 overflow-y-auto divide-y divide-slate-100">
+                  {!available.length && <p className="px-3 py-4 text-[12px] text-slate-400 text-center">No residents to add</p>}
+                  {available.slice(0, 60).map((r) => (
+                    <div key={r._id} className="flex items-center gap-2.5 px-3 py-2">
+                      <Avatar r={r} size={28} ring={false} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[12.5px] font-medium text-slate-800 truncate">{r.name}</p>
+                        <p className="text-[11px] text-slate-400 truncate">{r.unitId ? `Now in ${r.unitId.unitNumber || 'another unit'}` : 'No unit yet'}</p>
+                      </div>
+                      <button disabled={busy} onClick={() => add(r._id)} className="h-8 px-2.5 rounded-lg text-[12px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 disabled:opacity-50"><Plus size={13} /> Add</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    </>
+      )}
+    </SidePanel>
   );
 }
 
+/* ── Add units panel: one, or a whole range at once ────────────────── */
+function AddUnitsPanel({ open, onClose, onDone, existing }) {
+  const [mode, setMode] = useState('single');
+  const [f, setF] = useState({ unitNumber: '', block: '', type: 'apartment', prefix: '', from: 1, to: 10, pad: 0 });
+  const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState(null);
+  useEffect(() => { if (open) { setProgress(null); } }, [open]);
+  const taken = useMemo(() => new Set(existing.map((u) => `${(u.block || '').toLowerCase()}|${u.unitNumber.toLowerCase()}`)), [existing]);
+  const range = useMemo(() => {
+    const a = Number(f.from), b = Number(f.to);
+    if (!Number.isFinite(a) || !Number.isFinite(b) || b < a || b - a > 199) return [];
+    return Array.from({ length: b - a + 1 }, (_, i) => `${f.prefix}${String(a + i).padStart(Number(f.pad) || 0, '0')}`);
+  }, [f.from, f.to, f.prefix, f.pad]);
+  const fresh = range.filter((n) => !taken.has(`${f.block.trim().toLowerCase()}|${n.toLowerCase()}`));
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      if (mode === 'single') {
+        if (!f.unitNumber.trim()) { toast.error('Enter a unit number'); return; }
+        await unitAPI.create({ unitNumber: f.unitNumber.trim(), block: f.block.trim(), type: f.type });
+        toast.success(`Unit ${f.unitNumber} created`);
+      } else {
+        let ok = 0, fail = 0;
+        for (let i = 0; i < fresh.length; i++) {
+          setProgress({ done: i, total: fresh.length });
+          try { await unitAPI.create({ unitNumber: fresh[i], block: f.block.trim(), type: f.type }); ok++; } catch { fail++; }
+        }
+        setProgress({ done: fresh.length, total: fresh.length });
+        toast.success(`${ok} unit${ok === 1 ? '' : 's'} created${fail ? ` · ${fail} skipped` : ''}`);
+      }
+      onDone();
+      onClose();
+    } catch (err) { toast.error(err.response?.data?.message || 'Could not create unit'); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <SidePanel open={open} onClose={onClose} title="Add units" subtitle="Add one unit, or a whole block in one go."
+      footer={<div className="flex items-center gap-2">
+        {progress && <span className="text-[12px] text-slate-500 mr-auto">Creating {progress.done}/{progress.total}…</span>}
+        <button type="button" onClick={onClose} className="btn-outline flex-1">Cancel</button>
+        <button type="submit" form="add-units-form" disabled={busy || (mode === 'range' && !fresh.length)} className="btn-primary flex-1 justify-center gap-1.5">
+          <Plus size={15} /> {mode === 'single' ? 'Create unit' : `Create ${fresh.length} unit${fresh.length === 1 ? '' : 's'}`}
+        </button>
+      </div>}>
+      <form id="add-units-form" onSubmit={submit} className="space-y-5">
+        <div className="grid grid-cols-2 gap-2">
+          {[['single', 'One unit', 'e.g. Flat 4B', Home], ['range', 'Many units', 'e.g. A101 – A120', ListPlus]].map(([v, l, h, I]) => (
+            <button key={v} type="button" onClick={() => setMode(v)}
+              className={`text-left rounded-2xl border p-3 transition-all ${mode === v ? 'border-emerald-500 bg-emerald-50/50 ring-2 ring-emerald-500/10' : 'border-slate-200 hover:border-slate-300'}`}>
+              <I size={16} className={mode === v ? 'text-emerald-600' : 'text-slate-400'} />
+              <p className="mt-1.5 text-[13px] font-semibold text-slate-900">{l}</p><p className="text-[11px] text-slate-400">{h}</p>
+            </button>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-2 gap-2.5">
+          {mode === 'single'
+            ? <label><span className="text-[12px] font-medium text-slate-600">Unit number *</span><input className="input-field mt-1" value={f.unitNumber} onChange={(e) => setF({ ...f, unitNumber: e.target.value })} placeholder="e.g. 4B" autoFocus /></label>
+            : <label><span className="text-[12px] font-medium text-slate-600">Prefix</span><input className="input-field mt-1" value={f.prefix} onChange={(e) => setF({ ...f, prefix: e.target.value })} placeholder="e.g. A or Flat " /></label>}
+          <label><span className="text-[12px] font-medium text-slate-600">Block</span><input className="input-field mt-1" value={f.block} onChange={(e) => setF({ ...f, block: e.target.value })} placeholder="Optional" /></label>
+        </div>
+
+        {mode === 'range' && (
+          <>
+            <div className="grid grid-cols-3 gap-2.5">
+              <label><span className="text-[12px] font-medium text-slate-600">From</span><input type="number" className="input-field mt-1" value={f.from} onChange={(e) => setF({ ...f, from: e.target.value })} /></label>
+              <label><span className="text-[12px] font-medium text-slate-600">To</span><input type="number" className="input-field mt-1" value={f.to} onChange={(e) => setF({ ...f, to: e.target.value })} /></label>
+              <label><span className="text-[12px] font-medium text-slate-600">Digits</span>
+                <select className="input-field mt-1" value={f.pad} onChange={(e) => setF({ ...f, pad: e.target.value })}><option value={0}>1, 2, 3</option><option value={2}>01, 02</option><option value={3}>001, 002</option></select>
+              </label>
+            </div>
+            <div className="rounded-2xl border border-slate-200/80 p-3">
+              <p className="text-[12px] font-semibold text-slate-600 mb-2 flex items-center gap-1.5"><Sparkles size={13} className="text-emerald-500" /> Preview · {fresh.length} new{range.length - fresh.length ? ` · ${range.length - fresh.length} already exist` : ''}</p>
+              <div className="flex flex-wrap gap-1 max-h-36 overflow-y-auto">
+                {range.slice(0, 120).map((n) => {
+                  const dup = !fresh.includes(n);
+                  return <span key={n} className={`text-[11px] font-medium px-1.5 py-0.5 rounded-md ${dup ? 'bg-slate-100 text-slate-400 line-through' : 'bg-emerald-50 text-emerald-700'}`}>{f.block ? `${f.block}-` : ''}{n}</span>;
+                })}
+                {!range.length && <span className="text-[12px] text-slate-400">Set a valid range (up to 200 units).</span>}
+              </div>
+            </div>
+          </>
+        )}
+
+        <div>
+          <p className="text-[12px] font-medium text-slate-600 mb-1.5">Type</p>
+          <div className="grid grid-cols-4 gap-1.5">
+            {TYPES.map(({ v, label, icon: I }) => (
+              <button key={v} type="button" onClick={() => setF({ ...f, type: v })}
+                className={`rounded-xl border py-2.5 flex flex-col items-center gap-1 text-[11.5px] font-medium ${f.type === v ? 'border-emerald-500 bg-emerald-50/50 text-emerald-700 ring-2 ring-emerald-500/10' : 'border-slate-200 text-slate-500'}`}><I size={16} />{label}</button>
+            ))}
+          </div>
+        </div>
+      </form>
+    </SidePanel>
+  );
+}
+
+/* ── Page ───────────────────────────────────────────────────────────── */
 export default function Units() {
   const [units, setUnits] = useState([]);
   const [allResidents, setAllResidents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ unitNumber: '', block: '', type: 'apartment' });
-  const [saving, setSaving] = useState(false);
-  const [selected, setSelected] = useState(null);
+  const [showAdd, setShowAdd] = useState(false);
+  const [selectedId, setSelectedId] = useState(null);
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('all'); // all | occupied | vacant | dues
+  const [filter, setFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [blockFilter, setBlockFilter] = useState('all');
+  const [sort, setSort] = useState('number');
+  const [view, setView] = useState(() => { try { return localStorage.getItem('em_units_view') || 'grid'; } catch { return 'grid'; } });
+  useEffect(() => { try { localStorage.setItem('em_units_view', view); } catch { /* ignore */ } }, [view]);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [u, r] = await Promise.all([
-        unitAPI.getAll(),
-        residentAPI.getAll({ limit: 500 }),
-      ]);
-      setUnits(u.data.data);
-      setAllResidents(r.data.data);
+      const [u, r] = await Promise.all([unitAPI.getAll(), residentAPI.getAll({ limit: 500 })]);
+      setUnits(u.data.data); setAllResidents(r.data.data);
     } catch { toast.error('Failed to load'); } finally { setLoading(false); }
   };
-
-  useEffect(() => { load(); }, []);
-
-  const handleCreate = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      await unitAPI.create(form);
-      toast.success('Unit created');
-      setShowCreate(false);
-      setForm({ unitNumber: '', block: '', type: 'apartment' });
-      load();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed');
-    } finally { setSaving(false); }
+  const reload = async () => {
+    const [u, r] = await Promise.all([unitAPI.getAll(), residentAPI.getAll({ limit: 500 })]);
+    setUnits(u.data.data); setAllResidents(r.data.data);
   };
+  useEffect(() => { load(); }, []);
+  const selected = units.find((u) => u._id === selectedId) || null;
 
   const handleDelete = async (id) => {
-    try {
-      await unitAPI.delete(id);
-      toast.success('Unit deleted');
-      load();
-    } catch { toast.error('Failed'); }
+    try { await unitAPI.delete(id); toast.success('Unit deleted'); load(); } catch { toast.error('Failed'); }
   };
-
   const handleAddResident = async (residentId, unitId) => {
-    try {
-      await residentAPI.assignUnit(residentId, unitId);
-      toast.success('Resident added to unit');
-      const { data } = await unitAPI.getAll();
-      setUnits(data.data);
-      setSelected(data.data.find(u => u._id === unitId) || null);
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to add resident');
-    }
+    try { await residentAPI.assignUnit(residentId, unitId); toast.success('Resident added to unit'); await reload(); }
+    catch (err) { toast.error(err.response?.data?.message || 'Failed to add resident'); }
   };
-
   const handleRemoveResident = async (residentId) => {
-    try {
-      await residentAPI.assignUnit(residentId, null);
-      toast.success('Resident removed from unit');
-      const [u, r] = await Promise.all([unitAPI.getAll(), residentAPI.getAll({ limit: 500 })]);
-      setUnits(u.data.data);
-      setAllResidents(r.data.data);
-      setSelected(prev => prev ? u.data.data.find(x => x._id === prev._id) || null : null);
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to remove resident');
-    }
+    try { await residentAPI.assignUnit(residentId, null); toast.success('Resident removed from unit'); await reload(); }
+    catch (err) { toast.error(err.response?.data?.message || 'Failed to remove resident'); }
   };
 
-  // ── Derived views ──────────────────────────────────────────────────────
   const stats = useMemo(() => {
-    let occupied = 0, vacant = 0, owed = 0;
+    let occupied = 0, vacant = 0, full = 0, owed = 0, overdue = 0, overdueAmt = 0, clear = 0, billed = 0, people = 0, capacity = 0;
     for (const u of units) {
-      const count = (u.residentIds || []).filter(r => r?._id).length;
-      if (count > 0) occupied++; else vacant++;
-      if (u.dues && u.dues.status !== 'exempt') owed += u.dues.outstanding || 0;
+      const c = occ(u).length; const max = u.maxOccupants || 7;
+      people += c; capacity += max;
+      if (c > 0) occupied++; else vacant++;
+      if (c >= max) full++;
+      const s = u.dues?.status;
+      if (s && s !== 'exempt') owed += u.dues.outstanding || 0;
+      if (s === 'overdue') { overdue++; overdueAmt += u.dues.overdueAmount || 0; }
+      if (s === 'clear') clear++;
+      if (['clear', 'owing', 'overdue'].includes(s)) billed++;
     }
-    return { total: units.length, occupied, vacant, owed };
+    const unassigned = allResidents.filter((r) => !r.unitId).length;
+    return { total: units.length, occupied, vacant, full, owed, overdue, overdueAmt, clear, billed, people, capacity, unassigned };
+  }, [units, allResidents]);
+
+  const blocks = useMemo(() => {
+    const m = {};
+    units.forEach((u) => {
+      const k = (u.block || '').trim() || '__none';
+      const b = (m[k] ||= { key: k, units: 0, occupied: 0, owed: 0, overdue: 0 });
+      b.units++; if (occ(u).length) b.occupied++;
+      if (u.dues?.status !== 'exempt') b.owed += u.dues?.outstanding || 0;
+      if (u.dues?.status === 'overdue') b.overdue++;
+    });
+    return Object.values(m).sort((a, b) => (a.key === '__none' ? 1 : b.key === '__none' ? -1 : a.key.localeCompare(b.key, undefined, { numeric: true })));
   }, [units]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return units.filter((u) => {
-      const count = (u.residentIds || []).filter(r => r?._id).length;
-      if (filter === 'occupied' && count === 0) return false;
-      if (filter === 'vacant'   && count > 0)  return false;
-      if (filter === 'dues'     && !['overdue', 'owing'].includes(u.dues?.status)) return false;
+    const list = units.filter((u) => {
+      const c = occ(u).length; const max = u.maxOccupants || 7; const s = u.dues?.status;
+      if (filter === 'occupied' && !c) return false;
+      if (filter === 'vacant' && c) return false;
+      if (filter === 'full' && c < max) return false;
+      if (filter === 'overdue' && s !== 'overdue') return false;
+      if (filter === 'owing' && !['overdue', 'owing'].includes(s)) return false;
+      if (filter === 'clear' && s !== 'clear') return false;
+      if (typeFilter !== 'all' && u.type !== typeFilter) return false;
+      if (blockFilter !== 'all' && ((u.block || '').trim() || '__none') !== blockFilter) return false;
       if (!q) return true;
-      const hay = [
-        u.unitNumber,
-        u.block,
-        u.type,
-        ...(u.residentIds || []).map(r => r?.name).filter(Boolean),
-      ].join(' ').toLowerCase();
-      return hay.includes(q);
+      return [u.unitNumber, u.block, u.type, ...occ(u).map((r) => r.name)].join(' ').toLowerCase().includes(q);
     });
-  }, [units, search, filter]);
+    const by = {
+      number: (a, b) => `${a.block || ''}${a.unitNumber}`.localeCompare(`${b.block || ''}${b.unitNumber}`, undefined, { numeric: true }),
+      owed: (a, b) => (b.dues?.outstanding || 0) - (a.dues?.outstanding || 0),
+      occupancy: (a, b) => occ(b).length - occ(a).length,
+      vacant: (a, b) => occ(a).length - occ(b).length,
+    };
+    return list.sort(by[sort]);
+  }, [units, search, filter, typeFilter, blockFilter, sort]);
 
   const grouped = useMemo(() => {
-    const map = {};
-    for (const u of filtered) {
-      const key = (u.block || '').trim() || '__none';
-      (map[key] = map[key] || []).push(u);
-    }
-    // Sort blocks alphabetically, unblocked last
-    return Object.entries(map).sort(([a], [b]) => {
-      if (a === '__none') return 1;
-      if (b === '__none') return -1;
-      return a.localeCompare(b);
-    });
+    const m = {};
+    filtered.forEach((u) => { const k = (u.block || '').trim() || '__none'; (m[k] ||= []).push(u); });
+    return Object.entries(m).sort(([a], [b]) => (a === '__none' ? 1 : b === '__none' ? -1 : a.localeCompare(b, undefined, { numeric: true })));
   }, [filtered]);
 
   const FILTERS = [
-    { key: 'all',      label: 'All',      count: stats.total },
+    { key: 'all', label: 'All', count: stats.total },
     { key: 'occupied', label: 'Occupied', count: stats.occupied },
-    { key: 'vacant',   label: 'Vacant',   count: stats.vacant },
-    { key: 'dues',     label: 'Owing' },
+    { key: 'vacant', label: 'Vacant', count: stats.vacant },
+    { key: 'full', label: 'Full', count: stats.full },
+    { key: 'overdue', label: 'Overdue', count: stats.overdue, tone: 'red' },
+    { key: 'owing', label: 'Owing' },
+    { key: 'clear', label: 'Paid up', count: stats.clear },
   ];
+  const occPct = stats.capacity ? Math.round((stats.people / stats.capacity) * 100) : 0;
+  const occupiedPct = stats.total ? Math.round((stats.occupied / stats.total) * 100) : 0;
+  const clearPct = stats.billed ? Math.round((stats.clear / stats.billed) * 100) : 0;
+  const hasFilters = search || filter !== 'all' || typeFilter !== 'all' || blockFilter !== 'all';
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="space-y-5 animate-fade-in max-w-[1400px] mx-auto">
       {/* Header */}
-      <div className="flex items-start justify-between flex-wrap gap-3">
+      <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-display font-bold text-slate-900" style={{ letterSpacing: '-0.02em' }}>
-            Units
-          </h1>
-          <p className="text-slate-500 text-xs sm:text-sm mt-0.5">
-            Manage your estate's units, occupancy and dues
-          </p>
+          <h1 className="text-[22px] font-semibold text-slate-900" style={{ letterSpacing: '-0.02em' }}>Units</h1>
+          <p className="text-slate-500 text-[13px] mt-0.5">Homes in your estate — who lives where, and whose dues are up to date.</p>
         </div>
-        <button onClick={() => setShowCreate(true)} className="btn-primary gap-2">
-          <Plus size={16} /> Add Unit
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="hidden sm:flex p-0.5 rounded-xl bg-slate-100">
+            {[['grid', LayoutGrid, 'Cards'], ['table', Rows3, 'Table'], ['map', MapIcon, 'Estate map']].map(([v, I, l]) => (
+              <button key={v} onClick={() => setView(v)} className={`flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12.5px] font-medium ${view === v ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><I size={14} />{l}</button>
+            ))}
+          </div>
+          <button onClick={() => setShowAdd(true)} className="btn-primary gap-2"><Plus size={16} /> Add units</button>
+        </div>
       </div>
 
-      {/* Stat strip */}
-      {!loading && units.length > 0 && (
-        <div className="grid grid-cols-4 gap-2 sm:gap-3">
-          <StatChip label="Total"    value={stats.total}    tone="default" />
-          <StatChip label="Occupied" value={stats.occupied} tone="green"   />
-          <StatChip label="Vacant"   value={stats.vacant}   tone="amber"   />
-          <StatChip label="Owed"     value={NGN_SHORT(stats.owed)} tone={stats.owed > 0 ? 'red' : 'default'} />
-        </div>
-      )}
-
-      {/* Filter bar */}
-      {!loading && units.length > 0 && (
-        <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-          <div className="relative flex-1">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#94A3B8' }} />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search unit, block, type or resident…"
-              className="w-full pl-9 pr-3 py-2.5 rounded-xl text-sm outline-none transition-all"
-              style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', color: '#0F172A' }}
-            />
-          </div>
-          <div className="flex items-center gap-1.5 overflow-x-auto -mx-1 px-1 pb-0.5" style={{ scrollbarWidth: 'thin' }}>
-            {FILTERS.map(({ key, label, count }) => {
-              const active = filter === key;
-              return (
-                <button key={key}
-                  onClick={() => setFilter(key)}
-                  className="flex-shrink-0 inline-flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl transition-all"
-                  style={{
-                    background: active ? 'linear-gradient(135deg, #10B981, #047857)' : '#FFFFFF',
-                    color: active ? '#fff' : '#475569',
-                    border: `1px solid ${active ? 'transparent' : '#E2E8F0'}`,
-                    boxShadow: active ? '0 4px 12px rgba(16,185,129,0.30)' : 'none',
-                  }}>
-                  {label}
-                  {typeof count === 'number' && (
-                    <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md"
-                      style={{
-                        background: active ? 'rgba(255,255,255,0.24)' : 'rgba(15,23,42,0.05)',
-                        color: active ? '#fff' : '#64748B',
-                      }}>
-                      {count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {loading ? (
-        <div className="flex justify-center p-12"><Spinner /></div>
-      ) : units.length === 0 ? (
-        <EmptyState icon={Home} title="No units yet" message="Create units to assign to residents" />
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-14 px-4 glass-card">
-          <Search size={26} className="mx-auto mb-3" style={{ color: '#CBD5E1' }} />
-          <p className="text-sm font-semibold" style={{ color: '#334155' }}>No units match your filters</p>
-          <button onClick={() => { setSearch(''); setFilter('all'); }}
-            className="text-xs font-semibold mt-2" style={{ color: '#059669' }}>
-            Clear search & filter
-          </button>
+      {loading ? <Spinner size={32} /> : units.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center">
+          <span className="mx-auto w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #10B981, #047857)' }}><Home size={24} className="text-white" /></span>
+          <p className="mt-4 text-[16px] font-semibold text-slate-900">Add your first units</p>
+          <p className="mt-1 text-[13px] text-slate-500 max-w-sm mx-auto">Create each home once — or a whole block at a time — then assign residents and track their dues.</p>
+          <button onClick={() => setShowAdd(true)} className="btn-primary mt-5 gap-2 inline-flex"><Plus size={15} /> Add units</button>
         </div>
       ) : (
-        <div className="space-y-6">
-          {grouped.map(([block, blockUnits]) => (
-            <div key={block}>
-              <div className="flex items-center gap-2.5 mb-3">
-                <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#64748B' }}>
-                  {block === '__none' ? 'Unblocked' : `Block ${block}`}
-                </span>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md"
-                  style={{ background: 'rgba(16,185,129,0.10)', color: '#047857' }}>
-                  {blockUnits.length}
-                </span>
-                <div className="flex-1 h-px" style={{ background: 'rgba(15,23,42,0.06)' }} />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                {blockUnits.map((u) => (
-                  <UnitCard key={u._id} u={u} onOpen={() => setSelected(u)} />
-                ))}
+        <>
+          {/* Stats */}
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+            <Stat i={0} label="Units" value={stats.total} Icon={Home} color="#10B981" sub={`${blocks.filter((b) => b.key !== '__none').length || 'No'} block${blocks.filter((b) => b.key !== '__none').length === 1 ? '' : 's'}`} />
+            <Stat i={1} label="Occupied" value={stats.occupied} Icon={DoorOpen} color="#6366F1" sub={`${stats.vacant} vacant · ${stats.full} full`}>
+              <span className="relative"><MiniRing pct={occupiedPct} color="#6366F1" /><span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-indigo-600">{occupiedPct}%</span></span>
+            </Stat>
+            <Stat i={2} label="Residents housed" value={stats.people} Icon={Users} color="#0EA5E9" sub={`${occPct}% of ${stats.capacity} spaces · ${stats.unassigned} without a unit`} />
+            <Stat i={3} label="Dues owed" display={NGN_SHORT(stats.owed)} Icon={Wallet} color={stats.owed ? '#F97316' : '#14B8A6'} sub={stats.overdue ? `${stats.overdue} unit${stats.overdue === 1 ? '' : 's'} overdue · ${NGN_SHORT(stats.overdueAmt)}` : 'Nothing overdue'} />
+            <Stat i={4} label="Paid up" display={`${clearPct}%`} Icon={CheckCircle2} color="#22C55E" sub={`${stats.clear} of ${stats.billed} billed units clear`}>
+              <span className="relative"><MiniRing pct={clearPct} color="#22C55E" /></span>
+            </Stat>
+          </div>
+
+          {/* Blocks overview */}
+          {blocks.length > 1 && (
+            <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-1 px-1">
+              {blocks.map((b) => {
+                const on = blockFilter === b.key;
+                const pct = b.units ? Math.round((b.occupied / b.units) * 100) : 0;
+                return (
+                  <button key={b.key} onClick={() => setBlockFilter(on ? 'all' : b.key)}
+                    className={`flex-shrink-0 w-[170px] text-left rounded-2xl border p-3 transition-all ${on ? 'border-emerald-500 bg-emerald-50/50 ring-2 ring-emerald-500/10' : 'border-slate-200/80 bg-white hover:border-slate-300'}`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[13px] font-semibold text-slate-900 flex items-center gap-1.5"><Layers size={13} className="text-emerald-600" />{b.key === '__none' ? 'No block' : `Block ${b.key}`}</span>
+                      <span className="text-[11px] text-slate-400 tabular-nums">{b.units}</span>
+                    </div>
+                    <div className="mt-2 h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${pct}%` }} /></div>
+                    <p className="mt-1.5 text-[11px] text-slate-500 tabular-nums">{pct}% occupied{b.owed ? <> · <span className={b.overdue ? 'text-red-600' : 'text-amber-600'}>{NGN_SHORT(b.owed)} owed</span></> : ''}</p>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Toolbar */}
+          <div className="rounded-2xl bg-white border border-slate-200/80 p-2.5 flex flex-col lg:flex-row gap-2 lg:items-center">
+            <div className="flex items-center gap-2 h-9 px-3 rounded-xl bg-slate-50 border border-slate-200 lg:w-72">
+              <Search size={14} className="text-slate-400" />
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Unit, block or resident" className="flex-1 min-w-0 bg-transparent outline-none text-[13px]" />
+              {search && <button onClick={() => setSearch('')}><X size={13} className="text-slate-400" /></button>}
+            </div>
+            <div className="flex items-center gap-1 flex-wrap">
+              {FILTERS.map(({ key, label, count, tone }) => {
+                const on = filter === key;
+                return (
+                  <button key={key} onClick={() => setFilter(key)}
+                    className={`flex-shrink-0 inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-[12.5px] font-medium transition-colors ${on ? 'text-white' : 'text-slate-600 hover:bg-slate-100'}`}
+                    style={on ? { background: tone === 'red' ? 'linear-gradient(135deg,#EF4444,#B91C1C)' : 'linear-gradient(135deg,#10B981,#047857)' } : undefined}>
+                    {label}{typeof count === 'number' && <span className={`text-[10.5px] px-1.5 rounded-md ${on ? 'bg-white/25' : tone === 'red' && count ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-500'}`}>{count}</span>}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="lg:ml-auto flex items-center gap-2">
+              <select className="input-field !h-9 !py-0 !w-auto text-[12.5px]" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+                <option value="all">All types</option>{TYPES.map((t) => <option key={t.v} value={t.v}>{t.label}s</option>)}
+              </select>
+              <select className="input-field !h-9 !py-0 !w-auto text-[12.5px]" value={sort} onChange={(e) => setSort(e.target.value)}>
+                <option value="number">Unit number</option><option value="owed">Most owed</option><option value="occupancy">Most residents</option><option value="vacant">Vacant first</option>
+              </select>
+            </div>
+          </div>
+
+          {!filtered.length ? (
+            <div className="text-center py-14 rounded-2xl bg-white border border-slate-200/80">
+              <Search size={24} className="mx-auto text-slate-300" />
+              <p className="mt-2 text-[13.5px] font-semibold text-slate-700">No units match</p>
+              <button onClick={() => { setSearch(''); setFilter('all'); setTypeFilter('all'); setBlockFilter('all'); }} className="mt-1 text-[12.5px] font-semibold text-emerald-600">Clear filters</button>
+            </div>
+          ) : view === 'table' ? (
+            <div className="rounded-2xl bg-white border border-slate-200/80 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-[13px] min-w-[860px]">
+                  <thead>
+                    <tr className="text-left text-[11.5px] text-slate-500 bg-slate-50 border-b border-slate-100">
+                      <th className="font-medium px-4 py-2.5">Unit</th><th className="font-medium px-3 py-2.5">Type</th><th className="font-medium px-3 py-2.5">Residents</th>
+                      <th className="font-medium px-3 py-2.5 w-[150px]">Occupancy</th><th className="font-medium px-3 py-2.5">Dues</th>
+                      <th className="font-medium px-3 py-2.5 text-right">Outstanding</th><th className="font-medium px-3 py-2.5">Last paid</th><th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((u) => {
+                      const people = occ(u); const max = u.maxOccupants || 7; const dv = duesView(u); const t = TONE[dv.tone]; const TI = TYPE_ICON[u.type] || Building2;
+                      return (
+                        <tr key={u._id} onClick={() => setSelectedId(u._id)} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/70 cursor-pointer">
+                          <td className="px-4 py-2.5"><span className="font-semibold text-slate-900">{u.unitNumber}</span>{u.block && <span className="ml-1.5 text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-medium">Block {u.block}</span>}</td>
+                          <td className="px-3 py-2.5 text-slate-600 capitalize"><span className="inline-flex items-center gap-1.5"><TI size={13} className="text-slate-400" />{u.type}</span></td>
+                          <td className="px-3 py-2.5">{people.length ? <div className="flex items-center gap-2"><div className="flex -space-x-2">{people.slice(0, 3).map((r) => <Avatar key={r._id} r={r} size={24} />)}</div><span className="text-[12px] text-slate-500 truncate max-w-[140px]">{people.map((r) => r.name?.split(' ')[0]).join(', ')}</span></div> : <span className="text-slate-300 text-[12px]">Vacant</span>}</td>
+                          <td className="px-3 py-2.5"><div className="flex items-center gap-2"><div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full" style={{ width: `${(people.length / max) * 100}%`, background: people.length >= max ? '#F87171' : '#10B981' }} /></div><span className="text-[11.5px] tabular-nums text-slate-600">{people.length}/{max}</span></div></td>
+                          <td className="px-3 py-2.5"><span className="inline-flex items-center gap-1 text-[11.5px] font-semibold px-2 py-0.5 rounded-full" style={{ background: t.bg, color: t.strong }}><dv.Icon size={11} />{dv.key === 'overdue' ? 'Overdue' : dv.key === 'owing' ? 'Owing' : dv.key === 'clear' ? 'Paid up' : dv.key === 'exempt' ? 'Exempt' : '—'}</span></td>
+                          <td className="px-3 py-2.5 text-right font-semibold tabular-nums" style={{ color: u.dues?.outstanding ? t.strong : '#CBD5E1' }}>{u.dues?.outstanding ? NGN(u.dues.outstanding) : '—'}</td>
+                          <td className="px-3 py-2.5 text-[12px] text-slate-500">{u.dues?.lastPaidAt ? shortDate(u.dues.lastPaidAt) : '—'}</td>
+                          <td className="px-3 py-2.5 text-slate-300"><ArrowRight size={14} /></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
-          ))}
-        </div>
+          ) : view === 'map' ? (
+            <div className="rounded-2xl bg-white border border-slate-200/80 p-4 space-y-4">
+              <div className="flex flex-wrap items-center gap-4 text-[11.5px] text-slate-500">
+                <span className="font-semibold text-slate-700">Estate map</span>
+                {[['#34D399', 'Paid up'], ['#FBBF24', 'Owing'], ['#F87171', 'Overdue'], ['#CBD5E1', 'No bills / exempt']].map(([c, l]) => <span key={l} className="flex items-center gap-1.5"><span className="w-3 h-3 rounded" style={{ background: c }} />{l}</span>)}
+                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded border-2 border-dashed border-slate-300" />Vacant</span>
+              </div>
+              {grouped.map(([block, list]) => (
+                <div key={block}>
+                  <p className="text-[11.5px] font-semibold uppercase tracking-wider text-slate-500 mb-2">{block === '__none' ? 'No block' : `Block ${block}`} <span className="text-slate-300 normal-case tracking-normal">· {list.length}</span></p>
+                  <div className="grid gap-1.5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(64px, 1fr))' }}>
+                    {list.map((u) => {
+                      const c = occ(u).length; const dv = duesView(u); const t = TONE[dv.tone];
+                      return (
+                        <button key={u._id} onClick={() => setSelectedId(u._id)} title={`${u.unitNumber} · ${c} resident${c === 1 ? '' : 's'} · ${dv.label}`}
+                          className="group relative aspect-square rounded-xl flex flex-col items-center justify-center transition-transform hover:scale-105 hover:z-10"
+                          style={c ? { background: t.tile, color: dv.tone === 'slate' ? '#475569' : '#fff' } : { border: '2px dashed #CBD5E1', color: '#94A3B8', background: '#F8FAFC' }}>
+                          <span className="text-[12px] font-bold leading-none truncate max-w-full px-1">{u.unitNumber}</span>
+                          {c > 0 && <span className="mt-1 text-[10px] font-medium opacity-90 flex items-center gap-0.5"><Users size={9} />{c}</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {grouped.map(([block, list]) => (
+                <div key={block}>
+                  <div className="flex items-center gap-2.5 mb-3">
+                    <span className="text-[12px] font-semibold text-slate-700 flex items-center gap-1.5"><Layers size={13} className="text-emerald-600" />{block === '__none' ? 'No block' : `Block ${block}`}</span>
+                    <span className="text-[10.5px] font-semibold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700">{list.length}</span>
+                    <div className="flex-1 h-px bg-slate-200/70" />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                    {list.map((u, i) => <UnitCard key={u._id} u={u} i={i} onOpen={() => setSelectedId(u._id)} />)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {hasFilters && filtered.length > 0 && <p className="text-[12px] text-slate-400 text-center">Showing {filtered.length} of {units.length} units</p>}
+        </>
       )}
 
-      <UnitDrawer
-        unit={selected}
-        allResidents={allResidents}
-        onAddResident={handleAddResident}
-        onRemoveResident={handleRemoveResident}
-        onDelete={handleDelete}
-        onClose={() => setSelected(null)}
-      />
-
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Add Unit">
-        <form onSubmit={handleCreate} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-sm text-slate-500 mb-1.5 block">Unit Number *</label>
-              <input className="input-field" value={form.unitNumber} placeholder="e.g. A101"
-                onChange={(e) => setForm({ ...form, unitNumber: e.target.value })} required />
-            </div>
-            <div>
-              <label className="text-sm text-slate-500 mb-1.5 block">Block</label>
-              <input className="input-field" value={form.block} placeholder="e.g. A"
-                onChange={(e) => setForm({ ...form, block: e.target.value })} />
-            </div>
-          </div>
-          <div>
-            <label className="text-sm text-slate-500 mb-1.5 block">Type</label>
-            <select className="input-field" value={form.type}
-              onChange={(e) => setForm({ ...form, type: e.target.value })}>
-              <option value="apartment">Apartment</option>
-              <option value="house">House</option>
-              <option value="shop">Shop</option>
-              <option value="office">Office</option>
-            </select>
-          </div>
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setShowCreate(false)} className="btn-outline flex-1">Cancel</button>
-            <button type="submit" disabled={saving} className="btn-primary flex-1">
-              {saving ? 'Creating...' : 'Create Unit'}
-            </button>
-          </div>
-        </form>
-      </Modal>
+      <UnitPanel unit={selected} allResidents={allResidents} onAddResident={handleAddResident} onRemoveResident={handleRemoveResident}
+        onDelete={handleDelete} onSaved={() => reload()} onClose={() => setSelectedId(null)} />
+      <AddUnitsPanel open={showAdd} onClose={() => setShowAdd(false)} onDone={load} existing={units} />
     </div>
   );
 }
