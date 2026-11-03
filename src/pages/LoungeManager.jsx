@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { PageLoader } from '../components/ui/Spinner';
 import { useNavigate } from 'react-router-dom';
 import {
   Music, Calendar, BarChart2, Plus, Trash2, X,
@@ -13,7 +14,7 @@ import toast from 'react-hot-toast';
 import DJLive from '../components/DJLive';
 import Portal from '../components/ui/Portal';
 import Feed from '../components/lounge/Feed';
-import { LoungeBanner, LoungeNav, LoungeRightRail, EventsDesktop } from '../components/lounge/LoungeDesktop';
+import { LoungeBanner, LoungeNav, LoungeRightRail, EventsDesktop, EventFormPanel } from '../components/lounge/LoungeDesktop';
 import useIsDesktop from '../hooks/useIsDesktop';
 import useFillHeight from '../hooks/useFillHeight';
 
@@ -257,15 +258,15 @@ function EventsTab({ desktop = false, createSignal = 0 }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      {!desktop && <div className="flex items-center justify-between">
         <p className="text-sm" style={{ color:'#94A3B8' }}>{upcoming.length} upcoming · {past.length} past</p>
         <button onClick={() => setShowForm(true)} className="flex items-center gap-2 px-4 py-2 rounded-xl text-white font-semibold text-sm" style={{ background:'#10B981' }}>
           <Plus size={14} /> New Event
         </button>
-      </div>
+      </div>}
 
-      {loading ? <div className="flex justify-center py-8"><RefreshCw size={18} className="text-emerald-500 animate-spin" /></div>
-       : events.length === 0 ? <div className="rounded-2xl p-10 text-center text-sm border" style={{ color:'#94A3B8', borderColor:'#F1F5F9' }}>No events yet. Create the first one!</div>
+      {loading ? <PageLoader variant="section" />
+       : events.length === 0 && !desktop ? <div className="rounded-2xl p-10 text-center text-sm border" style={{ color:'#94A3B8', borderColor:'#F1F5F9' }}>No events yet. Create the first one!</div>
        : desktop ? (
         <EventsDesktop upcoming={upcoming} past={past} catMap={catMap} onDelete={removeEvent} onNew={() => setShowForm(true)} />
        ) : (
@@ -321,7 +322,12 @@ function EventsTab({ desktop = false, createSignal = 0 }) {
         </div>
       )}
 
-      {showForm && (
+      {desktop && (
+        <EventFormPanel open={showForm} onClose={() => setShowForm(false)} form={form} setForm={setForm}
+          categories={EVENT_CATEGORIES} catMap={catMap} onSubmit={handleCreate} saving={saving} />
+      )}
+
+      {showForm && !desktop && (
         <Portal>
         <div className="fixed inset-0 z-[100] overlay-scrim flex items-center justify-center p-4">
           <div className="w-full max-w-md rounded-2xl p-6 bg-white shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -410,7 +416,7 @@ function PollsTab({ createSignal = 0 }) {
           <Plus size={14} /> New Poll
         </button>
       </div>
-      {loading ? <div className="flex justify-center py-8"><RefreshCw size={18} className="text-emerald-500 animate-spin" /></div>
+      {loading ? <PageLoader variant="section" />
        : polls.length===0 ? <div className="rounded-2xl p-10 text-center text-sm border" style={{color:'#94A3B8',borderColor:'#F1F5F9'}}>No polls yet.</div>
        : (
         <div className="space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-4 lg:items-start">
@@ -526,7 +532,7 @@ function MusicTab() {
   const defaultTracks=queue.filter(t=>t.isDefault);
   const visibleDefaults=defaultTracks.slice(0,defaultsPage*DJ_PAGE);
 
-  if(loading) return <div className="flex justify-center py-8"><RefreshCw size={18} className="text-pink-500 animate-spin"/></div>;
+  if(loading) return <PageLoader variant="section" />;
 
   return (
     <div className="space-y-6">
@@ -699,7 +705,7 @@ export default function LoungeManager() {
   if (isDesktop) return (
     <div ref={shellRef} className="max-w-[1400px] mx-auto flex flex-col gap-5 overflow-hidden"
       style={{ height: shellHeight ?? 'calc(100vh - 4rem)' }}>
-      <div className="flex-none"><LoungeBanner isFridayNight={isFridayNight} countdown={countdown} /></div>
+      <div className="flex-none"><LoungeBanner isFridayNight={isFridayNight} countdown={countdown} onCreate={(key) => { createIn(key); centreRef.current?.scrollTo({ top: 0 }); }} /></div>
       <div className="flex-1 min-h-0 grid grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)_300px] gap-6">
         <div className="h-full min-h-0 overflow-y-auto no-scrollbar">
           <LoungeNav tabs={TABS} tab={tab} onTab={switchTab} onCreate={(key) => { createIn(key); centreRef.current?.scrollTo({ top: 0 }); }} />

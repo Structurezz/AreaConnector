@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 import Spinner from '../ui/Spinner';
+import DuesEnforcement from './DuesEnforcement';
 
 const TYPE_META = {
   security_dues: { label: 'Security dues', icon: ShieldCheck,     color: '#2563EB' },
@@ -97,6 +98,7 @@ export default function PaymentsDesktop(p) {
     { id: 'bills', label: 'Bills', hint: `${schedules.length} bill${schedules.length === 1 ? '' : 's'}` },
     { id: 'withdrawals', label: 'Withdrawals', hint: `${withdrawals.length} payout${withdrawals.length === 1 ? '' : 's'}` },
     { id: 'paystack', label: 'Paystack', hint: unlinkedCount ? `${unlinkedCount} not linked` : 'Online payments', alert: unlinkedCount > 0 },
+    { id: 'enforcement', label: 'Enforcement', hint: 'Overdue residents' },
   ];
 
   return (
@@ -426,6 +428,8 @@ export default function PaymentsDesktop(p) {
               </div>
             )
         )}
+
+        {tab === 'enforcement' && <DuesEnforcement />}
 
         {/* Paystack inflow */}
         {tab === 'paystack' && (

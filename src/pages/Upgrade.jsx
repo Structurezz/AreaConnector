@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { PageLoader, LogoLoader } from '../components/ui/Spinner';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { planAPI } from '../api';
 import { usePlan } from '../hooks/usePlan';
@@ -237,9 +238,9 @@ export default function Upgrade() {
 
   if (verifying) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-[calc(100dvh-11rem)] lg:min-h-[calc(100dvh-9rem)] flex items-center justify-center">
         <div className="glass-card p-12 text-center">
-          <RefreshCw size={36} className="text-emerald-600 animate-spin mx-auto mb-4" />
+          <LogoLoader size={56} showPhrase={false} className="mx-auto mb-4" />
           <p className="font-bold text-lg" style={{ color: '#0F172A' }}>Confirming your upgrade…</p>
           <p className="text-sm mt-1" style={{ color: '#94A3B8' }}>Please wait, do not close this tab.</p>
         </div>
@@ -285,9 +286,7 @@ export default function Upgrade() {
       )}
 
       {loading ? (
-        <div className="flex justify-center py-20">
-          <RefreshCw size={24} className="text-emerald-600 animate-spin" />
-        </div>
+        <PageLoader variant="section" />
       ) : plans.length === 0 ? (
         <div className="max-w-2xl mx-auto glass-card p-12 text-center">
           <CreditCard size={36} className="mx-auto mb-3" style={{ color: '#CBD5E1' }} />

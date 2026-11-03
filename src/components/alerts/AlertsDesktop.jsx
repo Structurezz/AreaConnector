@@ -214,12 +214,14 @@ export default function AlertsDesktop({
 }) {
   const shellRef = useRef(null);
   const height = useFillHeight(shellRef, true, { min: 560 });
-  const [selectedId, setSelectedId] = useState(null);
+  // From an alert notification: /alerts?alert=<id> selects that alert
+  const [selectedId, setSelectedId] = useState(() => new URLSearchParams(window.location.search).get('alert'));
   const [busy, setBusy] = useState(false);
   const estate = useEstate();
 
   // Keep a sensible selection: first open alert, else the first in the list
   useEffect(() => {
+    if (!alerts.length) return; // wait for the list, so a deep-linked ?alert= isn't overwritten
     if (alerts.some((a) => a._id === selectedId)) return;
     setSelectedId((alerts.find((a) => a.status === 'open') || alerts[0])?._id || null);
   }, [alerts, selectedId]);
@@ -306,7 +308,7 @@ export default function AlertsDesktop({
               const st = STATUS_META[a.status] || STATUS_META.open;
               const on = a._id === selectedId;
               return (
-                <button key={a._id} onClick={() => setSelectedId(a._id)}
+                <button key={a._id} data-focus-id={a._id} onClick={() => setSelectedId(a._id)}
                   className={`dash-rise relative w-full flex items-start gap-3 px-4 py-3 text-left border-b border-slate-50 transition-colors ${on ? 'bg-slate-50' : 'hover:bg-slate-50/60'}`}
                   style={{ animationDelay: `${80 + i * 30}ms` }}>
                   <span className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: on ? st.color : a.status === 'open' ? `${st.color}80` : 'transparent' }} />

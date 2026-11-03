@@ -52,6 +52,7 @@ export const visitorAPI = {
   checkOut: (id) => api.patch(`/visitors/${id}/checkout`),
   blacklist: (id) => api.patch(`/visitors/${id}/blacklist`),
   cancel: (id) => api.patch(`/visitors/${id}/cancel`),
+  approvePass: (id) => api.post(`/visitors/${id}/approve-pass`),
 };
 
 // Residents
@@ -72,6 +73,7 @@ export const unitAPI = {
   create: (data) => api.post('/units', data),
   update: (id, data) => api.patch(`/units/${id}`, data),
   delete: (id) => api.delete(`/units/${id}`),
+  getPayments: (id) => api.get(`/units/${id}/payments`),
 };
 
 // Announcements
@@ -103,7 +105,7 @@ export const messageAPI = {
   getConversations: () => api.get('/messages/conversations'),
   getUnread: () => api.get('/messages/unread'),
   getEstateUsers: (params) => api.get('/messages/users', { params }),
-  send: (data) => api.post('/messages', data),
+  send: (data, config) => api.post('/messages', data, config),
 };
 
 // Alerts
@@ -182,11 +184,20 @@ export const planAPI = {
 // Payments
 export const paymentAPI = {
   getStats: () => api.get('/payments/stats'),
+  getHistory: (params) => api.get('/payments/history', { params }),
   getSchedules: () => api.get('/payments/schedules'),
   createSchedule: (data) => api.post('/payments/schedules', data),
   deleteSchedule: (id) => api.delete(`/payments/schedules/${id}`),
   getSchedulePayments: (scheduleId) => api.get(`/payments/schedules/${scheduleId}/payments`),
   getInvoice: (paymentId) => api.get(`/payments/${paymentId}/invoice`),
+  // Dues enforcement (restrict services for overdue bills)
+  enforcementSettings: () => api.get('/payments/enforcement/settings'),
+  saveEnforcementSettings: (data) => api.put('/payments/enforcement/settings', data),
+  enforcementOverview: () => api.get('/payments/enforcement'),
+  enforcementResident: (id) => api.get(`/payments/enforcement/residents/${id}`),
+  sendDuesNotice: (id, data) => api.post(`/payments/enforcement/residents/${id}/notice`, data),
+  applyRestriction: (id, data) => api.post(`/payments/enforcement/residents/${id}/apply`, data),
+  liftRestriction: (id, data) => api.post(`/payments/enforcement/residents/${id}/lift`, data),
   recordManual: (paymentId, data) => api.patch(`/payments/${paymentId}/manual`, data),
   waive: (paymentId, data) => api.patch(`/payments/${paymentId}/waive`, data),
   // Force-sync a stuck Paystack reference against the gateway.

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { teamAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
-import Spinner from '../components/ui/Spinner';
+import Spinner, { PageLoader } from '../components/ui/Spinner';
 import Modal from '../components/ui/Modal';
 import toast from 'react-hot-toast';
 import {
@@ -166,7 +166,7 @@ export default function Team() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-12"><Spinner size={28} /></div>
+        <PageLoader variant="section" />
       ) : (
         <div className="glass-card divide-y" style={{ borderColor: '#F1F5F9' }}>
           {members.map(m => {

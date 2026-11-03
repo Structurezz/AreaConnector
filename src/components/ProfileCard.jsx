@@ -100,10 +100,17 @@ export default function ProfileCard() {
   const initial = (form.name || user?.name || '?')[0]?.toUpperCase();
 
   return (
-    <div className="glass-card p-6">
-      <h2 className="text-base font-semibold mb-5 flex items-center gap-2" style={{ color: '#0F172A' }}>
-        <UserIcon size={18} style={{ color: '#10B981' }} /> My Profile
-      </h2>
+    <div className="glass-card p-5">
+      <div className="flex items-start gap-3 mb-5">
+        <span className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: 'linear-gradient(135deg, #10B981, #10B981CC)', boxShadow: '0 6px 14px -6px #10B981' }}>
+          <UserIcon size={16} className="text-white" />
+        </span>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-[15px] font-semibold text-slate-900">My profile</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Your photo, name and phone as residents and staff see them.</p>
+        </div>
+      </div>
 
       {/* Avatar */}
       <div className="flex items-center gap-4 sm:gap-5 mb-5">

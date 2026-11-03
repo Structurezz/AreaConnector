@@ -6,6 +6,7 @@ import { Search, X, Plus, ChevronRight, ChevronLeft, Users, Package, Wrench, Hea
 // each app passes its own colours and card actions). Desktop keeps the table.
 
 export const VISITOR_STATUS = {
+  pending:       { label: 'Needs approval', dot: '#6366F1', bg: '#EEF2FF', text: '#4338CA' },
   active:        { label: 'Expected',   dot: '#10B981', bg: '#ECFDF5', text: '#047857' },
   'checked-in':  { label: 'Inside now', dot: '#10B981', bg: '#ECFDF5', text: '#047857' },
   'checked-out': { label: 'Left',       dot: '#94A3B8', bg: '#F1F5F9', text: '#475569' },
@@ -15,7 +16,7 @@ export const VISITOR_STATUS = {
 };
 
 export const STATUS_CHIPS = [
-  ['', 'All'], ['active', 'Expected'], ['checked-in', 'Inside'], ['checked-out', 'Left'], ['expired', 'Expired'], ['cancelled', 'Cancelled'], ['blacklisted', 'Blocked'],
+  ['', 'All'], ['pending', 'Needs approval'], ['active', 'Expected'], ['checked-in', 'Inside'], ['checked-out', 'Left'], ['expired', 'Expired'], ['cancelled', 'Cancelled'], ['blacklisted', 'Blocked'],
 ];
 
 const PURPOSE_ICON = {

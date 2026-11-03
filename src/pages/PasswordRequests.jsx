@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { PageLoader } from '../components/ui/Spinner';
 import { KeyRound, Check, X, RefreshCw, Users, Shield, Phone, Mail, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
@@ -193,9 +194,7 @@ export default function PasswordRequests() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <RefreshCw size={22} className="animate-spin" style={{ color: '#6366F1' }}/>
-        </div>
+        <PageLoader variant="section" />
       ) : items.length === 0 ? (
         <div className="glass-card p-10 text-center" style={{ border: '1px dashed #CBD5E1' }}>
           <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center"
@@ -212,8 +211,9 @@ export default function PasswordRequests() {
       ) : (
         <div className="space-y-3">
           {items.map(req => (
-            <RequestCard key={req._id} req={req} busyId={busyId}
-              onApprove={handleApprove} onDeny={handleDeny} />
+            <div key={req._id} data-focus-id={req._id}>
+              <RequestCard req={req} busyId={busyId} onApprove={handleApprove} onDeny={handleDeny} />
+            </div>
           ))}
         </div>
       )}

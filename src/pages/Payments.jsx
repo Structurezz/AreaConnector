@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axios';
-import Spinner from '../components/ui/Spinner';
+import Spinner, { PageLoader } from '../components/ui/Spinner';
 import InvoiceModal from '../components/ui/InvoiceModal';
 import BottomSheet from '../components/payments/BottomSheet';
 import SidePanel from '../components/payments/SidePanel';
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 import toast from 'react-hot-toast';
+import DuesEnforcement from '../components/payments/DuesEnforcement';
 
 const TYPE_META = {
   security_dues: { label: 'Security Dues', icon: ShieldCheck, color: 'text-blue-600',    bg: 'bg-blue-50' },
@@ -123,7 +124,11 @@ export default function ManagerPayments() {
   const [stats, setStats] = useState(null);
   const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState('bills'); // bills | withdrawals | paystack
+  // bills | withdrawals | paystack | enforcement — ?tab= lets notifications deep-link
+  const [tab, setTab] = useState(() => {
+    const t = new URLSearchParams(window.location.search).get('tab');
+    return ['bills', 'withdrawals', 'paystack', 'enforcement'].includes(t) ? t : 'bills';
+  });
   const isDesktop = useIsDesktop();
 
   // Collection (drill-down inside the Bills tab)
@@ -160,6 +165,16 @@ export default function ManagerPayments() {
     amount: '', frequency: 'monthly', dueDate: '',
   });
   const [invoicePaymentId, setInvoicePaymentId] = useState(null);
+  // From a payment notification: /payments?payment=<id> opens that invoice or receipt
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const pid = params.get('payment');
+    if (!pid) return;
+    setInvoicePaymentId(pid);
+    params.delete('payment');
+    const rest = params.toString();
+    window.history.replaceState(null, '', window.location.pathname + (rest ? `?${rest}` : ''));
+  }, []);
   const [saving, setSaving] = useState(false);
 
   const loadData = async () => {
@@ -351,7 +366,7 @@ export default function ManagerPayments() {
     }
   };
 
-  if (loading) return <div className="flex justify-center py-24"><Spinner size={28} /></div>;
+  if (loading) return <PageLoader />;
 
   const shown = (n) => (hideBalance ? '₦ ••••••' : naira(n));
   const withdrawals = wallet?.withdrawals || [];
@@ -468,6 +483,7 @@ export default function ManagerPayments() {
           { id: 'bills',       label: 'Bills' },
           { id: 'withdrawals', label: 'Withdrawals' },
           { id: 'paystack',    label: 'Paystack' },
+          { id: 'enforcement', label: 'Enforce' },
         ].map(({ id, label }) => (
           <button key={id}
             onClick={() => { setTab(id); if (id !== 'bills') setSelectedSchedule(null); }}
@@ -544,7 +560,7 @@ export default function ManagerPayments() {
           </div>
 
           {collectionLoading ? (
-            <div className="flex justify-center py-12"><Spinner /></div>
+            <PageLoader variant="section" />
           ) : collectionPayments.length === 0 ? (
             <EmptyState icon={FileText} title="No residents on this bill" />
           ) : (
@@ -610,7 +626,7 @@ export default function ManagerPayments() {
       {/* ── Withdrawals: statement ── */}
       {tab === 'withdrawals' && (
         walletLoading && !wallet ? (
-          <div className="flex justify-center py-16"><Spinner size={26} /></div>
+          <PageLoader variant="section" />
         ) : !wallet ? (
           <div className="flex justify-center py-12">
             <button onClick={loadWallet} className="btn-outline gap-2"><RefreshCw size={14} /> Retry</button>
@@ -654,6 +670,10 @@ export default function ManagerPayments() {
         )
       )}
 
+      {tab === 'enforcement' && (
+        <div className="rounded-2xl bg-white border border-slate-200/80 overflow-hidden"><DuesEnforcement /></div>
+      )}
+
       {/* ── Paystack ledger ── */}
       {tab === 'paystack' && (
         <div className="space-y-3">
@@ -668,7 +688,7 @@ export default function ManagerPayments() {
           </div>
 
           {ledgerLoading ? (
-            <div className="flex justify-center py-16"><Spinner size={26} /></div>
+            <PageLoader variant="section" />
           ) : ledger.length === 0 ? (
             <EmptyState icon={CreditCard} title="No Paystack payments yet" />
           ) : (

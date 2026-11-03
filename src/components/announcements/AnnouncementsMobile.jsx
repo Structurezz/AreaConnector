@@ -235,7 +235,7 @@ export default function AnnouncementsMobile({ announcements, loading, page, pagi
         <section>
           <h2 className="text-[16px] font-semibold text-slate-900 mb-3" style={{ letterSpacing: '-0.02em' }}>Your notices</h2>
           <div className="space-y-3">
-            {announcements.map((a, i) => <NoticeCard key={a._id} a={a} i={i} onDelete={onDelete} onTogglePin={onTogglePin} />)}
+            {announcements.map((a, i) => <div key={a._id} data-focus-id={a._id}><NoticeCard a={a} i={i} onDelete={onDelete} onTogglePin={onTogglePin} /></div>)}
           </div>
         </section>
       )}

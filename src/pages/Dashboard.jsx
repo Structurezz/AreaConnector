@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { estateAPI, visitorAPI, alertAPI, announcementAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
-import Spinner from '../components/ui/Spinner';
+import Spinner, { PageLoader } from '../components/ui/Spinner';
 import DesktopDashboard from '../components/dashboard/DesktopDashboard';
 import MobileDashboard from '../components/dashboard/MobileDashboard';
 import useIsDesktop from '../hooks/useIsDesktop';
@@ -42,7 +42,7 @@ export default function ManagerDashboard() {
   }, [estateId]);
 
   if (loading) return (
-    <div className="flex items-center justify-center h-64"><Spinner size={32} /></div>
+    <PageLoader />
   );
 
   const estateName = user?.estateId && typeof user.estateId === 'object'

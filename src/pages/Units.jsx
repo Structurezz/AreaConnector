@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { unitAPI, residentAPI } from '../api';
-import Spinner from '../components/ui/Spinner';
+import Spinner, { PageLoader } from '../components/ui/Spinner';
 import SidePanel from '../components/payments/SidePanel';
 import useCountUp from '../hooks/useCountUp';
 import {
   Home, Plus, Trash2, Users, UserPlus, UserMinus, Search, CheckCircle2, AlertCircle, Wallet, Clock, Building2, Store,
   Briefcase, LayoutGrid, Rows3, Map as MapIcon, Pencil, Layers, ArrowRight, X, Check, Sparkles, DoorOpen, ListPlus,
+  ChevronDown, Receipt,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -133,6 +134,79 @@ function UnitCard({ u, onOpen, i }) {
   );
 }
 
+/* ── A resident's payment record inside the unit panel ─────────────── */
+const BILL_STATUS = {
+  overdue: { label: 'Overdue', tone: 'red' },
+  pending: { label: 'Unpaid',  tone: 'amber' },
+  paid:    { label: 'Paid',    tone: 'green' },
+  waived:  { label: 'Waived',  tone: 'slate' },
+};
+const METHOD_LABEL = { paystack: 'Paystack', cash: 'Cash', bank_transfer: 'Bank transfer', manual: 'Manual' };
+const fullDate = (d) => new Date(d).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' });
+
+function residentDuesBadge(rec) {
+  if (!rec) return null;
+  if (rec.overdueAmount > 0) return { tone: 'red', text: `${NGN(rec.overdueAmount)} overdue` };
+  if (rec.outstanding > 0) return { tone: 'amber', text: `${NGN(rec.outstanding)} owing` };
+  if (rec.bills.length) return { tone: 'green', text: 'Paid up' };
+  return { tone: 'slate', text: 'No bills' };
+}
+
+function ResidentRow({ r, rec, open, onToggle, onRemove }) {
+  const badge = residentDuesBadge(rec);
+  const t = badge ? TONE[badge.tone] : null;
+  return (
+    <div className="rounded-xl bg-slate-50 border border-slate-100 overflow-hidden">
+      <div className="flex items-center gap-3 p-2.5">
+        <Avatar r={r} size={34} ring={false} />
+        <button type="button" onClick={onToggle} disabled={!rec} className="flex-1 min-w-0 text-left">
+          <p className="text-[13px] font-semibold text-slate-900 truncate">{r.name}</p>
+          <p className="text-[11px] text-slate-400 truncate">{r.email || r.phone || ''}</p>
+        </button>
+        {badge && (
+          <button type="button" onClick={onToggle}
+            className="flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full flex-shrink-0"
+            style={{ background: t.bg, color: t.strong, border: `1px solid ${t.bd}` }}>
+            {badge.text}
+            {rec.bills.length > 0 && <ChevronDown size={12} className={`transition-transform ${open ? 'rotate-180' : ''}`} />}
+          </button>
+        )}
+        <button onClick={onRemove} title="Remove from unit" className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50"><UserMinus size={15} /></button>
+      </div>
+      {open && rec?.bills.length > 0 && (
+        <div className="bg-white border-t border-slate-100">
+          <div className="grid grid-cols-3 gap-px bg-slate-100 text-[11.5px]">
+            {[['Owing', NGN(rec.outstanding)], ['Overdue', NGN(rec.overdueAmount)], ['Paid', NGN(rec.paidTotal)]].map(([k, v]) => (
+              <div key={k} className="bg-white px-3 py-2"><p className="text-slate-400">{k}</p><p className="font-semibold text-slate-900 tabular-nums">{v}</p></div>
+            ))}
+          </div>
+          <div className="max-h-60 overflow-y-auto divide-y divide-slate-100">
+            {rec.bills.map((b) => {
+              const st = BILL_STATUS[b.status] || BILL_STATUS.pending;
+              const bt = TONE[st.tone];
+              return (
+                <div key={b._id} className="flex items-center gap-2.5 px-3 py-2">
+                  <Receipt size={13} className="text-slate-300 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] font-medium text-slate-800 truncate">{b.title}</p>
+                    <p className="text-[10.5px] text-slate-400 truncate">
+                      {b.status === 'paid' && b.paidAt
+                        ? `Paid ${fullDate(b.paidAt)}${b.method ? ` · ${METHOD_LABEL[b.method] || b.method}` : ''}`
+                        : b.dueDate ? `Due ${fullDate(b.dueDate)}` : 'No due date'}
+                    </p>
+                  </div>
+                  <span className="text-[12px] font-semibold text-slate-900 tabular-nums">{NGN(b.amount)}</span>
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full w-14 text-center" style={{ background: bt.bg, color: bt.strong }}>{st.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Unit detail side panel ────────────────────────────────────────── */
 function UnitPanel({ unit, allResidents, onAddResident, onRemoveResident, onDelete, onSaved, onClose }) {
   const [addId, setAddId] = useState('');
@@ -141,6 +215,18 @@ function UnitPanel({ unit, allResidents, onAddResident, onRemoveResident, onDele
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({});
+  const [records, setRecords] = useState(null); // { [residentId]: record } — null while loading / no finance access
+  const [openId, setOpenId] = useState(null);
+  const residentKey = (unit?.residentIds || []).map((r) => r?._id || r).join(',');
+  useEffect(() => {
+    setRecords(null); setOpenId(null);
+    if (!unit?._id || !residentKey) return;
+    let live = true;
+    unitAPI.getPayments(unit._id)
+      .then(({ data }) => { if (live) setRecords(Object.fromEntries(data.data.map((x) => [String(x.resident._id), x]))); })
+      .catch(() => {}); // e.g. team member without Finance access — just hide the records
+    return () => { live = false; };
+  }, [unit?._id, residentKey, unit?.dues?.outstanding, unit?.dues?.paidCount]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { setAddId(''); setQ(''); setConfirmDelete(false); setEditing(false); if (unit) setForm({ unitNumber: unit.unitNumber, block: unit.block || '', type: unit.type }); }, [unit?._id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const u = unit;
@@ -245,21 +331,24 @@ function UnitPanel({ unit, allResidents, onAddResident, onRemoveResident, onDele
 
           {/* Occupants */}
           <div>
-            <p className="text-[12px] font-semibold text-slate-600 mb-2 flex items-center gap-1.5"><Users size={13} /> Residents · {count}</p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[12px] font-semibold text-slate-600 flex items-center gap-1.5"><Users size={13} /> Residents · {count}</p>
+              {records && (() => {
+                const owing = people.filter((r) => records[String(r._id)]?.outstanding > 0).length;
+                return <span className={`text-[11px] font-semibold ${owing ? 'text-red-600' : 'text-emerald-600'}`}>{owing ? `${owing} owing` : 'Nobody owing'}</span>;
+              })()}
+            </div>
             {!count ? (
               <div className="text-[12px] text-center py-6 rounded-2xl border border-dashed border-slate-200 text-slate-400">Nobody lives here yet</div>
             ) : (
               <div className="space-y-1.5">
-                {people.map((r) => (
-                  <div key={r._id} className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                    <Avatar r={r} size={34} ring={false} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-semibold text-slate-900 truncate">{r.name}</p>
-                      <p className="text-[11px] text-slate-400 truncate">{r.email || r.phone || ''}</p>
-                    </div>
-                    <button onClick={() => onRemoveResident(r._id)} title="Remove from unit" className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50"><UserMinus size={15} /></button>
-                  </div>
-                ))}
+                {[...people]
+                  .sort((x, y) => (records?.[String(y._id)]?.outstanding || 0) - (records?.[String(x._id)]?.outstanding || 0))
+                  .map((r) => (
+                    <ResidentRow key={r._id} r={r} rec={records?.[String(r._id)]}
+                      open={openId === r._id} onToggle={() => setOpenId((id) => (id === r._id ? null : r._id))}
+                      onRemove={() => onRemoveResident(r._id)} />
+                  ))}
               </div>
             )}
           </div>
@@ -435,6 +524,7 @@ export default function Units() {
     catch (err) { toast.error(err.response?.data?.message || 'Failed to add resident'); }
   };
   const handleRemoveResident = async (residentId) => {
+    if (!window.confirm("Remove this resident from the unit? Residents need a unit to use AreaMates, so they'll be signed out until they're assigned to one again.")) return;
     try { await residentAPI.assignUnit(residentId, null); toast.success('Resident removed from unit'); await reload(); }
     catch (err) { toast.error(err.response?.data?.message || 'Failed to remove resident'); }
   };
@@ -530,7 +620,7 @@ export default function Units() {
         </div>
       </div>
 
-      {loading ? <Spinner size={32} /> : units.length === 0 ? (
+      {loading ? <PageLoader variant="section" /> : units.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center">
           <span className="mx-auto w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #10B981, #047857)' }}><Home size={24} className="text-white" /></span>
           <p className="mt-4 text-[16px] font-semibold text-slate-900">Add your first units</p>

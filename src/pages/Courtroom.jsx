@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { PageLoader } from '../components/ui/Spinner';
 import {
   Scale, Gavel, Users, FileText, Clock, CheckCircle2, XCircle,
   AlertTriangle, Shield, ChevronRight, Plus, ArrowLeft, Upload,
@@ -955,14 +956,7 @@ function CaseDetail({ caseId, onBack, user, isManager }) {
     }
   }, [c?.lawyerChats]);
 
-  if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 80 }}>
-      <svg className="animate-spin" width={32} height={32} viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="12" r="10" stroke="#10B981" strokeWidth="2.5" strokeOpacity=".2"/>
-        <path d="M12 2a10 10 0 0 1 10 10" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round"/>
-      </svg>
-    </div>
-  );
+  if (loading) return <PageLoader />;
 
   if (!c) return <div style={{ padding: 32, color: '#94A3B8' }}>Case not found.</div>;
 
@@ -2188,7 +2182,15 @@ export default function Courtroom() {
   const [stats, setStats]       = useState(null);
   const [loading, setLoading]   = useState(true);
   const [residents, setResidents] = useState([]);
-  const [selectedCaseId, setSelectedCaseId] = useState(null);
+  // From a court notification: /courtroom?case=<id> opens that case
+  const [selectedCaseId, setSelectedCaseId] = useState(() => new URLSearchParams(window.location.search).get('case'));
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.get('case')) return;
+    params.delete('case');
+    const rest = params.toString();
+    window.history.replaceState(null, '', window.location.pathname + (rest ? `?${rest}` : ''));
+  }, []);
   const isDesktop = useIsDesktop();
   const [q, setQ] = useState('');
   const [guideHidden, setGuideHidden] = useState(() => { try { return localStorage.getItem(GUIDE_KEY) === '1'; } catch { return false; } });

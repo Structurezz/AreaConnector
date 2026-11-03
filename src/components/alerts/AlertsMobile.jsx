@@ -263,7 +263,7 @@ export default function AlertsMobile({
         </div>
       ) : (
         <div className="space-y-3">
-          {alerts.map((a, i) => <AlertCard key={a._id} a={a} i={i} onAck={onAck} onResolve={onResolve} />)}
+          {alerts.map((a, i) => <div key={a._id} data-focus-id={a._id}><AlertCard a={a} i={i} onAck={onAck} onResolve={onResolve} /></div>)}
         </div>
       )}
 

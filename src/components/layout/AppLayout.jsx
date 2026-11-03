@@ -8,6 +8,7 @@ import Sidebar from './Sidebar';
 import { useAuth } from '../../context/AuthContext';
 import { canOpen } from '../../utils/teamAccess';
 import NotificationBell from '../ui/NotificationBell';
+import useFocusItem from '../../hooks/useFocusItem';
 import AlertModal from '../ui/AlertModal';
 import EstateSwitcher from '../ui/EstateSwitcher';
 import { NotificationProvider } from '../../context/NotificationContext';
@@ -25,6 +26,7 @@ const BOTTOM_NAV = [
 ];
 
 export default function AppLayout({ children }) {
+  useFocusItem();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user } = useAuth();
   const bottomNav = BOTTOM_NAV.filter(l => canOpen(user, l.to));

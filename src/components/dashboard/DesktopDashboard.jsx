@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { format, subDays, formatDistanceToNow, isAfter, startOfDay } from 'date-fns';
 import { visitorAPI, paymentAPI, guardAPI, eventAPI, pollAPI } from '../../api';
-import { VISITOR_STATUS } from '../visitors/MobileVisitors';
+import { VISITOR_STATUS, purposeIcon } from '../visitors/MobileVisitors';
 import EstateMap from '../EstateMap';
 import useCountUp from '../../hooks/useCountUp';
 import { CampaignBanner } from '../campaigns/CampaignSlots';
@@ -212,53 +212,51 @@ function SecurityCard({ alerts }) {
   );
 }
 
+const VTONE = { active: '#10B981', 'checked-in': '#2563EB', 'checked-out': '#64748B', expired: '#D97706', blacklisted: '#DC2626', cancelled: '#94A3B8', pending: '#6366F1' };
+
 function RecentVisitors({ visitors }) {
   return (
     <div className={`${CARD} overflow-hidden`} style={delay(8)}>
-      <CardHead title="Recent visitors" Icon={UserCheck} color="#0EA5E9" right={<HeadLink to="/visitors">View all</HeadLink>} />
+      <CardHead title="Recent visitors" Icon={UserCheck} color="#0EA5E9" right={<HeadLink to="/visitors">Visitor log</HeadLink>} />
       {visitors.length === 0 ? (
         <div className="py-10 text-center">
           <UserCheck size={20} className="mx-auto text-slate-300" />
           <p className="text-[13px] text-slate-500 mt-2">No visitors yet</p>
         </div>
       ) : (
-        <table className="w-full">
-          <thead>
-            <tr className="text-[11px] text-slate-400 text-left">
-              <th className="px-5 py-2 font-medium">Visitor</th>
-              <th className="px-3 py-2 font-medium">Host</th>
-              <th className="px-3 py-2 font-medium">Expected</th>
-              <th className="px-5 py-2 font-medium text-right">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visitors.slice(0, 6).map((v, i) => {
-              const st = VISITOR_STATUS[v.status] || VISITOR_STATUS['checked-out'];
-              const initials = (v.visitorName || '?').split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
-              return (
-                <tr key={v._id} className="dash-rise border-t border-slate-100 hover:bg-slate-50/80 transition-colors" style={{ animationDelay: `${450 + i * 40}ms` }}>
-                  <td className="px-5 py-2.5">
-                    <Link to={`/visitors/${v._id}`} className="flex items-center gap-2.5 min-w-0" style={{ textDecoration: 'none' }}>
-                      <span className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-semibold flex-shrink-0" style={{ background: st.bg, color: st.text }}>{initials}</span>
-                      <span className="min-w-0">
-                        <span className="block text-[13px] font-medium text-slate-900 truncate">{v.visitorName}</span>
-                        <span className="block text-[11px] text-slate-400 capitalize truncate">{v.purpose}</span>
-                      </span>
-                    </Link>
-                  </td>
-                  <td className="px-3 py-2.5 text-[12px] text-slate-600 truncate max-w-[140px]">{v.hostResidentId?.name || 'Estate manager'}</td>
-                  <td className="px-3 py-2.5 text-[12px] text-slate-500 whitespace-nowrap">{v.expectedDate ? format(new Date(v.expectedDate), 'MMM d, h:mm a') : '—'}</td>
-                  <td className="px-5 py-2.5 text-right">
-                    <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full" style={{ background: st.bg, color: st.text }}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${v.status === 'checked-in' ? 'animate-pulse' : ''}`} style={{ background: st.dot }} />
-                      {st.label}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <div className="divide-y divide-slate-100">
+          {visitors.slice(0, 6).map((v, i) => {
+            const st = VISITOR_STATUS[v.status] || VISITOR_STATUS['checked-out'];
+            const tone = VTONE[v.status] || '#64748B';
+            const [PIcon, pColor, pBg] = purposeIcon(v.purpose);
+            const initials = (v.visitorName || '?').split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
+            const unit = v.hostUnitId?.unitNumber ? `${v.hostUnitId.block ? `${v.hostUnitId.block} · ` : ''}${v.hostUnitId.unitNumber}` : '';
+            return (
+              <Link key={v._id} to={`/visitors/${v._id}`}
+                className="dash-rise group flex items-center gap-3 px-5 py-2.5 hover:bg-slate-50/80 transition-colors"
+                style={{ animationDelay: `${450 + i * 40}ms`, textDecoration: 'none' }}>
+                <span className="relative flex-shrink-0">
+                  <span className="w-9 h-9 rounded-xl flex items-center justify-center text-[11px] font-bold text-white transition-transform group-hover:scale-105"
+                    style={{ background: `linear-gradient(135deg, ${tone}, ${tone}BB)`, boxShadow: `0 6px 14px -8px ${tone}` }}>{initials}</span>
+                  <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-md flex items-center justify-center border-2 border-white" style={{ background: pBg, color: pColor }}>
+                    <PIcon size={8} />
+                  </span>
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[13px] font-semibold text-slate-900 truncate">{v.visitorName}</span>
+                  <span className="block text-[11px] text-slate-400 truncate capitalize">{v.purpose} · {v.hostResidentId?.name || 'Estate manager'}{unit && ` · ${unit}`}</span>
+                </span>
+                <span className="text-[11.5px] text-slate-500 whitespace-nowrap tabular-nums">{v.expectedDate ? format(new Date(v.expectedDate), 'MMM d, h:mm a') : '—'}</span>
+                <span className="w-[104px] flex justify-end">
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: st.bg, color: st.text }}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${v.status === 'checked-in' ? 'animate-pulse' : ''}`} style={{ background: st.dot }} />
+                    {st.label}
+                  </span>
+                </span>
+              </Link>
+            );
+          })}
+        </div>
       )}
     </div>
   );
@@ -471,12 +469,241 @@ function CommunityCard({ events, polls }) {
   );
 }
 
+/* ── Bento overview ─────────────────────────────────────────────────── */
+
+const TILE = 'dash-rise group relative overflow-hidden rounded-2xl bg-white border border-slate-200/70 transition-all duration-300 hover:border-slate-300 hover:shadow-[0_18px_40px_-24px_rgba(15,23,42,0.35)]';
+
+function TileLabel({ Icon, color, children, right }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="flex items-center gap-2 text-[12px] font-medium text-slate-500">
+        <span className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: `${color}14`, color }}>
+          <Icon size={13} />
+        </span>
+        {children}
+      </span>
+      {right ?? <ArrowUpRight size={14} className="text-slate-300 transition-all group-hover:text-slate-600 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />}
+    </div>
+  );
+}
+
+function Big({ value, suffix, className = '' }) {
+  const n = useCountUp(typeof value === 'number' ? value : 0);
+  return (
+    <span className={`font-semibold text-slate-900 tabular-nums leading-none ${className}`} style={{ letterSpacing: '-0.035em' }}>
+      {typeof value === 'number' ? n.toLocaleString() : value}{suffix}
+    </span>
+  );
+}
+
+// Smooth area chart; dots/tooltips are HTML so they don't stretch with the SVG
+function AreaChart({ days }) {
+  const [hover, setHover] = useState(null);
+  const list = days || [];
+  const W = 600, H = 150, PAD = 10;
+  const max = Math.max(1, ...list.map((d) => d.count));
+  const pts = list.map((d, i) => [(i / Math.max(1, list.length - 1)) * W, PAD + (1 - d.count / max) * (H - PAD * 2)]);
+  const path = pts.reduce((acc, [x, y], i) => {
+    if (!i) return `M${x},${y}`;
+    const [px, py] = pts[i - 1];
+    const mx = (px + x) / 2;
+    return `${acc} C${mx},${py} ${mx},${y} ${x},${y}`;
+  }, '');
+  if (!days) return <div className="skeleton h-[150px] rounded-xl" />;
+  return (
+    <div className="relative h-[150px]" onMouseLeave={() => setHover(null)}>
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="absolute inset-0 w-full h-full overflow-visible">
+        <defs>
+          <linearGradient id="gateFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#10B981" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="#10B981" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="gateLine" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#34D399" /><stop offset="100%" stopColor="#0EA5E9" />
+          </linearGradient>
+        </defs>
+        {[0.25, 0.5, 0.75].map((f) => (
+          <line key={f} x1="0" x2={W} y1={H * f} y2={H * f} stroke="#F1F5F9" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+        ))}
+        <path d={`${path} L${W},${H} L0,${H} Z`} fill="url(#gateFill)" style={{ animation: 'fadeIn 0.9s ease-out 0.3s both' }} />
+        <path d={path} fill="none" stroke="url(#gateLine)" strokeWidth="2.5" strokeLinecap="round" vectorEffect="non-scaling-stroke"
+          style={{ strokeDasharray: 1400, '--len': 1400, animation: 'dashDraw 1.6s cubic-bezier(0.16,1,0.3,1) both' }} />
+      </svg>
+      <div className="absolute inset-0 flex">
+        {list.map((d, i) => (
+          <div key={i} className="flex-1 h-full relative cursor-default" onMouseEnter={() => setHover(i)} />
+        ))}
+      </div>
+      {pts.map(([x, y], i) => {
+        const on = hover === i, last = i === pts.length - 1;
+        if (!on && !last) return null;
+        return (
+          <div key={i} className="absolute pointer-events-none" style={{ left: `${(x / W) * 100}%`, top: `${(y / H) * 100}%` }}>
+            <span className="absolute -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white border-[2.5px] border-emerald-500 shadow" />
+            {last && !on && <span className="absolute -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-emerald-400 animate-ping opacity-60" />}
+            {on && (
+              <span className="absolute -translate-x-1/2 -translate-y-[calc(100%+12px)] px-2 py-1 rounded-md bg-slate-900 text-white text-[11px] font-medium whitespace-nowrap animate-scale-in">
+                {list[i].count} · {format(list[i].date, 'EEE d MMM')}
+              </span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function GateTile({ s, week }) {
+  const total = week ? week.reduce((t, d) => t + d.count, 0) : null;
+  const prev = week ? week.slice(0, 6).reduce((t, d) => t + d.count, 0) / 6 : 0;
+  const today = s.todaysVisitors || 0;
+  const delta = prev ? Math.round(((today - prev) / prev) * 100) : null;
+  return (
+    <Link to="/visitors" className={`${TILE} col-span-7 row-span-2 p-5 flex flex-col`} style={{ ...delay(1), textDecoration: 'none' }}>
+      <span className="absolute -top-24 -right-24 w-64 h-64 rounded-full pointer-events-none opacity-60 transition-transform duration-700 group-hover:scale-110"
+        style={{ background: 'radial-gradient(circle, rgba(16,185,129,0.14), transparent 70%)' }} />
+      <TileLabel Icon={Activity} color="#10B981">Gate activity</TileLabel>
+      <div className="relative mt-4 flex items-end gap-6">
+        <div>
+          <Big value={today} className="text-[40px]" />
+          <div className="mt-1.5 flex items-center gap-2 text-[12px] text-slate-500">
+            Visitors today
+            {delta !== null && (
+              <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-md ${delta >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-600'}`}>
+                {delta >= 0 ? '↑' : '↓'} {Math.abs(delta)}% vs avg
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex gap-5 pb-1 ml-auto">
+          {[
+            ['Inside now', s.activeVisitors || 0, '#0EA5E9', (s.activeVisitors || 0) > 0],
+            ['Last 7 days', total ?? 0, '#8B5CF6'],
+          ].map(([l, v, c, live]) => (
+            <div key={l} className="text-right">
+              <div className="flex items-center justify-end gap-1.5">
+                {live && <span className="relative flex w-1.5 h-1.5"><span className="absolute inset-0 rounded-full animate-ping opacity-70" style={{ background: c }} /><span className="relative w-1.5 h-1.5 rounded-full" style={{ background: c }} /></span>}
+                <Big value={v} className="text-[20px]" />
+              </div>
+              <div className="text-[11px] text-slate-400 mt-1">{l}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="relative mt-auto pt-5"><AreaChart days={week} /></div>
+      <div className="relative mt-2 flex justify-between text-[10.5px] text-slate-400">
+        {(week || []).map((d, i) => <span key={i} className={i === 6 ? 'font-semibold text-emerald-600' : ''}>{i === 6 ? 'Today' : format(d.date, 'EEE')}</span>)}
+      </div>
+    </Link>
+  );
+}
+
+function MoneyTile({ pay, wallet, loading }) {
+  if (!loading && !pay && !wallet) return null;
+  const overdue = pay?.overdue || 0;
+  return (
+    <Link to="/payments" className={`${TILE} col-span-3 p-5 flex flex-col`} style={{ ...delay(2), textDecoration: 'none' }}>
+      <TileLabel Icon={Wallet} color="#0EA5E9">Wallet balance</TileLabel>
+      <div className="mt-4">{loading ? <span className="skeleton inline-block w-28 h-7 rounded" /> : <Big value={naira(wallet?.balance)} className="text-[26px]" />}</div>
+      <div className="mt-1 text-[11.5px] text-slate-400">{naira(pay?.thisMonth)} collected this month</div>
+      <div className="mt-auto pt-4 flex items-center gap-2 text-[11.5px]">
+        <span className={`inline-flex items-center gap-1 font-semibold px-2 py-0.5 rounded-full ${overdue ? 'bg-orange-50 text-orange-600' : 'bg-emerald-50 text-emerald-700'}`}>
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: overdue ? '#F97316' : '#10B981' }} />
+          {overdue ? `${overdue} overdue` : 'No overdue'}
+        </span>
+        <span className="text-slate-400">{pay?.pending ?? 0} pending</span>
+      </div>
+    </Link>
+  );
+}
+
+function SecurityTile({ alerts, count }) {
+  const hot = count > 0;
+  const color = hot ? '#EF4444' : '#10B981';
+  return (
+    <Link to="/alerts" className={`${TILE} col-span-3 p-5 flex flex-col`} style={{ ...delay(3), textDecoration: 'none', borderColor: hot ? '#FECACA' : undefined }}>
+      <TileLabel Icon={hot ? ShieldAlert : ShieldCheck} color={color}>Security</TileLabel>
+      <div className="mt-4 flex items-center gap-4">
+        <span className="relative w-12 h-12 flex-shrink-0 flex items-center justify-center">
+          <span className="dash-ripple absolute inset-0 rounded-full border" style={{ borderColor: `${color}66` }} />
+          <span className="dash-ripple absolute inset-0 rounded-full border" style={{ borderColor: `${color}66`, animationDelay: '1s' }} />
+          <span className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${color}, ${color}CC)`, boxShadow: `0 8px 18px -8px ${color}` }}>
+            {hot ? <ShieldAlert size={16} className="text-white" /> : <ShieldCheck size={16} className="text-white" />}
+          </span>
+        </span>
+        <div className="min-w-0">
+          {hot ? <Big value={count} className="text-[26px]" /> : <span className="text-[17px] font-semibold text-slate-900">All quiet</span>}
+          <div className="text-[11.5px] text-slate-400 mt-1">{hot ? `open alert${count === 1 ? '' : 's'}` : 'No open alerts'}</div>
+        </div>
+      </div>
+      <div className="mt-auto pt-3 text-[11.5px] text-slate-500 truncate">
+        {hot && alerts[0] ? <><span className="capitalize font-medium text-red-600">{alerts[0].type}</span> · {formatDistanceToNow(new Date(alerts[0].createdAt), { addSuffix: true })}</> : 'Panic alerts reach you instantly'}
+      </div>
+    </Link>
+  );
+}
+
+function OccupancyTile({ s }) {
+  const units = s.totalUnits || 0, res = s.totalResidents || 0;
+  const pct = units ? Math.min(100, Math.round((res / units) * 100)) : 0;
+  const R = 22, C = 2 * Math.PI * R;
+  return (
+    <Link to="/residents" className={`${TILE} col-span-3 p-5 flex flex-col`} style={{ ...delay(4), textDecoration: 'none' }}>
+      <TileLabel Icon={UsersRound} color="#6366F1">Residents</TileLabel>
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <div>
+          <Big value={res} className="text-[26px]" />
+          <div className="text-[11.5px] text-slate-400 mt-1">across {units} unit{units === 1 ? '' : 's'}</div>
+        </div>
+        <span className="relative w-14 h-14 flex-shrink-0">
+          <svg width="56" height="56" viewBox="0 0 56 56" className="-rotate-90">
+            <defs><linearGradient id="occRing" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#A78BFA" /><stop offset="100%" stopColor="#6366F1" /></linearGradient></defs>
+            <circle cx="28" cy="28" r={R} fill="none" stroke="#EEF2FF" strokeWidth="6" />
+            <circle cx="28" cy="28" r={R} fill="none" stroke="url(#occRing)" strokeWidth="6" strokeLinecap="round" strokeDasharray={C}
+              style={{ '--len': C, '--to': C * (1 - pct / 100), strokeDashoffset: C * (1 - pct / 100), animation: 'dashDraw 1.3s cubic-bezier(0.16,1,0.3,1) 0.3s both' }} />
+          </svg>
+          <span className="absolute inset-0 flex items-center justify-center text-[11px] font-semibold text-slate-700 tabular-nums">{pct}%</span>
+        </span>
+      </div>
+      <div className="mt-auto pt-3 text-[11.5px] text-slate-500">Occupancy across the estate</div>
+    </Link>
+  );
+}
+
+function GuardsTile({ guards, total }) {
+  if (!guards) return null;
+  const online = (g) => g.lastSeen && Date.now() - new Date(g.lastSeen).getTime() < 15 * 60000;
+  const sorted = [...guards].sort((a, b) => Number(online(b)) - Number(online(a)));
+  const on = guards.filter(online).length;
+  return (
+    <Link to="/guards" className={`${TILE} col-span-3 p-5 flex flex-col`} style={{ ...delay(5), textDecoration: 'none' }}>
+      <TileLabel Icon={Shield} color="#0F766E">Guards on duty</TileLabel>
+      <div className="mt-4 flex items-baseline gap-1.5">
+        <Big value={on} className="text-[26px]" />
+        <span className="text-[13px] text-slate-400">/ {total ?? guards.length}</span>
+      </div>
+      <div className="text-[11.5px] text-slate-400 mt-1">active in the last 15 min</div>
+      <div className="mt-auto pt-3 flex items-center">
+        {!guards.length && <span className="text-[11.5px] text-slate-400">No guards yet</span>}
+        {sorted.slice(0, 5).map((g, i) => (
+          <span key={g._id} className="relative -ml-2 first:ml-0" style={{ zIndex: 10 - i }} title={g.name}>
+            {g.profilePhoto
+              ? <img src={g.profilePhoto} alt="" className="w-8 h-8 rounded-full object-cover border-2 border-white" />
+              : <span className="w-8 h-8 rounded-full bg-teal-50 text-teal-700 text-[11px] font-semibold flex items-center justify-center border-2 border-white">{g.name?.[0]?.toUpperCase()}</span>}
+            <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${online(g) ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+          </span>
+        ))}
+        {guards.length > 5 && <span className="-ml-2 w-8 h-8 rounded-full bg-slate-100 text-slate-500 text-[10.5px] font-semibold flex items-center justify-center border-2 border-white">+{guards.length - 5}</span>}
+      </div>
+    </Link>
+  );
+}
+
 /* ── Page ───────────────────────────────────────────────────────────── */
 
 export default function DesktopDashboard({ stats, recentVisitors, openAlerts, announcements, estate, estateName, firstName }) {
   const now = useClock();
   const week = useWeeklyTraffic();
-  const spark = useMemo(() => week?.map((d) => d.count), [week]);
   const s = stats || {};
   const alertsOpen = s.openAlerts || 0;
   const x = useExtras();
@@ -484,98 +711,59 @@ export default function DesktopDashboard({ stats, recentVisitors, openAlerts, an
   return (
     <div className="max-w-[1400px] mx-auto space-y-5">
 
-      {/* ── Welcome banner ── */}
-      <div className="dash-rise relative overflow-hidden rounded-2xl px-6 py-5"
-        style={{
-          background: 'linear-gradient(120deg, #022C22 0%, #064E3B 50%, #047857 100%)',
-          boxShadow: '0 16px 32px -18px rgba(4,120,87,0.7)',
-        }}>
-        <div className="dash-blob absolute -top-20 right-40 w-56 h-56 rounded-full blur-3xl pointer-events-none" style={{ background: 'rgba(52,211,153,0.22)' }} />
-        <div className="dash-blob absolute -bottom-24 right-0 w-64 h-64 rounded-full blur-3xl pointer-events-none" style={{ background: 'rgba(6,78,59,0.5)', animationDelay: '-6s' }} />
-        <div className="absolute inset-0 pointer-events-none opacity-20"
-          style={{
-            backgroundImage: 'radial-gradient(rgba(255,255,255,0.9) 1px, transparent 1px)', backgroundSize: '16px 16px',
-            maskImage: 'linear-gradient(90deg, transparent 30%, black 100%)', WebkitMaskImage: 'linear-gradient(90deg, transparent 30%, black 100%)',
-          }} />
-        <div className="relative flex items-center justify-between gap-4">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 text-[12px] text-white/75">
-              <span className="inline-flex items-center gap-1.5 font-semibold text-white px-2 py-0.5 rounded-full bg-white/15 border border-white/20">
-                <span className="relative flex w-1.5 h-1.5">
-                  <span className="absolute inset-0 rounded-full bg-white animate-ping" />
-                  <span className="relative w-1.5 h-1.5 rounded-full bg-white" />
-                </span>
-                Live
-              </span>
-              {format(now, 'EEEE, d MMMM · HH:mm')}
-            </div>
-            <h1 className="mt-2 text-[22px] font-semibold text-white" style={{ letterSpacing: '-0.025em' }}>
-              {greeting()}, {firstName} 👋
-            </h1>
-            <p className="mt-0.5 text-[13px] text-white/75 flex items-center gap-1.5 truncate">
-              <MapPin size={13} className="flex-shrink-0" />
-              <span className="font-medium text-white">{estate?.name || estateName}</span>
-              {estate?.address && <span className="truncate">· {estate.address}</span>}
-            </p>
+      {/* ── Header ── */}
+      <div className="dash-rise flex items-end justify-between gap-4">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-[12px] text-slate-500">
+            <span className="relative flex w-1.5 h-1.5">
+              <span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping" />
+              <span className="relative w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            </span>
+            <span className="font-medium text-slate-700">{estate?.name || estateName}</span>
+            <span className="text-slate-300">/</span>
+            {format(now, 'EEEE d MMMM · HH:mm')}
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <Link to="/alerts" className="inline-flex items-center gap-1.5 text-[13px] font-medium px-3 py-2 rounded-xl text-white bg-white/10 border border-white/25 hover:bg-white/20 transition-all hover:-translate-y-0.5 backdrop-blur">
-              <Bell size={14} /> Alerts
-              {alertsOpen > 0 && (
-                <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center animate-pulse">{alertsOpen}</span>
-              )}
-            </Link>
-            <Link to="/announcements" className="inline-flex items-center gap-1.5 text-[13px] font-medium px-3 py-2 rounded-xl text-white bg-white/10 border border-white/25 hover:bg-white/20 transition-all hover:-translate-y-0.5 backdrop-blur">
-              <Megaphone size={14} /> Post notice
-            </Link>
-            <Link to="/visitors/new" className="group inline-flex items-center gap-1.5 text-[13px] font-semibold px-3.5 py-2 rounded-xl bg-white text-emerald-700 hover:-translate-y-0.5 transition-all"
-              style={{ boxShadow: '0 8px 18px -8px rgba(0,0,0,0.35)' }}>
-              <UserPlus size={14} /> Register visitor
-              <ArrowRight size={13} className="transition-transform group-hover:translate-x-0.5" />
-            </Link>
-          </div>
+          <h1 className="mt-1.5 text-[22px] font-semibold text-slate-900" style={{ letterSpacing: '-0.025em' }}>
+            {greeting()}, {firstName}
+          </h1>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Link to="/alerts" aria-label="Alerts" className="relative w-9 h-9 rounded-xl flex items-center justify-center bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300 transition-all">
+            <Bell size={15} />
+            {alertsOpen > 0 && <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[9.5px] font-semibold flex items-center justify-center ring-2 ring-white">{alertsOpen}</span>}
+          </Link>
+          <Link to="/announcements" className="inline-flex items-center gap-1.5 h-9 text-[13px] font-medium px-3 rounded-xl text-slate-700 bg-white border border-slate-200 hover:border-slate-300 transition-all" style={{ textDecoration: 'none' }}>
+            <Megaphone size={14} /> Post notice
+          </Link>
+          <Link to="/visitors/new" className="group inline-flex items-center gap-1.5 h-9 text-[13px] font-semibold px-3.5 rounded-xl text-white bg-slate-900 hover:bg-slate-800 transition-all" style={{ textDecoration: 'none' }}>
+            <Plus size={14} /> Register visitor
+          </Link>
         </div>
       </div>
 
       <CampaignBanner />
 
-      {/* ── Stats ── */}
-      <div className="grid grid-cols-6 gap-4">
-        <Stat i={0} label="Residents"      value={s.totalResidents || 0} Icon={UsersRound} color="#6366F1" to="/residents" sub="Active members" />
-        <Stat i={1} label="Units"          value={s.totalUnits || 0}     Icon={Home}       color="#8B5CF6" to="/units"     sub={s.totalUnits ? `${Math.round(((s.totalResidents || 0) / s.totalUnits) * 100)}% occupied` : 'Homes in the estate'} />
-        <Stat i={2} label="Visitors today" value={s.todaysVisitors || 0} Icon={UserCheck}  color="#10B981" to="/visitors"  spark={spark} />
-        <Stat i={3} label="Inside now"     value={s.activeVisitors || 0} Icon={LogIn}      color="#0EA5E9" to="/visitors"  sub="Checked in at the gate" live={(s.activeVisitors || 0) > 0} />
-        <Stat i={4} label="Open alerts"    value={alertsOpen}            Icon={Bell}       color={alertsOpen > 0 ? '#EF4444' : '#F59E0B'} to="/alerts"
-          sub={alertsOpen > 0 ? 'Needs attention' : 'Nothing pending'} live={alertsOpen > 0} />
-        <Stat i={5} label="Overdue dues"   value={x.pay?.overdue || 0}   Icon={AlertTriangle} color={(x.pay?.overdue || 0) > 0 ? '#F97316' : '#14B8A6'} to="/payments"
-          sub={x.pay ? `${x.pay.pending || 0} pending payments` : 'Payments'} />
-      </div>
-
-      {/* ── Map + money ── */}
-      <div className="grid grid-cols-12 gap-5 items-stretch">
-        <div className="col-span-8 dash-rise" style={delay(6)}>
-          <EstateMap name={estate?.name || estateName} address={estate?.address} location={estate?.location} height={330} variant="card" />
+      {/* ── Bento overview ── */}
+      <div className="grid grid-cols-12 auto-rows-[minmax(168px,auto)] gap-4">
+        <GateTile s={s} week={week} />
+        <div className="dash-rise col-span-5 row-span-2 min-w-0" style={delay(2)}>
+          <EstateMap name={estate?.name || estateName} address={estate?.address} location={estate?.location} height={352} variant="card" />
         </div>
-        <div className="col-span-4"><FinanceCard pay={x.pay} wallet={x.wallet} loading={x.loading} /></div>
+        <MoneyTile pay={x.pay} wallet={x.wallet} loading={x.loading} />
+        <SecurityTile alerts={openAlerts} count={alertsOpen} />
+        <OccupancyTile s={s} />
+        <GuardsTile guards={x.guards} total={x.guardTotal} />
       </div>
 
-      {/* ── Traffic + Security ── */}
-      <div className="grid grid-cols-12 gap-5">
-        <div className="col-span-8"><TrafficChart days={week} /></div>
-        <div className="col-span-4"><SecurityCard alerts={openAlerts} /></div>
-      </div>
-
-      {/* ── Visitors + side rail ── */}
+      {/* ── Activity ── */}
       <div className="grid grid-cols-12 gap-5 items-start">
-        <div className="col-span-8"><RecentVisitors visitors={recentVisitors} /></div>
-        <div className="col-span-4 space-y-5">
-          <GuardsCard guards={x.guards} total={x.guardTotal} />
+        <div className="col-span-8 min-w-0"><RecentVisitors visitors={recentVisitors} /></div>
+        <div className="col-span-4 space-y-5 min-w-0">
           <Notices items={announcements} />
           <QuickActions />
         </div>
       </div>
 
-      {/* ── Community ── */}
       <CommunityCard events={x.events} polls={x.polls} />
     </div>
   );

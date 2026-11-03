@@ -136,7 +136,7 @@ export default function ResidentsMobile({
             <MoreVertical size={16} />
           </button>
           <Menu open={more} onClose={() => setMore(false)} className="right-0 top-11">
-            <MenuItem Icon={Upload} label="Bulk invite (paste a list)" onClick={() => { setMore(false); onBulk(); }} />
+            <MenuItem Icon={Upload} label="Bulk invite (CSV, PDF or paste)" onClick={() => { setMore(false); onBulk(); }} />
             <MenuItem Icon={Plus} label="Add without email" onClick={() => { setMore(false); onAdd(); }} />
           </Menu>
         </div>

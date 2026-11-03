@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { PageLoader } from '../components/ui/Spinner';
 import toast from 'react-hot-toast';
 import { format, isToday, isYesterday } from 'date-fns';
 import { Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, Search, RefreshCw, ShieldCheck, Hand } from 'lucide-react';
@@ -126,7 +127,7 @@ export default function Calls() {
               className="input-field pl-10 py-3" />
           </div>
           {loading ? (
-            <div className="py-16 flex justify-center"><RefreshCw size={22} className="animate-spin text-emerald-500" /></div>
+            <PageLoader variant="section" />
           ) : filtered.length === 0 ? (
             <div className="glass-card py-12 text-center text-sm text-slate-400">
               {q ? `No match for “${q}”` : tab === 'staff' ? 'No other staff in this estate yet' : 'No residents yet'}

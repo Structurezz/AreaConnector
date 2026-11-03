@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { residentAPI, unitAPI } from '../api';
-import Spinner from '../components/ui/Spinner';
+import Spinner, { PageLoader } from '../components/ui/Spinner';
 import {
   Users, ChevronLeft, ChevronRight, UserX, UserCheck,
   Phone, Mail, Calendar, Home, DoorOpen, MessageSquare,
@@ -9,11 +9,14 @@ import {
 import useCountUp from '../hooks/useCountUp';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
+import useIsDesktop from '../hooks/useIsDesktop';
+import ResidentProfileDesktop from '../components/residents/ResidentProfileDesktop';
 
 export default function ResidentDetail() {
   const { id } = useParams();
   const { state } = useLocation();
   const navigate = useNavigate();
+  const isDesktop = useIsDesktop();
 
   const [resident, setResident] = useState(state?.resident || null);
   const [units, setUnits] = useState(state?.units || []);
@@ -84,6 +87,10 @@ export default function ResidentDetail() {
     }
   };
 
+  if (loading && isDesktop) return (
+    <PageLoader />
+  );
+
   if (loading) return (
     <div className="max-w-lg mx-auto space-y-4">
       <div className="skeleton h-4 w-24 rounded" />
@@ -97,6 +104,16 @@ export default function ResidentDetail() {
   );
 
   if (!resident) return null;
+
+  if (isDesktop) return (
+    <ResidentProfileDesktop
+      resident={resident} units={units}
+      onBack={() => navigate('/residents')}
+      onToggle={handleToggle} acting={acting}
+      assignUnitId={assignUnitId} setAssignUnitId={setAssignUnitId}
+      onAssign={handleAssign} savingUnit={savingUnit}
+    />
+  );
 
   const r = resident;
   const unitDisplay = r.unitId

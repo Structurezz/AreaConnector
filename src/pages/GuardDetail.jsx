@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { guardAPI } from '../api';
-import Spinner from '../components/ui/Spinner';
+import Spinner, { PageLoader } from '../components/ui/Spinner';
 import {
   Shield, ChevronLeft, UserX, UserCheck, Trash2,
   Phone, Mail, Calendar,
@@ -59,11 +59,7 @@ export default function GuardDetail() {
     }
   };
 
-  if (loading) return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <Spinner />
-    </div>
-  );
+  if (loading) return <PageLoader />;
 
   if (!guard) return null;
 

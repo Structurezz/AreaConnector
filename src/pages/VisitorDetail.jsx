@@ -5,7 +5,7 @@ import { visitorAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import Badge, { visitorStatusBadge } from '../components/ui/Badge';
-import Spinner from '../components/ui/Spinner';
+import Spinner, { PageLoader } from '../components/ui/Spinner';
 import {
   ArrowLeft, UserCheck, Share2, CheckCircle, LogIn, LogOut, Ban, MessageCircle, Copy, XCircle, Calendar, Clock, Timer,
   Phone, Mail, StickyNote, ChevronRight, Zap, Users, Package, Wrench, Heart, MoreHorizontal, Home, ShieldCheck,
@@ -358,14 +358,19 @@ export default function VisitorDetailPage() {
     catch { toast.error('Failed'); }
   };
 
-  if (loading) return <div className="flex justify-center p-16"><Spinner /></div>;
+  if (loading) return <PageLoader />;
   if (!visitor) return null;
 
   const isDone     = visitor.status === 'checked-out';
   const isIn       = visitor.status === 'checked-in';
   const isBlocked  = ['blacklisted', 'expired', 'cancelled'].includes(visitor.status);
-  const canShare   = !isDone && !isBlocked;
-  const canCancel  = visitor.status === 'active';
+  const isHeld     = visitor.status === 'pending' && visitor.awaitingApproval;
+  const canShare   = !isDone && !isBlocked && !isHeld;
+  const canCancel  = visitor.status === 'active' || isHeld;
+  const approvePass = async () => {
+    try { const { data } = await visitorAPI.approvePass(visitor._id); toast.success(data.message || 'Pass approved'); load(); }
+    catch (e) { toast.error(e.response?.data?.message || 'Couldn\'t approve the pass'); }
+  };
   const expectedAt = new Date(visitor.expectedDate);
   const cancelPass = async () => {
     if (!confirm(`Cancel ${visitor.visitorName}'s pass? The gate will refuse the code.`)) return;
@@ -497,6 +502,16 @@ export default function VisitorDetailPage() {
       <div className="fixed inset-x-0 z-30 px-4 pt-3 md:static md:mt-4 md:px-4"
         style={{ bottom: 'calc(4.25rem + env(safe-area-inset-bottom))', background: 'linear-gradient(to top, rgba(248,250,252,1) 75%, rgba(248,250,252,0))' }}>
         <div className="max-w-xl mx-auto space-y-2">
+          {isHeld && (
+            <>
+              <p className="text-[12px] text-center text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-xl px-3 py-2">
+                The host's visitor passes need approval (overdue estate bills). The visitor gets their code once you approve.
+              </p>
+              <button onClick={approvePass} className="w-full flex items-center justify-center gap-2 rounded-2xl font-bold text-white py-3.5 active:scale-[0.99] transition-transform" style={{ background: 'linear-gradient(135deg,#6366F1,#4F46E5)' }}>
+                <CheckCircle size={17} /> Approve pass
+              </button>
+            </>
+          )}
           {visitor.status === 'active' && (
             <button onClick={handleCheckIn} className="w-full flex items-center justify-center gap-2 rounded-2xl font-bold text-white py-3.5 active:scale-[0.99] transition-transform" style={{ background: 'linear-gradient(135deg,#10B981,#059669)' }}>
               <LogIn size={17} /> Check in now
