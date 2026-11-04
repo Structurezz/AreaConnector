@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { FamilyRequestsBanner, FamilyRequestsPanel, AddFamilyPanel, MyHouseholdCard } from '../components/residents/FamilyPanels';
 import { residentAPI, unitAPI } from '../api';
 import Modal from '../components/ui/Modal';
 import {
   Users, Search, Plus, UserX, UserCheck,
   MailPlus, Upload, CheckCircle, AlertCircle, X, ChevronLeft,
   Home, Building2, DoorOpen, ChevronRight, Mail, Phone, Download, FileText, Trash2,
-  Calendar, LayoutGrid, List,
+  Calendar, LayoutGrid, List, Crown, UserPlus, Clock,
 } from 'lucide-react';
 import Portal, { Z } from '../components/ui/Portal';
 import PageHeader, { HEADER_BTN_PRIMARY, HEADER_BTN_GHOST } from '../components/dashboard/PageHeader';
@@ -52,6 +53,79 @@ function ResidentStatus({ r }) {
       <span className={`w-1.5 h-1.5 rounded-full ${r.isActive ? 'bg-emerald-500' : 'bg-red-500'}`} />
       {r.isActive ? 'Active' : 'Suspended'}
     </span>
+  );
+}
+
+// Family members are added by their household head from AreaMates
+export function FamilyTag({ r, className = '' }) {
+  if (r?.householdRole !== 'member') return null;
+  const head = r.householdHead?.name?.split(' ')[0];
+  return (
+    <span className={`inline-flex items-center gap-1 text-[10.5px] font-semibold px-1.5 py-0.5 rounded-md bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-100 whitespace-nowrap ${className}`}>
+      <Users size={10} /> {r.relationship || 'Family'}{head ? ` of ${head}` : ''}
+    </span>
+  );
+}
+
+const HOUSEHOLD_PERMS = { visitors: 'Visitors', payments: 'Bills', chat: 'Chat', community: 'Lounge', marketplace: 'Market', neighbours: 'Calls' };
+
+// The household this resident heads or belongs to (loaded on open)
+function HouseholdSection({ r }) {
+  const navigate = useNavigate();
+  const [data, setData] = useState(null);
+  const [adding, setAdding] = useState(false);
+  const reload = () => residentAPI.getOne(r._id).then(({ data }) => setData(data.data)).catch(() => setData({ household: [] }));
+  useEffect(() => { setData(null); reload(); }, [r._id]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!data) return null;
+  const isMember = data.householdRole === 'member';
+  const head = isMember ? data.householdHead : null;
+  const family = (data.household || []).filter(m => m._id !== r._id);
+  const headForAdd = isMember ? head : { _id: r._id, name: r.name };
+
+  const Row = ({ p, crown }) => (
+    <button onClick={() => navigate(`/residents/${p._id}`)}
+      className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50 transition-colors">
+      <ResidentAvatar r={p} size={32} ring={false} />
+      <div className="min-w-0 flex-1">
+        <div className="text-[13px] font-semibold text-slate-900 truncate flex items-center gap-1.5">
+          {p.name}{crown && <Crown size={11} className="text-amber-500" />}{p.isActive === false && <span className="text-[10px] font-semibold text-slate-400">· paused</span>}
+        </div>
+        <div className="text-[11px] text-slate-400 truncate">
+          {crown ? 'Head of household' : `${p.relationship || 'Family member'} · ${(p.householdPermissions || []).map(k => HOUSEHOLD_PERMS[k]).filter(Boolean).join(', ') || 'Basics only'}`}
+        </div>
+      </div>
+      <ChevronRight size={14} className="text-slate-300" />
+    </button>
+  );
+
+  return (
+    <div className="rounded-2xl border border-slate-200 overflow-hidden" style={{ animation: 'dashRise 0.45s cubic-bezier(0.16,1,0.3,1) 120ms both' }}>
+      <div className="flex items-center gap-2.5 px-4 py-3 border-b border-slate-100" style={{ background: 'linear-gradient(135deg, #FDF4FF, transparent 70%)' }}>
+        <span className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #D946EF, #A855F7)', boxShadow: '0 4px 10px -4px #A855F7' }}>
+          <Users size={13} className="text-white" />
+        </span>
+        <span className="text-[13px] font-semibold text-slate-900 flex-1">Household</span>
+        {headForAdd?._id && r.isActive !== false && (
+          <button onClick={() => setAdding(true)}
+            className="inline-flex items-center gap-1 text-[11.5px] font-semibold px-2 py-1 rounded-lg text-fuchsia-700 bg-fuchsia-50 hover:bg-fuchsia-100">
+            <UserPlus size={12} /> Add
+          </button>
+        )}
+      </div>
+      {!isMember && !family.length && (
+        <p className="px-4 py-3 text-[12px] text-slate-500">No family members yet. {r.name.split(' ')[0]} can add them from AreaMates, or you can add them here.</p>
+      )}
+      <div className="divide-y divide-slate-100">
+        {head && <Row p={head} crown />}
+        {family.map(m => <Row key={m._id} p={m} />)}
+      </div>
+      <p className="px-4 py-2.5 text-[11px] text-slate-400 bg-slate-50/60">
+        {isMember
+          ? 'Family members aren\'t billed and follow the head\'s unit, dues status and suspension.'
+          : 'Suspending or moving this resident also applies to their family. Family members are never billed.'}
+      </p>
+      {adding && <AddFamilyPanel head={headForAdd} onClose={() => setAdding(false)} onSaved={reload} />}
+    </div>
   );
 }
 
@@ -125,6 +199,7 @@ function ResidentDrawer({ resident, units, onToggle, onAssignUnit, onClose, onOp
                 <h2 className="text-[17px] font-semibold text-slate-900 truncate">{r.name}</h2>
                 <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                   <ResidentStatus r={r} />
+                  <FamilyTag r={r} />
                   {currentUnit && (
                     <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white/80 text-indigo-700 border border-indigo-100">
                       <Home size={10} /> {aptOf(currentUnit)}
@@ -153,6 +228,8 @@ function ResidentDrawer({ resident, units, onToggle, onAssignUnit, onClose, onOp
                   : <div key={label} className={cls} style={style}>{inner}</div>;
               })}
             </div>
+
+            <HouseholdSection r={r} />
 
             {/* Apartment assignment */}
             <div className="rounded-2xl border border-slate-200 overflow-hidden">
@@ -296,6 +373,7 @@ function ResidentCard({ r, i, selected, onOpen, onToggle }) {
       <div className="px-4 pb-4 -mt-4">
         <ResidentAvatar r={r} size={40} />
         <div className="mt-2 text-[14px] font-semibold text-slate-900 truncate">{r.name}</div>
+        {r.householdRole === 'member' && <FamilyTag r={r} className="mt-1" />}
         <div className="text-[11px] text-slate-400">{r.createdAt ? `Joined ${format(new Date(r.createdAt), 'MMM yyyy')}` : ' '}</div>
         <div className="mt-3 space-y-1.5">
           <div className="text-[12px] text-slate-600 truncate flex items-center gap-2"><Mail size={12} className="text-slate-300 flex-shrink-0" />{r.email}</div>
@@ -317,7 +395,8 @@ function ResidentCard({ r, i, selected, onOpen, onToggle }) {
 
 const PAGE_SIZE = 20;
 
-export default function ManagerResidents() {
+export default function ManagerResidents({ mode = 'residents' }) {
+  const tab = mode; // 'family' = the Family members page (own nav item)
   const [residents, setResidents]   = useState([]);
   const [units, setUnits]           = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -325,6 +404,20 @@ export default function ManagerResidents() {
   // Residents with no unit can't sign in; ?filter=no_unit comes from the "waiting for a unit" notification
   const [noUnitOnly, setNoUnitOnly] = useState(() => new URLSearchParams(window.location.search).get('filter') === 'no_unit');
   const [noUnitCount, setNoUnitCount] = useState(0);
+  // Family members residents asked to add (estate setting "Approve family members")
+  const location = useLocation();
+  const [familyCount, setFamilyCount] = useState(0);
+  const [familyTotal, setFamilyTotal] = useState(0);
+  const [addingFamily, setAddingFamily] = useState(false);
+  const [showRequests, setShowRequests] = useState(false);
+  const loadFamilyCount = () => residentAPI.familyRequests().then(({ data }) => setFamilyCount(data.data.length)).catch(() => {});
+  useEffect(() => {
+    loadFamilyCount();
+    if (new URLSearchParams(location.search).get('requests') === '1') {
+      setShowRequests(true);
+      navigate(location.pathname, { replace: true });
+    }
+  }, [location.search]); // eslint-disable-line react-hooks/exhaustive-deps
   const [page, setPage]             = useState(1);
   const [limit, setLimit]           = useState(PAGE_SIZE);
   const [pagination, setPagination] = useState({ total: 0, pages: 1 });
@@ -349,17 +442,18 @@ export default function ManagerResidents() {
   const changeView = (v) => { setView(v); try { localStorage.setItem('residents:view', v); } catch {} };
   const navigate = useNavigate();
 
-  const load = async (p = page, q = search, lim = limit, nu = noUnitOnly) => {
+  const load = async (p = page, q = search, lim = limit, nu = noUnitOnly, t = tab) => {
     setLoading(true);
     try {
       const [r, u] = await Promise.all([
-        residentAPI.getAll({ page: p, limit: lim, search: q || undefined, filter: nu ? 'no_unit' : undefined }),
+        residentAPI.getAll({ page: p, limit: lim, search: q || undefined, filter: nu && t !== 'family' ? 'no_unit' : undefined, type: t === 'family' ? 'family' : undefined }),
         unitAPI.getAll(),
       ]);
       setResidents(r.data.data);
       const pg = r.data.pagination || { total: r.data.data.length, pages: 1 };
       setPagination(pg);
-      if (!q && !nu) setTotalAll(pg.total);
+      setTotalAll(r.data.residentCount ?? (t !== 'family' && !q && !nu ? pg.total : totalAll));
+      setFamilyTotal(r.data.familyCount || 0);
       setNoUnitCount(r.data.noUnitCount || 0);
       setUnits(u.data.data);
     } catch {
@@ -373,7 +467,8 @@ export default function ManagerResidents() {
   const handleLimit  = (l) => { setLimit(l); setPage(1); load(1, search, l); };
   const handleSearch = (q) => { setSearch(q); setPage(1); load(1, q); };
 
-  useEffect(() => { load(1, ''); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Residents and Family members share this page component: reload when switching between them
+  useEffect(() => { setPage(1); setSearch(''); setSelected(null); load(1, '', limit, noUnitOnly, mode); }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
   const toggleNoUnit = (on) => { setNoUnitOnly(on); setPage(1); load(1, search, limit, on); };
 
   // ── Single invite ────────────────────────────────────────────────
@@ -526,6 +621,26 @@ export default function ManagerResidents() {
 
       {/* ── Desktop ── */}
       <div className="hidden lg:block space-y-5 max-w-[1400px] mx-auto">
+        {tab === 'family' ? (
+        <PageHeader
+          title="Family members"
+          subtitle="People residents have added to their homes"
+          actions={<>
+            <button onClick={() => setShowRequests(true)} className={HEADER_BTN_GHOST}>
+              <Clock size={14} /> Requests{familyCount ? ` (${familyCount})` : ''}
+            </button>
+            <button onClick={() => setAddingFamily(true)} className={HEADER_BTN_PRIMARY}>
+              <UserPlus size={15} /> Add family member
+            </button>
+          </>}
+          stats={[
+            { label: 'Family members',    value: familyTotal, Icon: Users,     color: '#A855F7', hint: 'Added by households' },
+            { label: 'Awaiting approval', value: familyCount, Icon: Clock,     color: '#F59E0B', hint: 'Requests to review' },
+            { label: 'Residents',         value: totalAll,    Icon: Home,      color: '#6366F1', hint: 'Household heads' },
+            { label: 'Apartments',        value: unitStats.total, Icon: Building2, color: '#10B981', hint: 'Units in the estate' },
+          ]}
+        />
+        ) : (
         <PageHeader
           title="Residents"
           subtitle="Everyone who calls the estate home"
@@ -541,8 +656,10 @@ export default function ManagerResidents() {
             { label: 'Open spaces', value: unitStats.open,     Icon: DoorOpen,  color: '#F59E0B', hint: 'Room left across units' },
           ]}
         />
+        )}
 
-        {noUnitCount > 0 && (
+        {tab === 'family' && <FamilyRequestsBanner count={familyCount} onOpen={() => setShowRequests(true)} />}
+        {tab === 'residents' && noUnitCount > 0 && (
           <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white px-4 py-3 flex flex-wrap items-center gap-3">
             <span className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0"><AlertCircle size={17} /></span>
             <div className="flex-1 min-w-[200px]">
@@ -600,9 +717,14 @@ export default function ManagerResidents() {
                       <Users size={28} className="text-white" />
                     </div>
                   </div>
-                  <p className="font-semibold text-slate-800 mt-2">{search ? `No residents match “${search}”` : 'No residents yet'}</p>
-                  <p className="text-sm text-slate-400">Invite residents and they'll appear here.</p>
-                  {!search && (
+                  <p className="font-semibold text-slate-800 mt-2">{search ? `No ${tab === 'family' ? 'family members' : 'residents'} match “${search}”` : tab === 'family' ? 'No family members yet' : 'No residents yet'}</p>
+                  <p className="text-sm text-slate-400">{tab === 'family'
+                    ? 'Residents add their family from AreaMates, or you can add them here.'
+                    : "Invite residents and they'll appear here."}</p>
+                  {!search && tab === 'family' && (
+                    <button onClick={() => setAddingFamily(true)} className="btn-primary gap-2 mt-2"><UserPlus size={14} /> Add family member</button>
+                  )}
+                  {!search && tab === 'residents' && (
                     <button onClick={() => setShowInvite(true)} className="btn-primary gap-2 mt-2"><MailPlus size={14} /> Send an invite</button>
                   )}
                 </div>
@@ -627,7 +749,9 @@ export default function ManagerResidents() {
                           <span className="block flex-shrink-0 transition-transform duration-300 group-hover:scale-105"><ResidentAvatar r={r} size={36} /></span>
                           <div className="min-w-0">
                             <div className="font-semibold text-[13px] text-slate-900 truncate">{r.name}</div>
-                            {r.createdAt && <div className="text-[11px] text-slate-400">Joined {format(new Date(r.createdAt), 'MMM yyyy')}</div>}
+                            {r.householdRole === 'member'
+                              ? <FamilyTag r={r} />
+                              : r.createdAt && <div className="text-[11px] text-slate-400">Joined {format(new Date(r.createdAt), 'MMM yyyy')}</div>}
                           </div>
                         </div>
                         <div className="min-w-0 space-y-0.5">
@@ -665,14 +789,36 @@ export default function ManagerResidents() {
             </div>
           </div>
 
-          <OccupancyRail units={units} unitStats={unitStats} totalAll={totalAll}
-            onInvite={() => setShowInvite(true)} onBulk={() => setShowBulk(true)} />
+          {tab === 'family' ? (
+            <aside className="dash-rise space-y-4 xl:sticky xl:top-4" style={{ animationDelay: '440ms' }}>
+              <MyHouseholdCard onChanged={() => load()} />
+              <div className="rounded-2xl bg-white border border-slate-200/70 p-5">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #D946EF, #A855F7)' }}><Users size={14} className="text-white" /></span>
+                  <span className="text-[13.5px] font-semibold text-slate-900">How families work</span>
+                </div>
+                <ul className="mt-3.5 space-y-2.5 text-[12.5px] text-slate-600 leading-relaxed">
+                  <li className="flex gap-2"><Crown size={13} className="text-amber-500 mt-0.5 flex-shrink-0" />Each family belongs to a resident you onboarded, who decides what they can use.</li>
+                  <li className="flex gap-2"><CheckCircle size={13} className="text-emerald-500 mt-0.5 flex-shrink-0" />Family members are never billed and follow their head's unit, dues and suspension.</li>
+                  <li className="flex gap-2"><UserPlus size={13} className="text-fuchsia-500 mt-0.5 flex-shrink-0" />Add family to any resident, or to your own household if you live here.</li>
+                </ul>
+                <button onClick={() => navigate('/settings#preferences')}
+                  className="mt-4 w-full py-2 rounded-xl text-[12.5px] font-semibold text-fuchsia-700 bg-fuchsia-50 hover:bg-fuchsia-100">
+                  Approval settings
+                </button>
+              </div>
+            </aside>
+          ) : (
+            <OccupancyRail units={units} unitStats={unitStats} totalAll={totalAll}
+              onInvite={() => setShowInvite(true)} onBulk={() => setShowBulk(true)} />
+          )}
         </div>
       </div>
 
       {/* ── Phone / tablet ── */}
       <div className="lg:hidden space-y-4">
-        {noUnitCount > 0 && (
+        {tab === 'family' && <FamilyRequestsBanner count={familyCount} onOpen={() => setShowRequests(true)} />}
+        {tab === 'residents' && noUnitCount > 0 && (
           <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white px-4 py-3 flex flex-wrap items-center gap-3">
             <span className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0"><AlertCircle size={17} /></span>
             <div className="flex-1 min-w-[200px]">
@@ -685,12 +831,14 @@ export default function ManagerResidents() {
             </button>
           </div>
         )}
+        {tab === 'family' && <MyHouseholdCard onChanged={() => load()} />}
         <ResidentsMobile
           residents={residents} loading={loading} search={search} onSearch={handleSearch}
           totalAll={totalAll} unitStats={unitStats}
           page={page} pagination={pagination} limit={limit} onPage={handlePage}
           onOpen={openResident} onToggle={handleToggle}
           onInvite={() => setShowInvite(true)} onBulk={() => setShowBulk(true)} onAdd={() => setShowAdd(true)}
+          family={tab === 'family'} familyTotal={familyTotal} requestCount={familyCount} onRequests={() => setShowRequests(true)} onAddFamily={() => setAddingFamily(true)}
         />
       </div>
 
@@ -905,6 +1053,9 @@ export default function ManagerResidents() {
           </div>
         )}
       </Modal>
+
+      {addingFamily && <AddFamilyPanel onClose={() => setAddingFamily(false)} onSaved={() => load()} />}
+      {showRequests && <FamilyRequestsPanel onClose={() => setShowRequests(false)} onChanged={() => { loadFamilyCount(); load(); }} />}
 
       <ResidentDrawer
         resident={selected}

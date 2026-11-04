@@ -104,7 +104,8 @@ function AppRoutes() {
       <Route path="/visitors" element={<RequireManager><PlanGate feature="visitorManagement" featureName="Visitor Management"><Visitors /></PlanGate></RequireManager>} />
       <Route path="/visitors/new" element={<RequireManager><PlanGate feature="visitorManagement" featureName="Visitor Management"><NewVisitorPage /></PlanGate></RequireManager>} />
       <Route path="/visitors/:id" element={<RequireManager><PlanGate feature="visitorManagement" featureName="Visitor Management"><VisitorDetail /></PlanGate></RequireManager>} />
-      <Route path="/residents" element={<RequireManager><PlanGate feature="residentManagement" featureName="Resident Management"><Residents /></PlanGate></RequireManager>} />
+      <Route path="/residents" element={<RequireManager key="residents-page"><PlanGate feature="residentManagement" featureName="Resident Management"><Residents key="residents" /></PlanGate></RequireManager>} />
+      <Route path="/family-members" element={<RequireManager key="family-page"><PlanGate feature="residentManagement" featureName="Resident Management"><Residents key="family" mode="family" /></PlanGate></RequireManager>} />
       <Route path="/residents/:id" element={<RequireManager><PlanGate feature="residentManagement" featureName="Resident Management"><ResidentDetail /></PlanGate></RequireManager>} />
       <Route path="/units" element={<RequireManager><PlanGate feature="unitManagement" featureName="Unit Management"><Units /></PlanGate></RequireManager>} />
       <Route path="/announcements" element={<RequireManager><PlanGate feature="announcements" featureName="Announcements"><Announcements /></PlanGate></RequireManager>} />

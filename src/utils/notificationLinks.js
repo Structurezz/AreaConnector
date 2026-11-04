@@ -16,6 +16,7 @@ export function linkFor(n) {
     case 'payment_received':
     case 'payment_due':
     case 'payment_overdue':        return { to: m.paymentId ? `/payments?payment=${m.paymentId}` : '/payments' };
+    case 'household_request':      return { to: '/family-members?requests=1' };
     case 'new_resident':           return { to: m.residentId ? `/residents/${m.residentId}` : '/residents' };
     case 'password_reset_request': return { to: m.requestId ? `/settings/password-requests?focus=${m.requestId}` : '/settings/password-requests' };
     case 'plan_expiry_warning':

@@ -3,12 +3,13 @@ import { Link } from 'react-router-dom';
 import {
   ChevronLeft, Phone, Mail, Calendar, Home, UserX, UserCheck, Wallet, AlertTriangle,
   UserCheck as VisitorIcon, ShieldAlert, ShieldCheck, Activity, Building2, CheckCircle2,
-  Clock, Receipt, Eye, EyeOff, Gavel, ChevronRight, BarChart3,
+  Clock, Receipt, Eye, EyeOff, Gavel, ChevronRight, BarChart3, Users, Crown, UserPlus,
 } from 'lucide-react';
 import { format, formatDistanceToNow, subMonths, startOfMonth, isSameMonth } from 'date-fns';
 import { paymentAPI, visitorAPI, alertAPI } from '../../api';
 import { VISITOR_STATUS, purposeIcon } from '../visitors/MobileVisitors';
 import useCountUp from '../../hooks/useCountUp';
+import { AddFamilyPanel } from './FamilyPanels';
 
 const naira = (n) => `₦${Math.round(n || 0).toLocaleString()}`;
 const idOf = (x) => (x && typeof x === 'object' ? x._id : x);
@@ -194,7 +195,8 @@ function Timeline({ payments, visitors, alerts }) {
 
 /* ── Page ────────────────────────────────────────────────────────── */
 
-export default function ResidentProfileDesktop({ resident: r, units, onBack, onToggle, acting, assignUnitId, setAssignUnitId, onAssign, savingUnit }) {
+export default function ResidentProfileDesktop({ resident: r, units, onBack, onToggle, acting, assignUnitId, setAssignUnitId, onAssign, savingUnit, onFamilyChanged }) {
+  const [addingFamily, setAddingFamily] = useState(false);
   const [tab, setTab] = useState('overview');
   const [data, setData] = useState({ loading: true, payments: [], visitors: [], alerts: [], dues: null });
 
@@ -469,6 +471,51 @@ export default function ResidentProfileDesktop({ resident: r, units, onBack, onT
               </button>
             </div>
           </Card>
+
+          {/* Household */}
+          {r.household && (
+            <Card title="Household" Icon={Users} color="#A855F7" delay={380}
+              right={
+                <span className="flex items-center gap-2">
+                  <span className="text-[11px] text-slate-400">{r.householdRole === 'member' ? `${r.relationship || 'Family'} of ${r.householdHead?.name?.split(' ')[0] || 'head'}` : `${r.household.length} family`}</span>
+                  {r.isActive !== false && (
+                    <button onClick={() => setAddingFamily(true)} className="inline-flex items-center gap-1 text-[11.5px] font-semibold px-2 py-1 rounded-lg text-fuchsia-700 bg-fuchsia-50 hover:bg-fuchsia-100">
+                      <UserPlus size={12} /> Add
+                    </button>
+                  )}
+                </span>
+              }>
+              {r.householdRole !== 'member' && !r.household.length && (
+                <p className="px-5 py-3 text-[12px] text-slate-500">No family members yet. {r.name?.split(' ')[0]} can add them from AreaMates, or you can add them here.</p>
+              )}
+              <div className="divide-y divide-slate-100">
+                {[
+                  ...(r.householdRole === 'member' && r.householdHead ? [{ ...r.householdHead, _head: true }] : []),
+                  ...(r.household || []).filter((m) => m._id !== r._id),
+                ].map((p) => (
+                  <Link key={p._id} to={`/residents/${p._id}`} className="flex items-center gap-3 px-5 py-2.5 hover:bg-slate-50 transition-colors" style={{ textDecoration: 'none' }}>
+                    {p.profilePhoto
+                      ? <img src={p.profilePhoto} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                      : <span className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-[12px] font-bold text-white" style={{ background: 'linear-gradient(135deg,#C084FC,#A855F7)' }}>{p.name?.[0]?.toUpperCase()}</span>}
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[13px] font-semibold text-slate-900 truncate flex items-center gap-1.5">{p.name}{p._head && <Crown size={11} className="text-amber-500" />}</div>
+                      <div className="text-[11px] text-slate-400 truncate">{p._head ? 'Head of household' : `${p.relationship || 'Family member'}${p.isActive === false ? ' · paused' : ''}`}</div>
+                    </div>
+                    <ChevronRight size={14} className="text-slate-300" />
+                  </Link>
+                ))}
+              </div>
+              <p className="px-5 py-2.5 text-[11px] text-slate-400 bg-slate-50/60 border-t border-slate-100">
+                {r.householdRole === 'member' ? 'Not billed. Follows the head\'s unit, dues status and suspension.' : 'Added from AreaMates. Family members are never billed.'}
+              </p>
+            </Card>
+          )}
+          {addingFamily && (
+            <AddFamilyPanel
+              head={r.householdRole === 'member' ? r.householdHead : { _id: r._id, name: r.name }}
+              onClose={() => setAddingFamily(false)}
+              onSaved={() => onFamilyChanged?.()} />
+          )}
 
           {/* Account */}
           <Card title="Account" Icon={Clock} color="#0EA5E9" delay={400}>

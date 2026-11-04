@@ -7,7 +7,7 @@ import ProfileCard from '../components/ProfileCard';
 import {
   Settings2, Save, ScrollText, Upload, FileText, Trash2, Download, Sparkles, MapPin, Building2,
   CheckCircle2, KeyRound, Lock, ShieldCheck, ChevronRight, UsersRound, User as UserIcon, Copy,
-  Eye, EyeOff, Store, MessagesSquare, UserCheck, AlertCircle, RotateCcw, Check,
+  Eye, EyeOff, Store, MessagesSquare, UserCheck, AlertCircle, RotateCcw, Check, Users,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -21,7 +21,7 @@ function formatBytes(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
-const PREF_KEYS = ['requireVisitorApproval', 'marketplaceApproval', 'allowGuestChat'];
+const PREF_KEYS = ['requireVisitorApproval', 'marketplaceApproval', 'householdApproval', 'allowGuestChat'];
 
 const inputCls = 'w-full rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10';
 
@@ -95,6 +95,7 @@ export default function ManagerSettings() {
   const [settings, setSettings] = useState({
     requireVisitorApproval: false,
     marketplaceApproval: false,
+    householdApproval: false,
     allowGuestChat: true,
   });
   const [saving, setSaving] = useState(false);
@@ -266,6 +267,7 @@ export default function ManagerSettings() {
   const toggles = [
     { key: 'requireVisitorApproval', icon: UserCheck,      color: '#0EA5E9', label: 'Require visitor approval', desc: 'All visitor pre-registrations require manager approval before the code is sent.' },
     { key: 'marketplaceApproval',    icon: Store,          color: '#F59E0B', label: 'Marketplace approval',     desc: 'All marketplace listings require manager approval before going live.' },
+    { key: 'householdApproval',      icon: Users,          color: '#A855F7', label: 'Approve family members',   desc: 'When residents add family to their home, you approve each person before their invite is sent. Off: invites go out automatically.' },
     { key: 'allowGuestChat',         icon: MessagesSquare, color: '#8B5CF6', label: 'Allow community chat',     desc: 'Residents can message each other in the estate group chat.' },
   ];
 
@@ -415,7 +417,7 @@ export default function ManagerSettings() {
           <Section id="preferences" icon={Settings2} color="#0EA5E9" delay={120}
             title="Estate preferences"
             desc="Control what needs your approval and how residents interact.">
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-2">
               {toggles.map(({ key, icon: I, color, label, desc }) => {
                 const on = !!settings[key];
                 return (

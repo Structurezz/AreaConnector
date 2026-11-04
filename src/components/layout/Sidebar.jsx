@@ -1,9 +1,11 @@
-import { NavLink, Link, useNavigate } from 'react-router-dom';
+import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { residentAPI } from '../../api';
 import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, UserCheck, Users, Home, Megaphone,
   MessageSquare, Bell, Settings, LogOut, CreditCard,
-  Zap, Crown, Music, Lock, Shield, Scale, Radio, Gift, PhoneCall, ShoppingBag, UsersRound, Building2,
+  Zap, Crown, Music, Lock, Shield, Scale, Radio, Gift, PhoneCall, ShoppingBag, UsersRound, Building2, HeartHandshake,
 } from 'lucide-react';
 import { usePlan } from '../../hooks/usePlan';
 import { canOpen, isTeamMember } from '../../utils/teamAccess';
@@ -17,6 +19,7 @@ const NAV = [
       { to: '/dashboard',     icon: LayoutDashboard, label: 'Dashboard' },
       { to: '/visitors',      icon: UserCheck,       label: 'Visitors',        feature: 'visitorManagement' },
       { to: '/residents',     icon: Users,           label: 'Residents',       feature: 'residentManagement' },
+      { to: '/family-members', icon: HeartHandshake, label: 'Family Members',  feature: 'residentManagement', badge: 'family' },
       { to: '/units',         icon: Home,            label: 'Units',           feature: 'unitManagement' },
       { to: '/announcements', icon: Megaphone,       label: 'Announcements',   feature: 'announcements' },
       { to: '/payments',      icon: CreditCard,      label: 'Payments',        feature: 'paymentSystem' },
@@ -48,6 +51,14 @@ export default function Sidebar({ mobile = false, onClose }) {
   const { user, estate, logout } = useAuth();
   const navigate = useNavigate();
   const { planName, planColor, status, isComp, can } = usePlan();
+  // Family members waiting for approval → badge on the Family Members link
+  const location = useLocation();
+  const [familyRequests, setFamilyRequests] = useState(0);
+  const showFamily = canOpen(user, '/family-members') && can('residentManagement');
+  useEffect(() => {
+    if (!showFamily) return;
+    residentAPI.familyRequests().then(({ data }) => setFamilyRequests(data.data.length)).catch(() => {});
+  }, [location.pathname, showFamily]);
   const estateName =
     user?.estateId && typeof user.estateId === 'object'
       ? user.estateId.name
@@ -139,7 +150,7 @@ export default function Sidebar({ mobile = false, onClose }) {
               {section}
             </p>
             <div className="space-y-0.5">
-              {links.map(({ to, icon: Icon, label, feature }) => {
+              {links.map(({ to, icon: Icon, label, feature, badge }) => {
                 const locked = feature ? !can(feature) : false;
                 return (
                   <NavLink
@@ -153,6 +164,9 @@ export default function Sidebar({ mobile = false, onClose }) {
                     style={{ opacity: locked ? 0.5 : 1 }}>
                     <Icon size={15} className="flex-shrink-0" />
                     <span className="flex-1">{label}</span>
+                    {badge === 'family' && !locked && familyRequests > 0 && (
+                      <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-fuchsia-600 text-white text-[10px] font-bold flex items-center justify-center" title={`${familyRequests} waiting for approval`}>{familyRequests}</span>
+                    )}
                     {locked && <Lock size={10} style={{ color: '#94A3B8', flexShrink: 0 }} />}
                   </NavLink>
                 );

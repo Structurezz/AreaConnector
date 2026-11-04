@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { format } from 'date-fns';
 import {
-  Users, Search, X, Building2, Home, DoorOpen, MailPlus, Upload, Plus, MoreVertical,
-  UserX, UserCheck, Phone, Mail, ChevronRight,
+  Users, Search, X, Building2, Home, DoorOpen, MailPlus, Upload, Plus, MoreVertical, UserX, UserCheck, Phone, Mail, ChevronRight, Clock, UserPlus,
 } from 'lucide-react';
 import useCountUp from '../../hooks/useCountUp';
 import Pagination from '../ui/Pagination';
@@ -72,6 +71,11 @@ function ResidentCard({ r, i, onOpen, onToggle }) {
             {!r.isActive && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-red-50 text-red-600 flex-shrink-0">Suspended</span>}
           </div>
           <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+            {r.householdRole === 'member' && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-fuchsia-50 text-fuchsia-700">
+                <Users size={11} /> {r.relationship || 'Family'}{r.householdHead?.name ? ` of ${r.householdHead.name.split(' ')[0]}` : ''}
+              </span>
+            )}
             {unit
               ? <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700"><Home size={11} /> {unit}</span>
               : <span className="text-[11px] italic text-slate-400">No apartment</span>}
@@ -104,6 +108,7 @@ function ResidentCard({ r, i, onOpen, onToggle }) {
 export default function ResidentsMobile({
   residents, loading, search, onSearch, totalAll, unitStats,
   page, pagination, limit, onPage, onOpen, onToggle, onInvite, onBulk, onAdd,
+  family = false, familyTotal = 0, requestCount = 0, onRequests, onAddFamily,
 }) {
   const [filter, setFilter] = useState('');
   const [more, setMore] = useState(false);
@@ -123,8 +128,22 @@ export default function ResidentsMobile({
       <header className="dash-rise flex items-end justify-between gap-3">
         <div className="min-w-0">
           <div className="text-[12px] font-medium text-slate-400">Community</div>
-          <h1 className="text-[22px] font-semibold text-slate-900 leading-tight" style={{ letterSpacing: '-0.03em' }}>Residents</h1>
+          <h1 className="text-[22px] font-semibold text-slate-900 leading-tight" style={{ letterSpacing: '-0.03em' }}>{family ? 'Family members' : 'Residents'}</h1>
         </div>
+        {family ? (
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <button onClick={onRequests} aria-label="Family requests"
+              className="relative w-9 h-9 rounded-xl border border-slate-200 bg-white flex items-center justify-center text-slate-500 active:bg-slate-50">
+              <Clock size={16} />
+              {requestCount > 0 && <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-fuchsia-600 text-white text-[10px] font-bold flex items-center justify-center">{requestCount}</span>}
+            </button>
+            <button onClick={onAddFamily}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[13px] font-semibold text-white active:scale-95 transition-transform"
+              style={{ background: 'linear-gradient(135deg, #A855F7, #7C3AED)', boxShadow: '0 10px 20px -12px rgba(124,58,237,0.9)' }}>
+              <UserPlus size={15} /> Add family
+            </button>
+          </div>
+        ) : (
         <div className="relative flex items-center gap-1.5 flex-shrink-0">
           <button onClick={onInvite}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[13px] font-semibold text-white active:scale-95 transition-transform"
@@ -140,15 +159,23 @@ export default function ResidentsMobile({
             <MenuItem Icon={Plus} label="Add without email" onClick={() => { setMore(false); onAdd(); }} />
           </Menu>
         </div>
+        )}
       </header>
 
       {/* Stats */}
+      {family ? (
+      <div className="grid grid-cols-2 gap-2.5">
+        <Tile i={0} label="Family members"    value={familyTotal}  Icon={Users} color="#A855F7" />
+        <Tile i={1} label="Awaiting approval" value={requestCount} Icon={Clock} color="#F59E0B" />
+      </div>
+      ) : (
       <div className="grid grid-cols-2 gap-2.5">
         <Tile i={0} label="Residents"   value={totalAll}           Icon={Users}     color="#10B981" />
         <Tile i={1} label="Apartments"  value={unitStats.total}    Icon={Building2} color="#6366F1" />
         <Tile i={2} label="Occupied"    value={unitStats.occupied} Icon={Home}      color="#0EA5E9" />
         <Tile i={3} label="Open spaces" value={unitStats.open}     Icon={DoorOpen}  color="#F59E0B" />
       </div>
+      )}
 
       {/* Search */}
       <div className="dash-rise relative" style={{ animationDelay: '240ms' }}>
@@ -195,12 +222,12 @@ export default function ResidentsMobile({
             <Users size={24} className="relative text-emerald-600" />
           </span>
           <div className="mt-4 text-[15px] font-semibold text-slate-900">
-            {search ? `No residents match “${search}”` : filter ? 'Nobody in this group' : 'No residents yet'}
+            {search ? `No ${family ? 'family members' : 'residents'} match “${search}”` : filter ? 'Nobody in this group' : family ? 'No family members yet' : 'No residents yet'}
           </div>
           <div className="text-[13px] text-slate-500 mt-1">
-            {search || filter ? 'Try a different search or filter.' : 'Invite residents and they will appear here.'}
+            {search || filter ? 'Try a different search or filter.' : family ? 'Residents add their family from AreaMates.' : 'Invite residents and they will appear here.'}
           </div>
-          {!search && !filter && (
+          {!search && !filter && !family && (
             <button onClick={onInvite} className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-semibold text-white"
               style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}><MailPlus size={14} /> Send an invite</button>
           )}

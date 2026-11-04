@@ -59,6 +59,12 @@ export const visitorAPI = {
 export const residentAPI = {
   getAll: (params) => api.get('/residents', { params }),
   getOne: (id) => api.get(`/residents/${id}`),
+  // Households: family requests (estate.settings.householdApproval) + manager adds
+  familyRequests: () => api.get('/residents/family-requests'),
+  approveFamily:  (id) => api.post(`/residents/family-requests/${id}/approve`),
+  rejectFamily:   (id, reason) => api.post(`/residents/family-requests/${id}/reject`, { reason }),
+  addFamily:      (headId, data) => api.post(`/residents/${headId}/family`, data),
+  resendFamily:   (id) => api.post(`/residents/${id}/family/resend-invite`),
   invite: (data) => api.post('/residents/invite', data),
   bulkInvite: (residents) => api.post('/residents/bulk-invite', { residents }),
   add: (data) => api.post('/residents', data),
@@ -302,4 +308,14 @@ export const campaignAPI = {
   markSeen:  (id) => api.post(`/campaigns/${id}/seen`),
   dismiss:   (id) => api.post(`/campaigns/${id}/dismiss`),
   click:     (id) => api.post(`/campaigns/${id}/click`),
+};
+
+// The manager's own household (managers who live in the estate head their own family)
+export const householdAPI = {
+  get:          () => api.get('/household'),
+  setHome:      (unitId) => api.patch('/household/home', { unitId }),
+  invite:       (data) => api.post('/household', data),
+  update:       (id, data) => api.patch(`/household/${id}`, data),
+  resendInvite: (id) => api.post(`/household/${id}/resend-invite`),
+  remove:       (id) => api.delete(`/household/${id}`),
 };

@@ -27,13 +27,14 @@ export default function ResidentDetail() {
 
   useEffect(() => {
     const fetches = [];
-    if (!resident) {
-      fetches.push(
-        residentAPI.getOne(id)
-          .then(({ data }) => setResident(data.data))
-          .catch(() => { toast.error('Resident not found'); navigate('/residents'); })
-      );
-    }
+    // Always load the full record (household, head) — list state is only a preview,
+    // and household links move between residents on this same page.
+    if (resident && resident._id !== id) { setResident(null); setLoading(true); }
+    fetches.push(
+      residentAPI.getOne(id)
+        .then(({ data }) => setResident(data.data))
+        .catch(() => { toast.error('Resident not found'); navigate('/residents'); })
+    );
     if (!units.length) {
       fetches.push(
         unitAPI.getAll()
@@ -112,6 +113,7 @@ export default function ResidentDetail() {
       onToggle={handleToggle} acting={acting}
       assignUnitId={assignUnitId} setAssignUnitId={setAssignUnitId}
       onAssign={handleAssign} savingUnit={savingUnit}
+      onFamilyChanged={() => residentAPI.getOne(id).then(({ data }) => setResident(data.data)).catch(() => {})}
     />
   );
 

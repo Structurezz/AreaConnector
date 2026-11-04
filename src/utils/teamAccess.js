@@ -15,6 +15,7 @@ export const AREA_LABELS = {
 // listed (dashboard, calls, settings for your own password) are open to all.
 const AREA_BY_PATH = {
   residents:     ['residents'],
+  'family-members': ['residents'],
   units:         ['residents'],
   visitors:      ['security'],
   guards:        ['security'],
