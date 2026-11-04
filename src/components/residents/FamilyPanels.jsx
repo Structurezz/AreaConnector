@@ -213,6 +213,27 @@ export function FamilyRequestsPanel({ onClose, onChanged }) {
   );
 }
 
+/* ── Where the manager lives (their own household) ────────────────── */
+
+const unitName = (u) => u.block ? `Block ${u.block} · Apt ${u.unitNumber}` : `Apt ${u.unitNumber}`;
+
+function HomeUnitSelect({ value, onChange, currentId, required }) {
+  const [units, setUnits] = useState(null);
+  useEffect(() => { unitAPI.getAll().then(({ data }) => setUnits(data.data || [])).catch(() => setUnits([])); }, []);
+  if (!units) return <div className="skeleton h-10 rounded-[9px]" />;
+  if (!units.length) return <p className="text-[12px] text-slate-500">No units yet. Create your unit on the Units page first.</p>;
+  return (
+    <select className="input-field text-sm" value={value} onChange={e => onChange(e.target.value)} required={required}>
+      <option value="">Choose the unit you live in…</option>
+      {units.map(u => {
+        const cnt = (u.residentIds || []).length, mx = u.maxOccupants || 7;
+        const full = cnt >= mx && u._id !== currentId;
+        return <option key={u._id} value={u._id} disabled={full}>{unitName(u)} — {cnt}/{mx}{full ? ' (full)' : u._id === currentId ? ' (your home)' : ''}</option>;
+      })}
+    </select>
+  );
+}
+
 /* ── Manager adds a family member to a resident ───────────────────── */
 
 // Pick which resident's household the family member joins (heads only)
@@ -292,11 +313,11 @@ export function AddFamilyPanel({ head: fixedHead, member, onClose, onSaved }) {
   // Managers adding their own family need a home unit first
   const [myHome, setMyHome] = useState(undefined); // undefined = not loaded, null = none
   const [homeUnitId, setHomeUnitId] = useState('');
-  const [units, setUnits] = useState([]);
   useEffect(() => {
     if (!head?.self || editing || myHome !== undefined) return;
-    householdAPI.get().then(({ data }) => setMyHome(data.data.unit || null)).catch(() => setMyHome(null));
-    unitAPI.getAll().then(({ data }) => setUnits(data.data || [])).catch(() => {});
+    householdAPI.get()
+      .then(({ data }) => { const u = data.data.unit || null; setMyHome(u); if (u) setHomeUnitId(String(u._id)); })
+      .catch(() => setMyHome(null));
   }, [head, editing, myHome]);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const toggle = (k) => set('permissions', form.permissions.includes(k) ? form.permissions.filter(x => x !== k) : [...form.permissions, k]);
@@ -305,7 +326,7 @@ export function AddFamilyPanel({ head: fixedHead, member, onClose, onSaved }) {
   const save = async (e) => {
     e.preventDefault();
     if (!editing && !head) { toast.error('Choose the resident whose household they\'re joining'); return; }
-    if (!editing && head.self && myHome === null && !homeUnitId) { toast.error('Choose the unit you live in'); return; }
+    if (!editing && head.self && !homeUnitId) { toast.error('Choose the unit you live in'); return; }
     setSaving(true);
     try {
       let data;
@@ -313,7 +334,7 @@ export function AddFamilyPanel({ head: fixedHead, member, onClose, onSaved }) {
         ({ data } = await householdAPI.update(member._id, { relationship: form.relationship, permissions: form.permissions }));
         data.message = `${member.name.split(' ')[0]}'s access updated`;
       } else if (head.self) {
-        if (!myHome && homeUnitId) await householdAPI.setHome(homeUnitId);
+        if (homeUnitId && homeUnitId !== String(myHome?._id || '')) await householdAPI.setHome(homeUnitId);
         ({ data } = await householdAPI.invite(form));
       } else {
         ({ data } = await residentAPI.addFamily(head._id, form));
@@ -351,21 +372,16 @@ export function AddFamilyPanel({ head: fixedHead, member, onClose, onSaved }) {
             <HouseholdPicker value={head} onChange={setHead} />
           </div>
         )}
-        {!editing && head?.self && myHome === null && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3.5">
-            <p className="text-[12.5px] font-semibold text-amber-900">Which unit do you live in?</p>
-            <p className="text-[11.5px] text-amber-800/80 mb-2">Your family joins you there. You only set this once.</p>
-            <select className="input-field text-sm" value={homeUnitId} onChange={e => setHomeUnitId(e.target.value)} required>
-              <option value="">Choose your unit…</option>
-              {units.map(u => {
-                const cnt = (u.residentIds || []).length, mx = u.maxOccupants || 7;
-                return <option key={u._id} value={u._id} disabled={cnt >= mx}>{u.block ? `Block ${u.block} · Apt ${u.unitNumber}` : `Apt ${u.unitNumber}`} — {cnt}/{mx}{cnt >= mx ? ' (full)' : ''}</option>;
-              })}
-            </select>
+        {!editing && head?.self && (
+          <div className={`rounded-xl border p-3.5 ${homeUnitId ? 'border-slate-200 bg-slate-50/60' : 'border-amber-200 bg-amber-50/60'}`}>
+            <p className={`text-[12.5px] font-semibold flex items-center gap-1.5 ${homeUnitId ? 'text-slate-800' : 'text-amber-900'}`}><Home size={13} /> Where you live</p>
+            <p className={`text-[11.5px] mb-2 ${homeUnitId ? 'text-slate-500' : 'text-amber-800/80'}`}>
+              {myHome ? `Your family joins you at ${myHome.label} (${myHome.occupants}/${myHome.maxOccupants}). Change it if you've moved.` : 'Choose your unit. Your family joins you there.'}
+            </p>
+            {myHome === undefined
+              ? <div className="skeleton h-10 rounded-[9px]" />
+              : <HomeUnitSelect value={homeUnitId} onChange={setHomeUnitId} currentId={myHome?._id ? String(myHome._id) : ''} required />}
           </div>
-        )}
-        {!editing && head?.self && myHome && (
-          <p className="text-[12px] text-slate-500 flex items-center gap-1.5"><Home size={12} className="text-fuchsia-500" /> Joining you at {myHome.label} · {myHome.occupants}/{myHome.maxOccupants} occupants</p>
         )}
         {!editing && <div className="space-y-2.5">
           <input className="input-field text-sm" placeholder="Full name" value={form.name} onChange={e => set('name', e.target.value)} required />
@@ -445,18 +461,53 @@ export function MyHouseholdCard({ onChanged }) {
   };
 
   const members = data?.members || [];
+  const [editingHome, setEditingHome] = useState(false);
+  const [homeId, setHomeId] = useState('');
+  const [savingHome, setSavingHome] = useState(false);
+  const saveHome = async () => {
+    if (!homeId) return;
+    setSavingHome(true);
+    try { const { data: r } = await householdAPI.setHome(homeId); toast.success(r.message); setEditingHome(false); changed(); }
+    catch (err) { toast.error(err.response?.data?.message || 'Could not set your unit'); }
+    finally { setSavingHome(false); }
+  };
   return (
     <div className="rounded-2xl bg-white border border-slate-200/70 overflow-hidden">
       <div className="flex items-center gap-2.5 px-5 pt-4 pb-3">
         <span className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #F59E0B, #F97316)' }}><Crown size={14} className="text-white" /></span>
         <div className="flex-1 min-w-0">
           <div className="text-[13.5px] font-semibold text-slate-900">My household</div>
-          <div className="text-[11.5px] text-slate-400 truncate">{data?.unit ? `${data.unit.label} · ${data.unit.occupants}/${data.unit.maxOccupants}` : 'Your own family on AreaMates'}</div>
+          <div className="text-[11.5px] text-slate-400 truncate">{data?.unit ? `${data.unit.occupants}/${data.unit.maxOccupants} people in your unit` : 'Your own family on AreaMates'}</div>
         </div>
         <button onClick={() => setPanel('add')} className="inline-flex items-center gap-1 text-[11.5px] font-semibold px-2 py-1 rounded-lg text-fuchsia-700 bg-fuchsia-50 hover:bg-fuchsia-100">
           <UserPlus size={12} /> Add
         </button>
       </div>
+      {data && (
+        <div className={`mx-5 mb-3 rounded-xl border px-3 py-2.5 ${data.unit ? 'border-slate-200 bg-slate-50/60' : 'border-amber-200 bg-amber-50/60'}`}>
+          {editingHome ? (
+            <div className="space-y-2">
+              <HomeUnitSelect value={homeId} onChange={setHomeId} currentId={data.unit?._id ? String(data.unit._id) : ''} />
+              <div className="flex gap-2">
+                <button onClick={() => setEditingHome(false)} className="flex-1 py-1.5 rounded-lg text-[12px] font-semibold text-slate-600 bg-white border border-slate-200">Cancel</button>
+                <button onClick={saveHome} disabled={!homeId || savingHome} className="flex-1 py-1.5 rounded-lg text-[12px] font-semibold text-white disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #A855F7, #7C3AED)' }}>
+                  {savingHome ? 'Saving…' : 'Save'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Home size={13} className={data.unit ? 'text-fuchsia-500' : 'text-amber-600'} />
+              <div className="flex-1 min-w-0 text-[12px]">
+                <span className="text-slate-400">Where you live: </span>
+                <span className={`font-semibold ${data.unit ? 'text-slate-800' : 'text-amber-800'}`}>{data.unit ? data.unit.label : 'Not set'}</span>
+              </div>
+              <button onClick={() => { setHomeId(data.unit?._id ? String(data.unit._id) : ''); setEditingHome(true); }}
+                className="text-[11.5px] font-semibold text-fuchsia-700 hover:underline">{data.unit ? 'Change' : 'Set unit'}</button>
+            </div>
+          )}
+        </div>
+      )}
       {!data ? (
         <div className="px-5 pb-4"><div className="skeleton h-10 rounded-xl" /></div>
       ) : members.length === 0 ? (
