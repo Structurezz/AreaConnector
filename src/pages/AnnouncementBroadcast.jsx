@@ -15,7 +15,9 @@ import Portal from '../components/ui/Portal';
 import useIsDesktop from '../hooks/useIsDesktop';
 import useFillHeight from '../hooks/useFillHeight';
 import { useRoomEngagement, useMicLevel } from '../components/podcast/StudioPanels';
-import { BroadcastSetupDesktop, BroadcastStudioDesktop, TalkingPoints, TEMPLATES } from '../components/announcements/BroadcastDesktop';
+import { BroadcastSetupDesktop, BroadcastStudioDesktop, TalkingPoints, broadcastTemplates } from '../components/announcements/BroadcastDesktop';
+import { useSite } from '../context/SiteContext';
+import { lower } from '../utils/siteTypes';
 import MobileHostStudio from '../components/podcast/MobileHostStudio';
 import SetupSteps, { MicCheck } from '../components/podcast/SetupSteps';
 
@@ -29,6 +31,7 @@ const fmtDur = (ms) => {
 
 export default function AnnouncementBroadcast() {
   const { user } = useAuth();
+  const { terms: T, isEstate: E } = useSite();
   const { emit } = useSocket() || {};
   const navigate = useNavigate();
 
@@ -174,9 +177,9 @@ export default function AnnouncementBroadcast() {
     const firstName = user?.name?.split(' ')[0] || 'there';
     return (
       <SetupSteps heading="Live announcement" accent={RED} onExit={() => navigate('/announcements')}
-        onFinish={goLive} finishing={starting} finishLabel="Go live to the estate"
+        onFinish={goLive} finishing={starting} finishLabel={`Go live to the ${lower(T.site)}`}
         steps={[
-          { key: 'headline', title: 'What do residents need to hear?', hint: `This headline appears on every resident's banner, ${firstName}.`,
+          { key: 'headline', title: `What do ${lower(T.members)} need to hear?`, hint: E ? `This headline appears on every resident's banner, ${firstName}.` : `This headline appears on everyone's banner, ${firstName}.`,
             ready: !!headline.trim(),
             content: (
               <div className="space-y-4">
@@ -192,7 +195,7 @@ export default function AnnouncementBroadcast() {
                 <div>
                   <div className="text-[12px] font-semibold text-slate-500 mb-2">Or start from a template</div>
                   <div className="flex flex-wrap gap-1.5">
-                    {TEMPLATES.map(([emoji, text]) => (
+                    {broadcastTemplates(T).map(([emoji, text]) => (
                       <button key={text} type="button" onClick={() => setHeadline(text)}
                         className="text-[12px] font-medium px-3 py-1.5 rounded-full border transition-all active:scale-95"
                         style={headline === text ? { borderColor: RED, background: '#FEF2F2', color: RED_DARK } : { borderColor: '#E2E8F0', background: '#fff', color: '#475569' }}>
@@ -202,14 +205,14 @@ export default function AnnouncementBroadcast() {
                   </div>
                 </div>
                 <div className="rounded-2xl border border-dashed border-slate-200 p-3">
-                  <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1"><Bell size={11} /> What residents will see</div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1"><Bell size={11} /> What {lower(T.members)} will see</div>
                   <div className="rounded-2xl p-3 flex items-start gap-3 border" style={{ background: 'linear-gradient(135deg,#FEF2F2,#FFFFFF)', borderColor: '#FECACA' }}>
                     <span className="relative w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `linear-gradient(135deg, ${RED}, ${RED_DARK})` }}>
                       <Megaphone size={15} className="text-white" />
                       <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 border-2 border-white animate-pulse" />
                     </span>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[10px] font-bold tracking-wider text-red-600">LIVE NOW <span className="text-slate-400 font-medium tracking-normal">· {user?.name || 'Estate manager'}</span></div>
+                      <div className="text-[10px] font-bold tracking-wider text-red-600">LIVE NOW <span className="text-slate-400 font-medium tracking-normal">· {user?.name || T.manager}</span></div>
                       <div className="text-[13px] font-semibold text-slate-900 mt-0.5 break-words">{headline.trim() || 'Your headline appears here'}</div>
                       <div className="text-[11px] text-slate-500 mt-0.5">Tap to listen</div>
                     </div>
@@ -250,7 +253,7 @@ export default function AnnouncementBroadcast() {
               <div className="space-y-3">
                 <MicCheck accent={RED} />
                 <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4 space-y-2 text-[13px] text-slate-600">
-                  <div>🔔 Every resident gets a notification the moment you go live.</div>
+                  <div>🔔 {E ? 'Every resident gets' : 'Everyone gets'} a notification the moment you go live.</div>
                   <div>📻 Going live interrupts any DJ set that's playing.</div>
                   <div>🎧 Speak close to the mic, away from noise.</div>
                 </div>
@@ -265,7 +268,7 @@ export default function AnnouncementBroadcast() {
   const endOnPhone = () => { if (window.confirm('End the announcement for everyone?')) endBroadcast(); };
   return (
     <MobileHostStudio
-      title={session.message || session.title} kindLabel={`Announcement · ${user?.name || 'Estate manager'}`} KindIcon={Megaphone}
+      title={session.message || session.title} kindLabel={`Announcement · ${user?.name || T.manager}`} KindIcon={Megaphone}
       accent={RED} dark={RED_DARK} live={live} level={level} elapsed={elapsed} peak={peak}
       engagement={engagement} onEnd={endOnPhone}
       music={{

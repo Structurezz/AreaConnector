@@ -1,9 +1,16 @@
 import { Lock, ArrowUpRight, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { usePlan } from '../../hooks/usePlan';
+import { useSite } from '../../context/SiteContext';
 
-export default function PlanGate({ feature, featureName, children }) {
+export default function PlanGate({ feature, featureName: rawName, children }) {
   const { can, loading, planName, planColor } = usePlan();
+  const site = useSite();
+  // Estate wording → the site's words ("Ward Management" for a hospital)
+  const featureName = site.isEstate ? rawName
+    : rawName === 'Resident Management' ? `${site.terms.members} Management`
+    : rawName === 'Unit Management' ? `${site.terms.unit} Management`
+    : rawName;
 
   if (loading) return null;
   if (can(feature)) return children;

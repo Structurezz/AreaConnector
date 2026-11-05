@@ -7,6 +7,8 @@ import useCountUp from '../../hooks/useCountUp';
 import Pagination from '../ui/Pagination';
 import { useSite } from '../../context/SiteContext';
 import { StayChip } from '../site/MemberFields';
+import { RoleChip } from '../site/RoleFields';
+import { blockName } from '../../utils/siteTypes';
 
 const initials = (n = '') => n.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
 const hue = (n = '?') => (n.charCodeAt(0) * 37) % 360;
@@ -54,7 +56,7 @@ const MenuItem = ({ Icon, label, onClick, tone = 'text-slate-700', href }) => {
 function ResidentCard({ r, i, onOpen, onToggle }) {
   const [menu, setMenu] = useState(false);
   const site = useSite();
-  const unit = r.unitId ? `${r.unitId.block ? `${r.unitId.block} · ` : ''}${site.isEstate ? 'Apt' : site.terms.unit} ${r.unitId.unitNumber}` : null;
+  const unit = r.unitId ? `${r.unitId.block ? `${site.isEstate ? r.unitId.block : blockName(r.unitId.block, site.terms)} · ` : ''}${site.isEstate ? 'Apt' : site.terms.unit} ${r.unitId.unitNumber}` : null;
   const h = hue(r.name);
   return (
     <div onClick={() => onOpen(r)} role="button" tabIndex={0}
@@ -72,22 +74,28 @@ function ResidentCard({ r, i, onOpen, onToggle }) {
           <div className="flex items-center gap-1.5">
             <span className="text-[15px] font-semibold text-slate-900 truncate" style={{ letterSpacing: '-0.01em' }}>{r.name}</span>
             {!r.isActive && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-red-50 text-red-600 flex-shrink-0">Suspended</span>}
+            {site.hasRoles && r.householdRole !== 'member' && site.roleOf(r.siteRole).staff && <RoleChip siteRole={r.siteRole} size="xs" className="flex-shrink-0" />}
           </div>
           <div className="mt-1 flex items-center gap-1.5 flex-wrap">
             {r.householdRole === 'member' && (
               <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-fuchsia-50 text-fuchsia-700">
-                <Users size={11} /> {r.relationship || 'Family'}{r.householdHead?.name ? ` of ${r.householdHead.name.split(' ')[0]}` : ''}
+                <Users size={11} /> {r.relationship || (site.isEstate ? 'Family' : site.terms.family)}{r.householdHead?.name ? ` of ${r.householdHead.name.split(' ')[0]}` : ''}
               </span>
             )}
             {unit
               ? <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700"><Home size={11} /> {unit}</span>
               : <span className="text-[11px] italic text-slate-400">No {site.isEstate ? 'apartment' : site.terms.unit.toLowerCase()}</span>}
             {site.modules?.stays && r.householdRole !== 'member' && <StayChip stay={r.stay} />}
-            {r.createdAt && <span className="text-[11px] text-slate-400">· Joined {format(new Date(r.createdAt), 'MMM yyyy')}</span>}
+            {site.hasRoles && r.memberProfile?.idNumber
+              ? <span className="text-[11px] text-slate-400">· {r.memberProfile.idNumber}</span>
+              : r.createdAt && <span className="text-[11px] text-slate-400">· Joined {format(new Date(r.createdAt), 'MMM yyyy')}</span>}
           </div>
+          {site.hasRoles && (r.assignedTo || []).some(a => a && typeof a === 'object') && (
+            <div className="mt-1 text-[11px] text-pink-700 truncate">{site.assignLabel}: {(r.assignedTo || []).filter(a => a && typeof a === 'object').map(a => a.name).join(', ')}</div>
+          )}
         </div>
         <div className="relative flex-shrink-0" onClick={e => e.stopPropagation()}>
-          <button type="button" onClick={() => setMenu(m => !m)} aria-label="Resident actions"
+          <button type="button" onClick={() => setMenu(m => !m)} aria-label={site.isEstate ? 'Resident actions' : `${site.terms.member} actions`}
             className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 active:bg-slate-100">
             <MoreVertical size={17} />
           </button>
@@ -113,6 +121,7 @@ export default function ResidentsMobile({
   residents, loading, search, onSearch, totalAll, unitStats,
   page, pagination, limit, onPage, onOpen, onToggle, onInvite, onBulk, onAdd,
   family = false, familyTotal = 0, requestCount = 0, onRequests, onAddFamily,
+  title, addLabel = null,
 }) {
   const [filter, setFilter] = useState('');
   const [more, setMore] = useState(false);
@@ -136,11 +145,11 @@ export default function ResidentsMobile({
       <header className="dash-rise flex items-end justify-between gap-3">
         <div className="min-w-0">
           <div className="text-[12px] font-medium text-slate-400">Community</div>
-          <h1 className="text-[22px] font-semibold text-slate-900 leading-tight" style={{ letterSpacing: '-0.03em' }}>{family ? T.familyPlural : T.members}</h1>
+          <h1 className="text-[22px] font-semibold text-slate-900 leading-tight" style={{ letterSpacing: '-0.03em' }}>{family ? T.familyPlural : (title || T.members)}</h1>
         </div>
         {family ? (
           <div className="flex items-center gap-1.5 flex-shrink-0">
-            <button onClick={onRequests} aria-label="Family requests"
+            <button onClick={onRequests} aria-label={E ? 'Family requests' : `${T.family} requests`}
               className="relative w-9 h-9 rounded-xl border border-slate-200 bg-white flex items-center justify-center text-slate-500 active:bg-slate-50">
               <Clock size={16} />
               {requestCount > 0 && <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-fuchsia-600 text-white text-[10px] font-bold flex items-center justify-center">{requestCount}</span>}
@@ -156,7 +165,7 @@ export default function ResidentsMobile({
           <button onClick={onInvite}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[13px] font-semibold text-white active:scale-95 transition-transform"
             style={{ background: 'linear-gradient(135deg, #10B981, #059669)', boxShadow: '0 10px 20px -12px rgba(5,150,105,0.9)' }}>
-            <MailPlus size={15} /> {stays ? 'Check in' : `Invite ${T.member.toLowerCase()}`}
+            {addLabel ? <><UserPlus size={15} /> {addLabel}</> : <><MailPlus size={15} /> {stays ? 'Check in' : `Invite ${T.member.toLowerCase()}`}</>}
           </button>
           <button onClick={() => setMore(m => !m)} aria-label="More ways to add"
             className="w-9 h-9 rounded-xl border border-slate-200 bg-white flex items-center justify-center text-slate-500 active:bg-slate-50">
@@ -164,7 +173,7 @@ export default function ResidentsMobile({
           </button>
           <Menu open={more} onClose={() => setMore(false)} className="right-0 top-11">
             <MenuItem Icon={Upload} label="Bulk invite (CSV, PDF or paste)" onClick={() => { setMore(false); onBulk(); }} />
-            <MenuItem Icon={Plus} label="Add without email" onClick={() => { setMore(false); onAdd(); }} />
+            {!addLabel && <MenuItem Icon={Plus} label="Add without email" onClick={() => { setMore(false); onAdd(); }} />}
           </Menu>
         </div>
         )}
@@ -178,7 +187,7 @@ export default function ResidentsMobile({
       </div>
       ) : (
       <div className="grid grid-cols-2 gap-2.5">
-        <Tile i={0} label={T.members}   value={totalAll}           Icon={Users}     color="#10B981" />
+        <Tile i={0} label={title || T.members}   value={totalAll}           Icon={Users}     color="#10B981" />
         <Tile i={1} label={E ? 'Apartments' : T.units} value={unitStats.total} Icon={Building2} color="#6366F1" />
         <Tile i={2} label="Occupied"    value={unitStats.occupied} Icon={Home}      color="#0EA5E9" />
         <Tile i={3} label="Open spaces" value={unitStats.open}     Icon={DoorOpen}  color="#F59E0B" />

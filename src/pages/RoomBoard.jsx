@@ -63,7 +63,7 @@ function RoomTile({ room, i, T, onOpen }) {
       <div className="relative flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="text-[18px] font-semibold text-slate-900 leading-none tabular-nums" style={{ letterSpacing: '-0.03em' }}>{room.unitNumber}</div>
-          <div className="text-[10.5px] text-slate-500 mt-1 truncate capitalize">{room.type || T.unit}</div>
+          <div className="text-[10.5px] text-slate-500 mt-1 truncate capitalize">{(room.type === 'apartment' && T.unit !== 'Unit' ? T.unit : room.type) || T.unit}</div>
         </div>
         <span className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
           style={room.state === 'vacant' ? { background: '#F1F5F9', color: '#94A3B8' } : { background: `linear-gradient(135deg, ${st.color}, ${st.color}CC)`, color: '#fff', boxShadow: `0 6px 12px -6px ${st.color}` }}>

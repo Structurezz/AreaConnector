@@ -7,6 +7,10 @@ import {
 import { eventAPI, pollAPI } from '../../api';
 import useCountUp from '../../hooks/useCountUp';
 import SidePanel from '../payments/SidePanel';
+import { useSite } from '../../context/SiteContext';
+import { lower, withAn } from '../../utils/siteTypes';
+
+const useW = () => { const { terms: T, isEstate: E } = useSite(); return { T, E, site: lower(T.site), Site: T.site, member: lower(T.member), Member: T.member, members: lower(T.members), Members: T.members }; };
 
 const pad = (n) => String(n).padStart(2, '0');
 const FUN = '#F59E0B';
@@ -14,12 +18,13 @@ const tintOf = (ev, catMap) => (ev.isFridayFunTimes ? FUN : (catMap[ev.category]
 
 /* ── Header with the Friday countdown ───────────────────────────────── */
 export function LoungeBanner({ isFridayNight, countdown, onCreate }) {
+  const W = useW();
   return (
     <div className="dash-rise flex items-end justify-between gap-4">
       <div className="min-w-0">
         <div className="flex items-center gap-1.5 text-[12px] text-slate-500"><Sparkles size={12} className="text-emerald-600" /> Community</div>
         <h1 className="mt-1 text-[22px] font-semibold text-slate-900" style={{ letterSpacing: '-0.025em' }}>Lounge</h1>
-        <p className="text-[13px] text-slate-500 mt-0.5">Where your estate hangs out: posts, events, polls and music.</p>
+        <p className="text-[13px] text-slate-500 mt-0.5">Where your {W.site} hangs out: posts, events, polls and music.</p>
       </div>
 
       <div className="flex items-center gap-3 flex-shrink-0">
@@ -59,6 +64,7 @@ export function LoungeBanner({ isFridayNight, countdown, onCreate }) {
 
 /* ── Left rail: section nav ─────────────────────────────────────────── */
 export function LoungeNav({ tabs, tab, onTab }) {
+  const W = useW();
   return (
     <aside className="space-y-4">
       <nav className="dash-rise rounded-2xl bg-white border border-slate-200/70 p-2" style={{ animationDelay: '60ms' }}>
@@ -86,7 +92,7 @@ export function LoungeNav({ tabs, tab, onTab }) {
           <Headphones size={16} />
         </span>
         <div className="mt-3 text-[13px] font-semibold text-slate-900">DJ Console</div>
-        <div className="text-[11.5px] text-slate-500 mt-0.5">Play music live to the whole estate.</div>
+        <div className="text-[11.5px] text-slate-500 mt-0.5">Play music live to the whole {W.site}.</div>
         <div className="mt-2 text-[12px] font-semibold text-violet-700 flex items-center gap-1">Go live <ArrowRight size={12} className="transition-transform group-hover:translate-x-0.5" /></div>
       </Link>
     </aside>
@@ -251,6 +257,7 @@ function EStat({ i, label, hint, value, Icon, color }) {
 }
 
 function FeaturedEvent({ ev, catMap, onDelete }) {
+  const W = useW();
   const cat = catMap[ev.category] || catMap.general;
   const color = tintOf(ev, catMap);
   const t = useTicker(startOf(ev));
@@ -279,7 +286,7 @@ function FeaturedEvent({ ev, catMap, onDelete }) {
           {ev.description && <p className="mt-1 text-[13px] text-slate-500 line-clamp-2 max-w-2xl">{ev.description}</p>}
           <div className="mt-3 flex items-center gap-x-4 gap-y-1 flex-wrap text-[12px] text-slate-600">
             {ev.time && <span className="flex items-center gap-1.5"><Clock size={13} className="text-slate-400" /> {ev.time}</span>}
-            <span className="flex items-center gap-1.5"><MapPin size={13} className="text-slate-400" /> {ev.location || 'Estate Grounds'}</span>
+            <span className="flex items-center gap-1.5"><MapPin size={13} className="text-slate-400" /> {ev.location || `${W.Site} Grounds`}</span>
             {ev.organizer && <span className="flex items-center gap-1.5"><User size={13} className="text-slate-400" /> {ev.organizer}</span>}
           </div>
         </div>
@@ -306,6 +313,7 @@ function FeaturedEvent({ ev, catMap, onDelete }) {
 }
 
 function EventCard({ ev, i, catMap, onDelete }) {
+  const W = useW();
   const cat = catMap[ev.category] || catMap.general;
   const color = tintOf(ev, catMap);
   const d = new Date(ev.date);
@@ -330,7 +338,7 @@ function EventCard({ ev, i, catMap, onDelete }) {
         {ev.description && <div className="mt-0.5 text-[12px] text-slate-500 line-clamp-2">{ev.description}</div>}
         <div className="mt-2 space-y-1 text-[12px] text-slate-500">
           {ev.time && <div className="flex items-center gap-1.5"><Clock size={12} className="text-slate-300" />{ev.time}</div>}
-          <div className="flex items-center gap-1.5 truncate"><MapPin size={12} className="text-slate-300 flex-shrink-0" />{ev.location || 'Estate Grounds'}</div>
+          <div className="flex items-center gap-1.5 truncate"><MapPin size={12} className="text-slate-300 flex-shrink-0" />{ev.location || `${W.Site} Grounds`}</div>
         </div>
         <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
           <span className="text-[12px] font-semibold text-emerald-600 flex items-center gap-1"><Users size={12} /> {ev.rsvps?.length || 0} going</span>
@@ -342,6 +350,7 @@ function EventCard({ ev, i, catMap, onDelete }) {
 }
 
 function MonthCalendar({ events, catMap, onNew }) {
+  const W = useW();
   const [cursor, setCursor] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const [picked, setPicked] = useState(null);
   const days = useMemo(() => {
@@ -413,7 +422,7 @@ function MonthCalendar({ events, catMap, onNew }) {
                   <span className="w-1 self-stretch rounded-full" style={{ background: c }} />
                   <div className="flex-1 min-w-0">
                     <div className="text-[13px] font-semibold text-slate-900 truncate">{ev.title}</div>
-                    <div className="text-[11.5px] text-slate-500 truncate">{cat.emoji} {cat.label}{ev.time ? ` · ${ev.time}` : ''} · {ev.location || 'Estate Grounds'}</div>
+                    <div className="text-[11.5px] text-slate-500 truncate">{cat.emoji} {cat.label}{ev.time ? ` · ${ev.time}` : ''} · {ev.location || `${W.Site} Grounds`}</div>
                   </div>
                   <span className="text-[11.5px] font-semibold text-emerald-600 flex items-center gap-1"><Users size={11} /> {ev.rsvps?.length || 0}</span>
                 </div>
@@ -430,6 +439,7 @@ function MonthCalendar({ events, catMap, onNew }) {
 const VIEW_KEY = 'lounge:events:view';
 
 export function EventsDesktop({ upcoming, past, catMap, onDelete, onNew }) {
+  const W = useW();
   const [view, setView] = useState(() => { try { return localStorage.getItem(VIEW_KEY) || 'cards'; } catch { return 'cards'; } });
   const [cat, setCat] = useState('all');
   const changeView = (v) => { setView(v); try { localStorage.setItem(VIEW_KEY, v); } catch {} };
@@ -448,7 +458,7 @@ export function EventsDesktop({ upcoming, past, catMap, onDelete, onNew }) {
       <div className="grid grid-cols-4 gap-4">
         <EStat i={0} label="Upcoming" hint="Events on the calendar" value={upcoming.length} Icon={CalendarDays} color="#0EA5E9" />
         <EStat i={1} label="This month" hint={now.toLocaleDateString('en', { month: 'long' })} value={thisMonth} Icon={Calendar} color="#8B5CF6" />
-        <EStat i={2} label="RSVPs" hint="Residents going" value={rsvps} Icon={Users} color="#10B981" />
+        <EStat i={2} label="RSVPs" hint={`${W.Members} going`} value={rsvps} Icon={Users} color="#10B981" />
         <EStat i={3} label="FunTimes nights" hint="Friday socials planned" value={fun} Icon={PartyPopper} color={FUN} />
       </div>
 
@@ -486,7 +496,7 @@ export function EventsDesktop({ upcoming, past, catMap, onDelete, onNew }) {
             <div className="dash-rise rounded-2xl border border-dashed border-slate-300 bg-white py-12 text-center">
               <div className="text-[32px]">📅</div>
               <div className="mt-2 text-[14px] font-semibold text-slate-900">{cat === 'all' ? 'Nothing on the calendar' : 'No upcoming events in this category'}</div>
-              <p className="text-[12.5px] text-slate-500 mt-1">Plan something your neighbours will love — a Friday hangout, a fitness morning, a kids' day.</p>
+              <p className="text-[12.5px] text-slate-500 mt-1">Plan something {W.E ? 'your neighbours' : `your ${W.members}`} will love — a Friday hangout, a fitness morning, a kids' day.</p>
               <button onClick={onNew} className="mt-4 btn-primary gap-2 !text-[13px] !px-4 !py-2"><Plus size={14} /> Plan an event</button>
             </div>
           )}
@@ -539,6 +549,7 @@ export function EventsDesktop({ upcoming, past, catMap, onDelete, onNew }) {
 
 /* ── Create event: side panel with a live preview ───────────────────── */
 export function EventFormPanel({ open, onClose, form, setForm, categories, catMap, onSubmit, saving }) {
+  const W = useW();
   const field = 'w-full rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-sky-400 focus:ring-4 focus:ring-sky-100';
   const preview = { ...form, date: form.date || new Date().toISOString().slice(0, 10), title: form.title || 'Your event title', rsvps: [] };
   const color = tintOf(preview, catMap);
@@ -546,7 +557,7 @@ export function EventFormPanel({ open, onClose, form, setForm, categories, catMa
   const d = new Date(preview.date);
 
   return (
-    <SidePanel open={open} onClose={onClose} title="Plan an event" subtitle="Residents see it in their Lounge and can RSVP"
+    <SidePanel open={open} onClose={onClose} title="Plan an event" subtitle={`${W.Members} see it in their Lounge and can RSVP`}
       footer={
         <div className="flex gap-2">
           <button type="button" onClick={onClose} className="btn-outline flex-1">Cancel</button>
@@ -564,10 +575,10 @@ export function EventFormPanel({ open, onClose, form, setForm, categories, catMa
           <div className="relative min-w-0">
             <div className="text-[11px] font-semibold" style={{ color }}>{cat.emoji} {cat.label}{form.isFridayFunTimes && ' · FunTimes'}</div>
             <div className={`text-[14px] font-semibold truncate ${form.title ? 'text-slate-900' : 'text-slate-400'}`}>{preview.title}</div>
-            <div className="text-[11.5px] text-slate-500 truncate">{form.time ? `${form.time} · ` : ''}{form.location || 'Estate Grounds'}</div>
+            <div className="text-[11.5px] text-slate-500 truncate">{form.time ? `${form.time} · ` : ''}{form.location || `${W.Site} Grounds`}</div>
           </div>
         </div>
-        <div className="px-4 py-2 text-[11px] text-slate-400 border-t border-slate-100">Preview — how residents will see it</div>
+        <div className="px-4 py-2 text-[11px] text-slate-400 border-t border-slate-100">Preview — how {W.members} will see it</div>
       </div>
 
       <form id="event-form" onSubmit={onSubmit} className="space-y-4">
@@ -599,11 +610,11 @@ export function EventFormPanel({ open, onClose, form, setForm, categories, catMa
         </div>
         <div>
           <label className="text-xs font-semibold mb-1.5 block text-slate-600">Location</label>
-          <input value={form.location} onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))} className={field} placeholder="Estate Grounds" />
+          <input value={form.location} onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))} className={field} placeholder={`${W.Site} Grounds`} />
         </div>
         <div>
           <label className="text-xs font-semibold mb-1.5 block text-slate-600">Organizer</label>
-          <input value={form.organizer} onChange={(e) => setForm((p) => ({ ...p, organizer: e.target.value }))} className={field} placeholder="e.g. Residents' committee" />
+          <input value={form.organizer} onChange={(e) => setForm((p) => ({ ...p, organizer: e.target.value }))} className={field} placeholder={W.E ? "e.g. Residents' committee" : `e.g. ${W.Members} committee`} />
         </div>
         <div>
           <label className="text-xs font-semibold mb-1.5 block text-slate-600">Description</label>

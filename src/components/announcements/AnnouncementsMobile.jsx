@@ -7,6 +7,8 @@ import DJLive from '../DJLive';
 import Modal from '../ui/Modal';
 import Pagination from '../ui/Pagination';
 import useCountUp from '../../hooks/useCountUp';
+import { useSite } from '../../context/SiteContext';
+import { lower } from '../../utils/siteTypes';
 
 const CAT = {
   general:     { Icon: Megaphone,     color: '#10B981', label: 'General' },
@@ -28,6 +30,7 @@ function Count({ label, value, delay }) {
 }
 
 function Composer({ open, onClose, onPost }) {
+  const { terms: T, isEstate: E } = useSite();
   const [form, setForm] = useState(BLANK);
   const [saving, setSaving] = useState(false);
   const m = CAT[form.category];
@@ -69,7 +72,7 @@ function Composer({ open, onClose, onPost }) {
             <span className="text-[11px] text-slate-400 tabular-nums">{form.body.length}</span>
           </div>
           <textarea className="input-field mt-1.5 resize-none" rows={5} value={form.body} required
-            placeholder="What do residents need to know?" onChange={e => setForm({ ...form, body: e.target.value })} />
+            placeholder={`What do ${lower(T.members)} need to know?`} onChange={e => setForm({ ...form, body: e.target.value })} />
         </div>
         <button type="button" onClick={() => setForm({ ...form, isPinned: !form.isPinned })}
           className="w-full flex items-center gap-3 p-3 rounded-2xl border text-left"
@@ -77,7 +80,7 @@ function Composer({ open, onClose, onPost }) {
           <Pin size={16} style={{ color: form.isPinned ? '#D97706' : '#94A3B8' }} />
           <span className="flex-1">
             <span className="block text-[13px] font-semibold text-slate-900">Pin to the top</span>
-            <span className="block text-[11px] text-slate-500">Stays first on every resident's notice board</span>
+            <span className="block text-[11px] text-slate-500">Stays first on {E ? "every resident's" : "everyone's"} notice board</span>
           </span>
           <span className="w-10 h-6 rounded-full relative transition-colors" style={{ background: form.isPinned ? '#F59E0B' : '#E2E8F0' }}>
             <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all" style={{ left: form.isPinned ? 18 : 2 }} />
@@ -100,7 +103,7 @@ function Composer({ open, onClose, onPost }) {
         <div className="flex gap-2 pt-1">
           <button type="button" onClick={onClose} className="btn-outline flex-1">Cancel</button>
           <button type="submit" disabled={saving || !form.title.trim() || !form.body.trim()} className="btn-primary flex-1 gap-2">
-            <Send size={14} /> {saving ? 'Posting…' : 'Post to estate'}
+            <Send size={14} /> {saving ? 'Posting…' : `Post to ${lower(T.site)}`}
           </button>
         </div>
       </form>
@@ -161,6 +164,7 @@ function NoticeCard({ a, i, onDelete, onTogglePin }) {
 
 export default function AnnouncementsMobile({ announcements, loading, page, pagination, pageSize, onPage, onPost, onDelete, onTogglePin, onGoLive }) {
   const [composing, setComposing] = useState(false);
+  const { terms: T, isEstate: E } = useSite();
   const pinned = announcements.filter(a => a.isPinned).length;
   const reads = announcements.reduce((n, a) => n + (a.readBy?.length || 0), 0);
   const latest = announcements[0];
@@ -180,7 +184,7 @@ export default function AnnouncementsMobile({ announcements, loading, page, pagi
         <div className="relative">
           <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-white/10 border border-white/15">
             <span className="relative flex w-1.5 h-1.5"><span className="absolute inset-0 rounded-full bg-emerald-300 animate-ping" /><span className="relative w-1.5 h-1.5 rounded-full bg-emerald-300" /></span>
-            Talk to your estate
+            Talk to your {lower(T.site)}
           </span>
           <div className="mt-3 text-[16px] font-semibold leading-snug">{latest ? `Last notice ${ago(latest.createdAt)}` : 'You haven’t posted yet'}</div>
           {latest && <div className="text-[12px] text-white/60 truncate mt-0.5">“{latest.title}”</div>}
@@ -228,7 +232,7 @@ export default function AnnouncementsMobile({ announcements, loading, page, pagi
             <Megaphone size={24} className="relative text-emerald-600" />
           </span>
           <div className="mt-4 text-[15px] font-semibold text-slate-900">No announcements yet</div>
-          <div className="text-[13px] text-slate-500 mt-1">Post your first notice — every resident gets it instantly.</div>
+          <div className="text-[13px] text-slate-500 mt-1">Post your first notice — {E ? 'every resident gets' : 'everyone gets'} it instantly.</div>
           <button onClick={() => setComposing(true)} className="btn-primary mt-4 gap-1.5 inline-flex"><Plus size={14} /> Post a notice</button>
         </div>
       ) : (

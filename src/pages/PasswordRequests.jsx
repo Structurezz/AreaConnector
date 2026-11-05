@@ -5,6 +5,8 @@ import toast from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { authAPI } from '../api';
 import { useSocket } from '../context/SocketContext';
+import { useSite } from '../context/SiteContext';
+import { lower, withAn } from '../utils/siteTypes';
 
 const STATUS_STYLE = {
   pending:  { label: 'Pending',   bg: '#FEF3C7', color: '#92400E', border: '#FDE68A' },
@@ -25,7 +27,8 @@ function StatusBadge({ status }) {
 
 function RequestCard({ req, onApprove, onDeny, busyId }) {
   const Icon = req.requesterRole === 'security' ? Shield : Users;
-  const roleLabel = req.requesterRole === 'security' ? 'Security officer' : 'Resident';
+  const site = useSite();
+  const roleLabel = req.requesterRole === 'security' ? 'Security officer' : site.terms.member;
   const busy = busyId === req._id;
   return (
     <div className="glass-card p-4" style={{ border: '1px solid #E2E8F0' }}>
@@ -99,6 +102,7 @@ function RequestCard({ req, onApprove, onDeny, busyId }) {
 
 export default function PasswordRequests() {
   const { subscribe } = useSocket() || {};
+  const site = useSite();
   const [status, setStatus] = useState('pending');
   const [items, setItems]   = useState([]);
   const [loading, setLoading] = useState(true);
@@ -205,7 +209,7 @@ export default function PasswordRequests() {
             No {status === 'all' ? '' : status} requests
           </div>
           <div className="text-xs mt-1" style={{ color: '#64748B' }}>
-            When a resident or security officer asks to reset their password, you'll see it here.
+            {site.isEstate ? 'When a resident or security officer asks to reset their password, you\'ll see it here.' : `When ${withAn(lower(site.terms.member))} or security officer asks to reset their password, you'll see it here.`}
           </div>
         </div>
       ) : (

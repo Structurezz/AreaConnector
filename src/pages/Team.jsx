@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { teamAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
+import { useSite } from '../context/SiteContext';
+import { lower } from '../utils/siteTypes';
 import Spinner, { PageLoader } from '../components/ui/Spinner';
 import Modal from '../components/ui/Modal';
 import toast from 'react-hot-toast';
@@ -27,12 +29,23 @@ const PRESETS = [
   { key: 'communications', label: 'Communications', permissions: ['communications', 'community'] },
 ];
 
+// Area label / description in the site's own words (estates keep the original text)
+function areaText(a, site) {
+  if (site.isEstate) return a;
+  const T = site.terms;
+  if (a.key === 'residents') return { ...a, label: `${T.members} & ${lower(T.units)}`, desc: `${T.members}, ${lower(T.units)}, invites` };
+  if (a.key === 'finance') return { ...a, desc: `${T.dues}, payments, wallet, withdrawals, plan` };
+  if (a.key === 'settings') return { ...a, desc: `${T.site} settings and this Team page` };
+  return a;
+}
+
 const sameSet = (a, b) => a.length === b.length && a.every(x => b.includes(x));
 const presetFor = (perms) => PRESETS.find(p => sameSet(p.permissions, perms));
 
 function AccessPicker({ value, onChange }) {
   const toggle = (k) => onChange(value.includes(k) ? value.filter(x => x !== k) : [...value, k]);
   const current = presetFor(value);
+  const site = useSite();
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-1.5">
@@ -52,7 +65,7 @@ function AccessPicker({ value, onChange }) {
         </span>
       </div>
       <div className="grid sm:grid-cols-2 gap-2">
-        {AREAS.map(({ key, label, desc, Icon, color }) => {
+        {AREAS.map(a => areaText(a, site)).map(({ key, label, desc, Icon, color }) => {
           const on = value.includes(key);
           return (
             <button key={key} type="button" onClick={() => toggle(key)}
@@ -78,12 +91,13 @@ function AccessPicker({ value, onChange }) {
 }
 
 function AccessChips({ permissions }) {
+  const site = useSite();
   return (
     <div className="flex flex-wrap gap-1">
       {permissions.map(k => AREA[k] && (
         <span key={k} className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
           style={{ background: `${AREA[k].color}14`, color: AREA[k].color }}>
-          {AREA[k].label}
+          {areaText(AREA[k], site).label}
         </span>
       ))}
     </div>

@@ -12,6 +12,8 @@ import { useAuth }   from './AuthContext';
 import toast from 'react-hot-toast';
 import { playSiren, stopSiren } from '../utils/siren';
 import { isStatusUpdate, isOwnAlert, isIncomingAlert, unitLabelOf } from '../utils/alertEvents';
+import { useSite } from './SiteContext';
+import { lower } from '../utils/siteTypes';
 
 const NotificationContext = createContext(null);
 
@@ -59,6 +61,10 @@ export function NotificationProvider({ children }) {
   const { subscribe } = useSocket();
   const { user }      = useAuth() || {};
   const currentUserId = user?._id ? String(user._id) : null;
+  // Site words for alert text (a ref so the socket handlers always read the latest)
+  const site = useSite();
+  const siteRef = useRef(site);
+  siteRef.current = site;
   const [notifications, setNotifications] = useState(loadStored);
   const navigateRef = useRef(null);
   const markReadRef = useRef(null);
@@ -176,14 +182,14 @@ export function NotificationProvider({ children }) {
         addNotification({
           id: alert._id || String(Date.now()),
           type: isBroadcast ? 'alert_broadcast' : 'new_alert',
-          title: alert.title || (isBroadcast ? 'Estate Broadcast' : 'Security Alert'),
-          body: alert.note || alert.message || 'New alert raised in your estate',
+          title: alert.title || (isBroadcast ? `${siteRef.current.terms.site} Broadcast` : 'Security Alert'),
+          body: alert.note || alert.message || `New alert raised in your ${lower(siteRef.current.terms.site)}`,
           meta: {
             alertId: alert._id, alertType: alert.type, severity: alert.severity,
             location: alert.location, actionRequired: alert.actionRequired, contactNumber: alert.contactNumber,
             raisedByRole: alert.raisedByRole || alert.residentId?.role || 'resident',
             raisedById: alert.residentId?._id, raisedByName: alert.residentId?.name, raisedByPhone: alert.residentId?.phone, raisedByPhoto: alert.residentId?.profilePhoto,
-            raisedByUnit: unitLabelOf(alert),
+            raisedByUnit: unitLabelOf(alert, siteRef.current.terms),
           },
         });
       }),

@@ -10,6 +10,7 @@ import VisitorSiteDetails from '../components/visitors/VisitorSiteDetails';
 import PlaceCard from '../components/visitors/PlaceCard';
 import { CategoryBadge } from '../components/visitors/CategoryIcon';
 import { useSite } from '../context/SiteContext';
+import { lower } from '../utils/siteTypes';
 import { VISITOR_STATUS, purposeIcon } from '../components/visitors/MobileVisitors';
 import VisitorsMobile from '../components/visitors/VisitorsMobile';
 import useCountUp from '../hooks/useCountUp';
@@ -87,9 +88,9 @@ const drawShieldLogo = (ctx, x, y, size, text, opts = {}) => {
   ctx.restore();
 };
 
-const generatePassCanvas = async (v, estate) => {
+const generatePassCanvas = async (v, estate, siteWord = 'Estate') => {
   const W = 580, H = 820;
-  const estateName    = truncate(estate?.name || 'Your Estate', 36);
+  const estateName    = truncate(estate?.name || `Your ${siteWord}`, 36);
   const estateAddress = truncate(estate?.address || '', 60);
 
   const canvas = document.createElement('canvas');
@@ -196,14 +197,14 @@ const generatePassCanvas = async (v, estate) => {
   return canvas;
 };
 
-const shareVisitorPass = async (v, estate) => {
+const shareVisitorPass = async (v, estate, siteWord = 'Estate') => {
   const date = format(new Date(v.expectedDate), 'MMM d, yyyy · h:mm a');
-  const estateLine = estate?.name ? `\n*Estate:* ${estate.name}` : '';
+  const estateLine = estate?.name ? `\n*${siteWord}:* ${estate.name}` : '';
   const waText = `🏠 *Visitor Pass — ${v.visitorName}*${estateLine}\n\n*Code:* ${v.visitorCode}\n*Purpose:* ${v.purpose}\n*Expected:* ${date}\n\n_Powered by Area Connector Technologies · RC 9607864_\n${BRAND_URL}`;
 
   let file = null;
   try {
-    const canvas = await generatePassCanvas(v, estate);
+    const canvas = await generatePassCanvas(v, estate, siteWord);
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
     if (blob) file = new File([blob], `visitor-pass-${v.visitorCode}.png`, { type: 'image/png' });
   } catch { /* image generation failed — we'll still share text */ }
@@ -693,6 +694,7 @@ const fmtLeft = (ms) => {
 
 /** Live pass state: countdown ring until arrival / expiry, or "inside now". */
 function PassStatus({ visitor: v }) {
+  const { terms: T } = useSite();
   const [, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 1000);
@@ -710,7 +712,7 @@ function PassStatus({ visitor: v }) {
   let label, value, sub, pct, color;
   if (v.status === 'checked-in') {
     const inside = entry ? fmtLeft(now - new Date(entry).getTime()) : null;
-    label = 'Inside the estate'; value = inside || 'Checked in';
+    label = `Inside the ${lower(T.site)}`; value = inside || 'Checked in';
     sub = entry ? `Arrived at ${format(new Date(entry), 'h:mm a')}` : 'Arrival time not recorded';
     pct = 100; color = '#2563EB';
   } else if (now < start) {
@@ -963,7 +965,7 @@ function VisitorDetailDrawer({ visitor, onClose, onCheckIn, onCheckOut, onBlackl
             </button>
           )}
           <div className="flex gap-2">
-            <button onClick={() => shareVisitorPass(v, user?.estateId)}
+            <button onClick={() => shareVisitorPass(v, user?.estateId, site.terms.site)}
                     className="flex-1 flex items-center justify-center gap-2 rounded-[9px] px-3 py-2 text-sm font-semibold text-white transition-all hover:-translate-y-0.5"
                     style={{ background: '#25D366', boxShadow: '0 6px 14px -8px #25D366' }}>
               <WhatsAppIcon /> Share pass
@@ -1070,6 +1072,7 @@ function RowActions({ v, onApprove, onDecline, onCheckIn, onCheckOut, onBlacklis
 
 /** Ticket-style card used by the grid view — mirrors the detail drawer. */
 function VisitorCard({ v, i, selected, onOpen, actions }) {
+  const site = useSite();
   const tone = toneOf(v);
   const [, pColor, pBg] = purposeIcon(v.purpose);
   const when = v.expectedDate ? dayTime(v.expectedDate) : null;
@@ -1090,7 +1093,7 @@ function VisitorCard({ v, i, selected, onOpen, actions }) {
         </div>
         <div className="flex items-center gap-1.5 mt-3 text-[11px]">
           <span className="font-semibold capitalize px-2 py-0.5 rounded-md truncate max-w-[50%]" style={{ background: pBg, color: pColor }}>{v.purpose}</span>
-          <span className="text-slate-500 truncate flex items-center gap-1"><Home size={11} className="flex-shrink-0" />{v.hostResidentId?.name || 'Manager'}{unit && ` · ${unit}`}</span>
+          <span className="text-slate-500 truncate flex items-center gap-1"><Home size={11} className="flex-shrink-0" />{v.hostResidentId?.name || (site.isEstate ? 'Manager' : site.terms.manager)}{unit && ` · ${unit}`}</span>
         </div>
       </div>
       <div className="relative border-t-2 border-dashed border-slate-100">
@@ -1158,6 +1161,7 @@ function HeroStat({ i, label, hint, value, Icon, color, active, pulse, onClick }
 
 /** Desktop hero: light status-tinted banner with gate ring + filter stats. */
 function VisitorsHeroBanner({ counts, now, statusFilter, onPick, onAll, onCreate, arrivingCount }) {
+  const { terms: T } = useSite();
   const due = counts?.today || 0;
   const inside = counts?.['checked-in'] || 0;
   const pct = due ? Math.min(100, Math.round((inside / due) * 100)) : 0;
@@ -1196,7 +1200,7 @@ function VisitorsHeroBanner({ counts, now, statusFilter, onPick, onAll, onCreate
           <h1 className="text-[22px] font-semibold text-slate-900" style={{ letterSpacing: '-0.025em' }}>Visitor log</h1>
           <p className="text-[13px] text-slate-600 mt-0.5">
             {greet}. {due ? <><strong className="font-semibold text-slate-900">{due}</strong> visitor{due === 1 ? '' : 's'} due today</> : 'No visitors due today'}
-            {inside > 0 && <>, <strong className="font-semibold text-blue-700">{inside}</strong> inside the estate right now</>}.
+            {inside > 0 && <>, <strong className="font-semibold text-blue-700">{inside}</strong> inside the {lower(T.site)} right now</>}.
           </p>
         </div>
         <button onClick={onCreate}
@@ -1458,7 +1462,7 @@ export default function ManagerVisitors() {
               </div>
             </div>
             <p className="font-semibold text-slate-800 mt-2">{search ? `No visitors match “${search}”` : 'No visitors found'}</p>
-            <p className="text-sm text-slate-400">Guest passes you or residents create will show up here.</p>
+            <p className="text-sm text-slate-400">Guest passes you or {lower(site.terms.members)} create will show up here.</p>
             {!search && (
               <button onClick={createPass} className="btn-primary gap-2 mt-2">
                 <Plus size={14} /> Create guest pass
@@ -1607,7 +1611,7 @@ export default function ManagerVisitors() {
               <div className="h-1.5 rounded-full bg-emerald-100 mt-3 overflow-hidden">
                 <div className="h-full rounded-full" style={{ width: `${pct}%`, background: 'linear-gradient(90deg, #10B981, #2563EB)', transformOrigin: 'left', animation: 'dashGrowX 0.9s cubic-bezier(0.16,1,0.3,1) both' }} />
               </div>
-              <div className="text-[11px] text-slate-500 mt-1.5">{inside} inside the estate now</div>
+              <div className="text-[11px] text-slate-500 mt-1.5">{inside} inside the {lower(site.terms.site)} now</div>
             </>);
           })()}
         </div>

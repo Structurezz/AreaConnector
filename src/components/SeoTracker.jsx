@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useSite } from '../context/SiteContext';
 
 // Search + analytics wiring for this SPA. Mounted once inside <BrowserRouter>.
 //
@@ -47,10 +48,11 @@ function maskPath(pathname) {
 
 export default function SeoTracker() {
   const { pathname } = useLocation();
+  const { isEstate } = useSite();
 
   useEffect(() => {
     const page = PUBLIC_PAGES[pathname];
-    const title = page ? page[0] : APP_TITLE;
+    const title = page ? page[0] : (isEstate ? APP_TITLE : 'AreaConnect — Manager Portal');
 
     document.title = title;
     setMeta('meta[name="robots"]', {
@@ -72,7 +74,7 @@ export default function SeoTracker() {
         page_title: title,
       });
     }
-  }, [pathname]);
+  }, [pathname, isEstate]);
 
   return null;
 }

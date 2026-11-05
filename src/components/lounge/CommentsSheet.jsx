@@ -4,12 +4,17 @@ import toast from 'react-hot-toast';
 import { postAPI } from '../../api';
 import BottomSheet from '../payments/BottomSheet';
 import { Avatar, timeAgo, isManagerRole, VerifiedTick } from './shared';
+import { useSite } from '../../context/SiteContext';
+import { lower, withAn } from '../../utils/siteTypes';
+
+const useW = () => { const { terms: T, isEstate: E } = useSite(); return { T, E, site: lower(T.site), Site: T.site, member: lower(T.member), Member: T.member, members: lower(T.members), Members: T.members }; };
 
 const QUICK = ['❤️', '🔥', '👏', '😂', '😍', '🙌'];
 
 // Comments for one post. The parent keeps the post in sync with live socket
 // events, so new comments from neighbours appear here as they're written.
 export default function CommentsSheet({ post, me, onClose, onCommentAdded, onCommentDeleted }) {
+  const W = useW();
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const listRef = useRef(null);
@@ -83,7 +88,7 @@ export default function CommentsSheet({ post, me, onClose, onCommentAdded, onCom
                 <Avatar person={c.author} size={32} />
                 <div className="flex-1 min-w-0">
                   <p className="text-[14px] leading-snug text-slate-900">
-                    <span className="font-semibold mr-1.5 inline-flex items-center gap-1">{c.author?.name || 'Resident'}{isManagerRole(c.author?.role) && <VerifiedTick size={12} />}</span>
+                    <span className="font-semibold mr-1.5 inline-flex items-center gap-1">{c.author?.name || W.Member}{isManagerRole(c.author?.role) && <VerifiedTick size={12} />}</span>
                     {c.text}
                   </p>
                   <span className="text-xs text-slate-400">{timeAgo(c.createdAt)}</span>

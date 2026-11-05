@@ -156,7 +156,7 @@ export default function InviteForm({ onCreated, onCancel, sticky = false }) {
               <div className="mt-3 space-y-2 rounded-2xl p-3 border" style={{ borderColor: `${(CATEGORY_STYLE[category] || CATEGORY_STYLE.guest).color}33`, background: (CATEGORY_STYLE[category] || CATEGORY_STYLE.guest).bg }}>
                 {catFields.map(k => (
                   <input key={k} value={details[k] || ''} onChange={(e) => setDetail(k, e.target.value)}
-                    placeholder={`${DETAIL_PLACEHOLDER[k] || DETAIL_LABELS[k] || k}${needDetail === k ? ' *' : ''}`}
+                    placeholder={`${(k === 'job' && !site.isEstate ? `Job (e.g. AC repair in ${site.terms.block ? `Moremi ${site.terms.block}` : `${site.terms.unit} 3`})` : DETAIL_PLACEHOLDER[k]) || DETAIL_LABELS[k] || k}${needDetail === k ? ' *' : ''}`}
                     style={k === 'vehiclePlate' ? { textTransform: 'uppercase' } : undefined}
                     className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-[14px] text-slate-900 outline-none focus:border-emerald-300" />
                 ))}

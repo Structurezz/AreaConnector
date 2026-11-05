@@ -9,6 +9,10 @@ import BottomSheet from '../components/payments/BottomSheet';
 import { marketAdminAPI } from '../api';
 import { useCall } from '../context/CallContext';
 import useIsDesktop from '../hooks/useIsDesktop';
+import { useSite } from '../context/SiteContext';
+import { lower, withAn } from '../utils/siteTypes';
+
+const useW = () => { const { terms: T, isEstate: E } = useSite(); return { T, E, site: lower(T.site), Site: T.site, member: lower(T.member), Member: T.member, members: lower(T.members), Members: T.members }; };
 
 // Estate manager's control room for the residents' marketplace:
 // approve/reject listings, act on reports, suspend sellers, set price rules.
@@ -27,8 +31,8 @@ const STATUS = {
   rejected: ['Rejected', 'bg-red-50 text-red-700'], removed: ['Removed', 'bg-slate-100 text-slate-600'], sold: ['Sold', 'bg-sky-50 text-sky-700'],
 };
 const REASON = { scam: 'Scam / fraud', overpriced: 'Price gouging', misleading: 'Misleading', unsafe: 'Unsafe / prohibited', not_delivered: 'Not delivered', other: 'Other' };
-const FLAG = { price_outlier: 'Price far above typical', reported: 'Reported by residents', approval_required: 'Approval required' };
-const QUICK_REASONS = ['Price is too high for this estate', 'Prohibited item', 'Photos or description are misleading', 'Duplicate listing', 'Not suitable for the marketplace'];
+const flagLabel = (type, W) => ({ price_outlier: 'Price far above typical', reported: `Reported by ${W.members}`, approval_required: 'Approval required' })[type] || type;
+const quickReasons = (W) => [`Price is too high for this ${W.site}`, 'Prohibited item', 'Photos or description are misleading', 'Duplicate listing', 'Not suitable for the marketplace'];
 
 function Thumb({ l, size = 64 }) {
   return (
@@ -48,6 +52,7 @@ function Rating({ r }) {
 
 // Asks for the reason the seller will see.
 function ReasonSheet({ ask, onClose }) {
+  const W = useW();
   const [reason, setReason] = useState('');
   const [days, setDays] = useState(7);
   const [busy, setBusy] = useState(false);
@@ -61,7 +66,7 @@ function ReasonSheet({ ask, onClose }) {
     <BottomSheet open onClose={onClose} title={ask.title} subtitle={ask.subtitle}
       footer={<button onClick={go} disabled={!reason.trim() || busy} className={`w-full py-3 rounded-xl font-bold text-white disabled:opacity-40 ${ask.danger ? 'bg-red-600' : 'bg-emerald-600'}`}>{busy ? 'Saving…' : ask.cta}</button>}>
       <div className="flex flex-wrap gap-1.5 mb-3">
-        {(ask.quick || QUICK_REASONS).map((q) => <button key={q} onClick={() => setReason(q)} className={`text-xs px-2.5 py-1.5 rounded-full border ${reason === q ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 text-slate-600'}`}>{q}</button>)}
+        {(ask.quick || quickReasons(W)).map((q) => <button key={q} onClick={() => setReason(q)} className={`text-xs px-2.5 py-1.5 rounded-full border ${reason === q ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 text-slate-600'}`}>{q}</button>)}
       </div>
       <textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason (the seller will see this)" className="input-field resize-none" />
       {ask.withDays && (
@@ -82,6 +87,7 @@ function ReasonSheet({ ask, onClose }) {
 // One card per listing. On phones the actions become a full-width row of
 // equal buttons so they're easy to hit with a thumb.
 function ListingRow({ l, median, actions }) {
+  const W = useW();
   const s = l.sellerId || {};
   const [open, setOpen] = useState(false);
   const over = median && l.price > median ? Math.round((l.price / median) * 10) / 10 : null;
@@ -96,13 +102,13 @@ function ListingRow({ l, median, actions }) {
             <span className="font-bold text-slate-900">{naira(l.price)}</span>
             {median && <span className={`text-xs ${over >= 2 ? 'text-red-600 font-semibold' : 'text-slate-400'}`}>typical {naira(median)}{over >= 1.5 ? ` · ${over}×` : ''}</span>}
           </div>
-          <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5 flex-wrap">{s.name || 'Resident'} <Rating r={l.sellerRating} /> {l.reportCount > 0 && <span className="text-red-600 font-semibold">· {l.reportCount} report{l.reportCount > 1 ? 's' : ''}</span>}</p>
+          <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5 flex-wrap">{s.name || W.Member} <Rating r={l.sellerRating} /> {l.reportCount > 0 && <span className="text-red-600 font-semibold">· {l.reportCount} report{l.reportCount > 1 ? 's' : ''}</span>}</p>
         </div>
         <ChevronRight size={18} className={`text-slate-300 shrink-0 self-center transition-transform ${open ? 'rotate-90' : ''}`} />
       </button>
       {l.flags?.length > 0 && l.status === 'pending_approval' && (
         <div className="mt-3 space-y-1">
-          {l.flags.map((f, i) => <p key={i} className="text-xs rounded-lg bg-amber-50 text-amber-800 px-2.5 py-1.5 flex gap-1.5"><AlertTriangle size={13} className="shrink-0 mt-px" /><span><b>{FLAG[f.type] || f.type}</b>{f.detail ? ` — ${f.detail}` : ''}</span></p>)}
+          {l.flags.map((f, i) => <p key={i} className="text-xs rounded-lg bg-amber-50 text-amber-800 px-2.5 py-1.5 flex gap-1.5"><AlertTriangle size={13} className="shrink-0 mt-px" /><span><b>{flagLabel(f.type, W)}</b>{f.detail ? ` — ${f.detail}` : ''}</span></p>)}
         </div>
       )}
       {l.moderation?.reason && ['rejected', 'removed'].includes(l.status) && (
@@ -129,6 +135,7 @@ function ListingRow({ l, median, actions }) {
 
 // Desktop: image-first product card with the same actions as ListingRow
 function ListingCard({ l, median, actions, i = 0 }) {
+  const W = useW();
   const s = l.sellerId || {};
   const [open, setOpen] = useState(false);
   const over = median && l.price > median ? Math.round((l.price / median) * 10) / 10 : null;
@@ -150,11 +157,11 @@ function ListingCard({ l, median, actions, i = 0 }) {
         <p className="mt-0.5 text-[14px] font-semibold text-slate-900 line-clamp-1">{l.title}</p>
         {median && <p className={`text-[12px] ${over >= 2 ? 'text-red-600 font-semibold' : 'text-slate-400'}`}>Typical {naira(median)}{over >= 1.5 ? ` · ${over}× higher` : ''}</p>}
         <div className="mt-1.5 flex items-center gap-1.5 text-[12px] text-slate-500 min-w-0">
-          <span className="truncate">{s.name || 'Resident'}</span> <Rating r={l.sellerRating} />
+          <span className="truncate">{s.name || W.Member}</span> <Rating r={l.sellerRating} />
         </div>
         {flagged && (
           <div className="mt-2 space-y-1">
-            {l.flags.map((f, k) => <p key={k} className="text-[11px] rounded-lg bg-amber-50 text-amber-800 px-2 py-1 flex gap-1"><AlertTriangle size={12} className="shrink-0 mt-px" /><span><b>{FLAG[f.type] || f.type}</b>{f.detail ? ` — ${f.detail}` : ''}</span></p>)}
+            {l.flags.map((f, k) => <p key={k} className="text-[11px] rounded-lg bg-amber-50 text-amber-800 px-2 py-1 flex gap-1"><AlertTriangle size={12} className="shrink-0 mt-px" /><span><b>{flagLabel(f.type, W)}</b>{f.detail ? ` — ${f.detail}` : ''}</span></p>)}
           </div>
         )}
         {l.moderation?.reason && ['rejected', 'removed'].includes(l.status) && (
@@ -254,16 +261,17 @@ function SellerSheet({ seller: s, onClose, onCall, onListings, onSuspend, onLift
   );
 }
 
-const TABS = [
+const tabsFor = (W) => [
   { id: 'queue',    label: 'Review queue',  short: 'Review',   icon: ListChecks, hint: 'Listings waiting for your decision' },
-  { id: 'reports',  label: 'Reports',       short: 'Reports',  icon: Flag,       hint: 'What residents flagged as unfair or unsafe' },
+  { id: 'reports',  label: 'Reports',       short: 'Reports',  icon: Flag,       hint: `What ${W.members} flagged as unfair or unsafe` },
   { id: 'orders',   label: 'Orders',        short: 'Orders',   icon: Receipt,    hint: 'Payments held in escrow and buyer disputes' },
-  { id: 'listings', label: 'Listings',      short: 'Listings', icon: ShoppingBag, hint: 'Everything on your estate\'s marketplace' },
+  { id: 'listings', label: 'Listings',      short: 'Listings', icon: ShoppingBag, hint: `Everything on your ${W.site}'s marketplace` },
   { id: 'sellers',  label: 'Sellers',       short: 'Sellers',  icon: Users,      hint: 'Ratings, reports and suspensions' },
   { id: 'rules',    label: 'Price & rules', short: 'Rules',    icon: Settings2,  hint: 'Price caps and protection settings' },
 ];
 
 export default function Marketplace() {
+  const W = useW();
   const { startCall } = useCall() || {};
   const isDesktop = useIsDesktop();
   const Listing = isDesktop ? ListingCard : ListingRow;
@@ -342,9 +350,10 @@ export default function Marketplace() {
     title: action === 'refund' ? 'Refund the buyer' : 'Pay the seller',
     subtitle: action === 'refund' ? `${naira(o.amount)} goes back to ${o.buyerId?.name || 'the buyer'}` : `${naira(o.sellerAmount)} is released to ${o.sellerId?.name || 'the seller'}`,
     cta: action === 'refund' ? 'Refund buyer' : 'Release payment', danger: action === 'refund',
-    quick: action === 'refund' ? ['Item not delivered', 'Item not as described', 'Seller unresponsive'] : ['Delivery confirmed by estate', 'Item matched the listing', 'Buyer\'s claim not supported'],
+    quick: action === 'refund' ? ['Item not delivered', 'Item not as described', 'Seller unresponsive'] : [`Delivery confirmed by ${W.site}`, 'Item matched the listing', 'Buyer\'s claim not supported'],
     run: (note) => act(() => marketAdminAPI.resolveOrder(o._id, action, note), action === 'refund' ? 'Buyer refunded' : 'Seller paid'),
   });
+  const TABS = tabsFor(W);
   const current = TABS.find((t) => t.id === tab);
   const TILES = stats ? [
     { k: 'To review', v: stats.pending, onClick: () => go('queue'), alert: stats.pending > 0 },
@@ -403,7 +412,7 @@ export default function Marketplace() {
         <div className="space-y-3">
           <Chips value={orderStatus} onChange={setOrderStatus} options={[['disputed', 'Disputes'], ['paid', 'Awaiting delivery'], ['delivered', 'Delivered'], ['completed', 'Completed'], ['refunded', 'Refunded'], ['all', 'All']]} />
           {orders === null ? <Skeleton /> : orders.length === 0 ? (
-            <AllClear icon={orderStatus === 'disputed' ? CheckCircle2 : Receipt} title={orderStatus === 'disputed' ? 'No disputes' : 'No orders'} body="Residents pay through the app; money is held until the buyer confirms delivery." />
+            <AllClear icon={orderStatus === 'disputed' ? CheckCircle2 : Receipt} title={orderStatus === 'disputed' ? 'No disputes' : 'No orders'} body={`${W.Members} pay through the app; money is held until the buyer confirms delivery.`} />
           ) : (
             <div className={`grid lg:grid-cols-2 gap-3 transition-opacity ${loading ? 'opacity-60' : ''}`}>
               {orders.map((o) => (
@@ -444,7 +453,7 @@ export default function Marketplace() {
         <div className="space-y-3">
           <Chips value={reportStatus} onChange={setReportStatus} options={[['open', 'Open'], ['upheld', 'Upheld'], ['dismissed', 'Dismissed'], ['all', 'All']]} />
           {reports === null ? <Skeleton /> : (reports.length === 0 ? (
-            <AllClear icon={Flag} title={reportStatus === 'open' ? 'No open reports' : 'No reports'} body="Residents can report scams, price gouging and misleading listings." />
+            <AllClear icon={Flag} title={reportStatus === 'open' ? 'No open reports' : 'No reports'} body={`${W.Members} can report scams, price gouging and misleading listings.`} />
           ) : (
             <div className={`grid lg:grid-cols-2 gap-3 transition-opacity ${loading ? 'opacity-60' : ''}`}>
               {reports.map((r) => (
@@ -458,7 +467,7 @@ export default function Marketplace() {
                       </div>
                       <p className="font-semibold text-slate-900 truncate mt-1">{r.listingId?.title || 'Deleted listing'}</p>
                       {r.listingId && <p className="text-sm font-bold text-slate-700">{naira(r.listingId.price)}</p>}
-                      <p className="text-xs text-slate-500">By {r.reporterId?.name || 'a resident'} · {ago(r.createdAt)} · seller {r.sellerId?.name || '—'}</p>
+                      <p className="text-xs text-slate-500">By {r.reporterId?.name || withAn(W.member)} · {ago(r.createdAt)} · seller {r.sellerId?.name || '—'}</p>
                     </div>
                   </div>
                   {r.note && <p className="text-sm text-slate-700 mt-3 rounded-xl bg-slate-50 p-3">“{r.note}”</p>}
@@ -479,7 +488,7 @@ export default function Marketplace() {
         </div>
       )}
 
-      {tab === 'sellers' && (sellers === null ? <Skeleton rows={4} compact /> : sellers.length === 0 ? <AllClear icon={Users} title="No sellers yet" body="Residents who list items appear here." /> : (
+      {tab === 'sellers' && (sellers === null ? <Skeleton rows={4} compact /> : sellers.length === 0 ? <AllClear icon={Users} title="No sellers yet" body={`${W.Members} who list items appear here.`} /> : (
         <div className={`glass-card divide-y divide-slate-100 overflow-hidden transition-opacity ${loading ? 'opacity-60' : ''}`}>
           {sellers.map((s) => (
             <button key={s._id} onClick={() => setSellerOpen(s)} className="w-full p-3.5 sm:p-4 flex items-center gap-3 text-left hover:bg-slate-50 active:bg-slate-50">
@@ -524,7 +533,7 @@ export default function Marketplace() {
             <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/10 border border-white/15 flex-shrink-0"><ShoppingBag size={22} className="text-emerald-300" /></div>
             <div className="min-w-0">
               <h1 className="text-[22px] font-semibold text-white" style={{ letterSpacing: '-0.025em' }}>Marketplace</h1>
-              <p className="text-[13px] text-emerald-100/75 flex items-center gap-1.5"><ShieldCheck size={13} /> Keep your residents' market fair and safe</p>
+              <p className="text-[13px] text-emerald-100/75 flex items-center gap-1.5"><ShieldCheck size={13} /> Keep your {W.members}' market fair and safe</p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -581,7 +590,7 @@ export default function Marketplace() {
         <div className="relative flex items-center gap-3">
           <div className="flex-1 min-w-0">
             <h1 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2"><ShoppingBag size={19} /> Marketplace</h1>
-            <p className="text-xs text-emerald-50/80 mt-0.5 flex items-center gap-1.5"><ShieldCheck size={12} /> Keep your residents' market fair and safe</p>
+            <p className="text-xs text-emerald-50/80 mt-0.5 flex items-center gap-1.5"><ShieldCheck size={12} /> Keep your {W.members}' market fair and safe</p>
           </div>
           <button onClick={() => { load(); loadStats(); }} aria-label="Refresh" className="w-10 h-10 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 shrink-0">
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
@@ -634,6 +643,7 @@ const toForm = (s) => ({
 });
 
 function Rules({ settings, onSaved }) {
+  const W = useW();
   const [f, setF] = useState(null);
   const [saving, setSaving] = useState(false);
   useEffect(() => { if (settings) setF(toForm(settings)); }, [settings]);
@@ -686,7 +696,7 @@ function Rules({ settings, onSaved }) {
         <div className="glass-card p-4 sm:p-5 space-y-4">
           <div>
             <h3 className="font-bold text-slate-900 flex items-center gap-2"><ShieldCheck size={17} className="text-emerald-600" /> Consumer protection</h3>
-            <p className="text-xs text-slate-500 mt-0.5">How listings go live and what happens when residents complain.</p>
+            <p className="text-xs text-slate-500 mt-0.5">How listings go live and what happens when {W.members} complain.</p>
           </div>
           <button type="button" onClick={() => set('requireApproval', !f.requireApproval)} className="w-full flex items-center gap-3 text-left rounded-xl border border-slate-200 p-3">
             <span className="flex-1"><span className="text-sm font-semibold text-slate-800 block">Approve every listing</span><span className="text-xs text-slate-500">New and edited listings wait in your review queue.</span></span>

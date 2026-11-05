@@ -8,16 +8,23 @@ import toast from 'react-hot-toast';
 import { siteAPI } from '../api';
 import { useAuth } from './AuthContext';
 import { useSocket } from './SocketContext';
-import { fallbackSite, MODULES } from '../utils/siteTypes';
+import { fallbackSite, MODULES, roleOf } from '../utils/siteTypes';
 
 const SiteContext = createContext(null);
+
+// The last site type seen on this device, so boot / page loaders say "Loading
+// your hospital" before the user and GET /api/site have loaded
+const LAST_TYPE_KEY = 'ac:lastSiteType';
+export const lastSiteType = () => { try { return localStorage.getItem(LAST_TYPE_KEY) || undefined; } catch { return undefined; } };
+const rememberType = (t) => { try { if (t) localStorage.setItem(LAST_TYPE_KEY, t); } catch { /* private mode */ } };
 
 export const SiteProvider = ({ children }) => {
   const { user } = useAuth();
   const socketCtx = useSocket();
   const estateObj = user?.estateId && typeof user.estateId === 'object' ? user.estateId : null;
   const estateId = estateObj?._id || (typeof user?.estateId === 'string' ? user.estateId : null);
-  const estateType = estateObj?.site?.type;
+  // Before the user (or their estate) has loaded, fall back to the last type on this device
+  const estateType = estateObj?.site?.type || lastSiteType();
 
   const [site, setSite] = useState(() => fallbackSite(estateType));
   const [loaded, setLoaded] = useState(false);
@@ -30,6 +37,7 @@ export const SiteProvider = ({ children }) => {
       const { data } = await siteAPI.get();
       if (id !== reqRef.current) return; // a newer request (estate switch) won
       setSite({ ...fallbackSite(data.data?.type), ...data.data });
+      rememberType(data.data?.type);
       setLoaded(true);
     } catch {
       /* keep the fallback — the UI still works with estate defaults */
@@ -38,6 +46,7 @@ export const SiteProvider = ({ children }) => {
 
   // New estate (login / switch): reset to its fallback, then fetch
   useEffect(() => {
+    if (estateObj?.site?.type) rememberType(estateObj.site.type);
     setSite(fallbackSite(estateType));
     setLoaded(false);
     if (estateId) refresh();
@@ -80,6 +89,15 @@ export const SiteProvider = ({ children }) => {
       // Module on? Unknown modules count as on so nothing disappears by accident
       on: (key) => site.modules?.[key] !== false,
       isEstate: site.type === 'estate',
+      // Site roles (GET /api/site → roles, defaultRole, assignLabel, requestKinds)
+      roles: site.roles || [],
+      defaultRole: site.defaultRole || site.roles?.[0]?.key || 'resident',
+      assignLabel: site.assignLabel || '',
+      requestKinds: site.requestKinds || [],
+      // Role UI is for non-estate sites with more than one role
+      hasRoles: site.type !== 'estate' && (site.roles || []).length > 1,
+      // roleOf('doctor') → role def; unknown / '' → the default role
+      roleOf: (key) => roleOf(site.roles, key),
     };
   }, [site, loaded, refresh]);
 
@@ -87,9 +105,18 @@ export const SiteProvider = ({ children }) => {
 };
 
 // Safe outside the provider too (returns the estate defaults)
-const FALLBACK = (() => {
-  const s = fallbackSite('estate');
-  return { ...s, loaded: false, refresh: () => {}, setSite: () => {}, t: (k) => s.terms[k] ?? k, on: (k) => s.modules[k] !== false, isEstate: true };
-})();
+const fallbackValue = () => {
+  const s = fallbackSite(lastSiteType());
+  return {
+    ...s, loaded: false, refresh: () => {}, setSite: () => {}, t: (k) => s.terms[k] ?? k, on: (k) => s.modules[k] !== false,
+    isEstate: s.type === 'estate', hasRoles: false, roleOf: (k) => roleOf(s.roles, k),
+    defaultRole: s.defaultRole, assignLabel: s.assignLabel, requestKinds: s.requestKinds,
+  };
+};
+let FALLBACK = null;
 
-export const useSite = () => useContext(SiteContext) || FALLBACK;
+export const useSite = () => {
+  const ctx = useContext(SiteContext);
+  if (ctx) return ctx;
+  return (FALLBACK ||= fallbackValue());
+};

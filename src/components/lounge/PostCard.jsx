@@ -3,6 +3,10 @@ import { Heart, MessageCircle, Send, MoreHorizontal, Trash2, Flag } from 'lucide
 import toast from 'react-hot-toast';
 import { postAPI } from '../../api';
 import { Avatar, VerifiedTick, imgUrl, timeAgo, isManagerRole } from './shared';
+import { useSite } from '../../context/SiteContext';
+import { lower, withAn } from '../../utils/siteTypes';
+
+const useW = () => { const { terms: T, isEstate: E } = useSite(); return { T, E, site: lower(T.site), Site: T.site, member: lower(T.member), Member: T.member, members: lower(T.members), Members: T.members }; };
 
 // Short text-only posts render as a bold gradient tile (Instagram-style).
 // Text tiles stay within the green family (estate manager theme).
@@ -46,6 +50,7 @@ function Carousel({ images, onDoubleTap }) {
 }
 
 export default function PostCard({ post, me, onLikeLocal, onOpenComments, onDelete, onOpenAuthor }) {
+  const W = useW();
   const [burst, setBurst] = useState(0);
   const [pop, setPop] = useState(0);
   const [expanded, setExpanded] = useState(false);
@@ -105,9 +110,9 @@ export default function PostCard({ post, me, onLikeLocal, onOpenComments, onDele
         <button onClick={() => onOpenAuthor?.(author)} className="shrink-0"><Avatar person={author} size={34} /></button>
         <div className="flex-1 min-w-0 leading-tight">
           <div className="flex items-center gap-1 text-[14px] font-semibold text-slate-900 truncate">
-            {author.name || 'Resident'} {isManagerRole(author.role) && <VerifiedTick />}
+            {author.name || W.Member} {isManagerRole(author.role) && <VerifiedTick />}
           </div>
-          <div className="text-[12px] text-slate-500 truncate">{isManagerRole(author.role) ? 'Estate Management' : 'Resident'} · {timeAgo(post.createdAt)}</div>
+          <div className="text-[12px] text-slate-500 truncate">{isManagerRole(author.role) ? `${W.Site} Management` : W.Member} · {timeAgo(post.createdAt)}</div>
         </div>
         <div className="relative">
           <button onClick={() => setMenu((m) => !m)} aria-label="More" className="w-9 h-9 -mr-1 rounded-full flex items-center justify-center text-slate-700 hover:bg-slate-100">
@@ -120,7 +125,7 @@ export default function PostCard({ post, me, onLikeLocal, onOpenComments, onDele
                   <Trash2 size={15} /> Delete post
                 </button>
               )}
-              <button onClick={() => { setMenu(false); toast.success('Thanks — estate management will review this post'); }} className="w-full flex items-center gap-2 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">
+              <button onClick={() => { setMenu(false); toast.success(`Thanks — ${W.site} management will review this post`); }} className="w-full flex items-center gap-2 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">
                 <Flag size={15} /> Report
               </button>
             </div>
@@ -167,7 +172,7 @@ export default function PostCard({ post, me, onLikeLocal, onOpenComments, onDele
         )}
         {comments.slice(-2).map((c) => (
           <p key={c._id} className="text-[14px] text-slate-900 leading-snug truncate">
-            <span className="font-semibold mr-1.5">{c.author?.name?.split(' ')[0] || 'Resident'}</span>{c.text}
+            <span className="font-semibold mr-1.5">{c.author?.name?.split(' ')[0] || W.Member}</span>{c.text}
           </p>
         ))}
         {comments.length > 0 && comments.length <= 2 && (

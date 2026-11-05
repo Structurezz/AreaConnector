@@ -18,6 +18,10 @@ import {
 import DeckList, { useMusicDeck, useMusicPlayer, MusicChannel } from '../components/podcast/MusicDeck';
 import MobileHostStudio from '../components/podcast/MobileHostStudio';
 import SetupSteps, { OptionCard, MicCheck } from '../components/podcast/SetupSteps';
+import { useSite } from '../context/SiteContext';
+import { lower, withAn } from '../utils/siteTypes';
+
+const useW = () => { const { terms: T, isEstate: E } = useSite(); return { T, E, site: lower(T.site), Site: T.site, member: lower(T.member), Member: T.member, members: lower(T.members), Members: T.members }; };
 
 // Podcast rooms are voice-only live sessions (server kinds: podcast | chat | prayer).
 // Everything here stays inside the Podcast section; the Lounge's DJ console is separate.
@@ -73,6 +77,7 @@ async function uploadVoice(blob) {
 }
 
 export default function PodcastStudio() {
+  const W = useW();
   const { user } = useAuth();
   const navigate = useNavigate();
   const isDesktop = useIsDesktop();
@@ -210,7 +215,7 @@ export default function PodcastStudio() {
               <Save size={18} />
             </span>
             <div className="mt-3 text-[17px] font-semibold text-slate-900">That's a wrap 🎉</div>
-            <p className="text-[13px] text-slate-500 mt-0.5">Save the recording so residents can replay it on the Podcast page.</p>
+            <p className="text-[13px] text-slate-500 mt-0.5">Save the recording so {W.members} can replay it on the Podcast page.</p>
             <div className="mt-4 grid grid-cols-4 gap-2">
               {[
                 ['Length', fmtDur(voiceDurRef.current * 1000)],
@@ -248,7 +253,7 @@ export default function PodcastStudio() {
       <SetupSteps heading={meta.label} accent={meta.color} onExit={() => navigate('/podcasts')}
         onFinish={goLive} finishing={starting}
         steps={[
-          { key: 'style', title: 'What kind of room?', hint: 'Pick how you want to talk to your residents.',
+          { key: 'style', title: 'What kind of room?', hint: `Pick how you want to talk to your ${W.members}.`,
             content: (
               <div className="space-y-2.5">
                 {STYLES.map(({ key, Icon, label, desc, color }) => (
@@ -256,7 +261,7 @@ export default function PodcastStudio() {
                 ))}
               </div>
             ) },
-          { key: 'details', title: 'Name your room', hint: 'This is what residents see in their notification.',
+          { key: 'details', title: 'Name your room', hint: `This is what ${W.members} see in their notification.`,
             content: (
               <div className="space-y-4">
                 <div>
@@ -268,7 +273,7 @@ export default function PodcastStudio() {
                 <div>
                   <label className="text-[12px] font-semibold text-slate-500">What's it about? <span className="font-normal text-slate-400">(optional)</span></label>
                   <textarea value={topic} onChange={(e) => setTopic(e.target.value)} rows={3} maxLength={200}
-                    placeholder="e.g. Monthly estate update and Q&A" className={`mt-1.5 resize-none ${inputCls}`} />
+                    placeholder={`e.g. Monthly ${W.site} update and Q&A`} className={`mt-1.5 resize-none ${inputCls}`} />
                 </div>
               </div>
             ) },
@@ -276,13 +281,13 @@ export default function PodcastStudio() {
             content: <DeckList deck={deck} accent={meta.color} /> },
           { key: 'rundown', title: 'Plan your show (optional)', hint: 'A simple running order you can tick off while you are live.',
             content: <RundownPanel rundown={rundown} live={false} accent={meta.color} /> },
-          { key: 'mic', title: 'Check your mic', hint: 'Make sure residents can hear you clearly.',
+          { key: 'mic', title: 'Check your mic', hint: `Make sure ${W.members} can hear you clearly.`,
             content: (
               <div className="space-y-3">
                 <MicCheck accent={meta.color} />
                 <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4 space-y-2 text-[13px] text-slate-600">
                   <div>🎧 Use headphones so your speaker doesn't echo into the mic.</div>
-                  <div>🔔 Residents get a notification the moment you go live.</div>
+                  <div>🔔 {W.Members} get a notification the moment you go live.</div>
                   {style === 'podcast' && <div>💾 When you end, you can save the recording to the Podcast archive.</div>}
                 </div>
               </div>
@@ -352,7 +357,7 @@ export default function PodcastStudio() {
               <ArrowLeft size={14} /> Podcast
             </button>
             <h1 className="mt-1.5 text-[22px] font-semibold text-slate-900" style={{ letterSpacing: '-0.025em' }}>Go live, {first}</h1>
-            <p className="text-[13px] text-slate-500 mt-0.5">Set up your room. Residents get a notification the moment you start.</p>
+            <p className="text-[13px] text-slate-500 mt-0.5">Set up your room. {W.Members} get a notification the moment you start.</p>
           </div>
           <div className="hidden xl:flex items-center gap-1.5">
             {checks.map((c, i) => (
@@ -415,7 +420,7 @@ export default function PodcastStudio() {
                 <div>
                   <div className="flex justify-between"><label className="text-[12px] font-semibold text-slate-600">What's it about? <span className="font-normal text-slate-400">(optional)</span></label><span className="text-[11px] text-slate-400 tabular-nums">{topic.length}/200</span></div>
                   <textarea value={topic} onChange={(e) => setTopic(e.target.value)} rows={2} maxLength={200}
-                    placeholder="e.g. Monthly estate update and Q&A" className={`mt-1.5 resize-none ${field}`}
+                    placeholder={`e.g. Monthly ${W.site} update and Q&A`} className={`mt-1.5 resize-none ${field}`}
                     style={{ fontFamily: 'inherit', '--tw-ring-color': `${meta.color}22` }}
                     onFocus={(e) => (e.currentTarget.style.borderColor = meta.color)} onBlur={(e) => (e.currentTarget.style.borderColor = '')} />
                 </div>
@@ -452,7 +457,7 @@ export default function PodcastStudio() {
                   <div className="text-[12px] text-slate-600 truncate">{shownTitle}</div>
                   {topic.trim() && <div className="text-[11.5px] text-slate-400 truncate">{topic.trim()}</div>}
                 </div>
-                <div className="mt-1.5 text-[11px] text-slate-400 text-center">What residents see on their phones</div>
+                <div className="mt-1.5 text-[11px] text-slate-400 text-center">What {W.members} see on their phones</div>
 
                 {/* Mic check */}
                 <div className="mt-4">
@@ -477,7 +482,7 @@ export default function PodcastStudio() {
                   style={{ background: `linear-gradient(135deg, ${meta.color}, ${meta.dark})`, boxShadow: `0 14px 28px -14px ${meta.color}` }}>
                   {starting ? <><Loader2 size={16} className="animate-spin" /> Starting…</> : <><span className="relative flex w-2 h-2"><span className="absolute inset-0 rounded-full bg-white animate-ping opacity-70" /><span className="relative w-2 h-2 rounded-full bg-white" /></span> Go live now</>}
                 </button>
-                <p className="mt-2 text-[11px] text-slate-400 text-center">Needs microphone access · one live room per estate at a time</p>
+                <p className="mt-2 text-[11px] text-slate-400 text-center">Needs microphone access · one live room per {W.site} at a time</p>
               </div>
             </div>
 

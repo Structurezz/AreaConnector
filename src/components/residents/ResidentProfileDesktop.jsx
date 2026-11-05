@@ -12,6 +12,8 @@ import useCountUp from '../../hooks/useCountUp';
 import { AddFamilyPanel } from './FamilyPanels';
 import { useSite } from '../../context/SiteContext';
 import { StayCard, StaffCard, StayChip } from '../site/MemberFields';
+import { RoleCard, RoleChip } from '../site/RoleFields';
+import { lower } from '../../utils/siteTypes';
 
 const naira = (n) => `₦${Math.round(n || 0).toLocaleString()}`;
 const idOf = (x) => (x && typeof x === 'object' ? x._id : x);
@@ -30,6 +32,14 @@ const ALERT_TONE = {
 const RESTRICTION = {
   notice: { label: 'Dues notice sent', color: '#F59E0B', text: 'A written dues notice has been sent. Nothing is restricted yet.' },
   active: { label: 'Services paused',  color: '#EF4444', text: 'Convenience services are paused until the overdue dues are paid.' },
+};
+// Same states in a non-estate site's words ("bills", "school fees"…)
+const restrictionFor = (status, E, dues) => {
+  const base = RESTRICTION[status];
+  if (!base || E) return base;
+  return status === 'notice'
+    ? { ...base, label: 'Payment notice sent', text: 'A written payment notice has been sent. Nothing is restricted yet.' }
+    : { ...base, text: `Convenience services are paused until the overdue ${dues} are paid.` };
 };
 
 function Pill({ tone }) {
@@ -172,12 +182,14 @@ function Purposes({ visitors }) {
 }
 
 function Timeline({ payments, visitors, alerts }) {
+  const site = useSite();
+  const duesWord = site.isEstate ? 'dues' : lower(site.terms.dues);
   const items = useMemo(() => [
     ...payments.map((p) => ({ at: p.paidAt || p.createdAt, color: PAY_STATUS[p.status]?.dot || '#94A3B8', Icon: Wallet,
-      text: p.status === 'paid' ? `Paid ${naira(p.amount)} for ${p.scheduleId?.title || 'dues'}` : `${naira(p.amount)} billed for ${p.scheduleId?.title || 'dues'}` })),
+      text: p.status === 'paid' ? `Paid ${naira(p.amount)} for ${p.scheduleId?.title || duesWord}` : `${naira(p.amount)} billed for ${p.scheduleId?.title || duesWord}` })),
     ...visitors.map((v) => ({ at: v.expectedDate || v.createdAt, color: '#0EA5E9', Icon: VisitorIcon, text: `${v.visitorName} — ${v.purpose}` })),
     ...alerts.map((a) => ({ at: a.createdAt, color: '#EF4444', Icon: ShieldAlert, text: `Raised a ${a.type} alert${a.title ? `: ${a.title}` : ''}` })),
-  ].filter((x) => x.at).sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, 8), [payments, visitors, alerts]);
+  ].filter((x) => x.at).sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, 8), [payments, visitors, alerts, duesWord]);
   if (!items.length) return <Empty Icon={Activity} text="No activity yet" />;
   return (
     <ol className="px-5 py-4">
@@ -203,6 +215,8 @@ export default function ResidentProfileDesktop({ resident: r, units, onBack, onT
   const T = site.terms;
   const E = site.isEstate;
   const unitWord = E ? 'Apartment' : T.unit;
+  const memberWord = E ? 'resident' : lower(T.member);
+  const duesWord = lower(T.dues);
   const [tab, setTab] = useState('overview');
   const [data, setData] = useState({ loading: true, payments: [], visitors: [], alerts: [], dues: null });
 
@@ -238,7 +252,7 @@ export default function ResidentProfileDesktop({ resident: r, units, onBack, onT
   const aptWord = E ? 'Apt' : T.unit;
   const unitDisplay = r.unitId ? (r.unitId.block ? `${E ? 'Block ' : ''}${r.unitId.block} · ${aptWord} ${r.unitId.unitNumber}` : `${aptWord} ${r.unitId.unitNumber}`) : null;
   const daysIn = r.createdAt ? Math.max(0, Math.floor((Date.now() - new Date(r.createdAt)) / 86400000)) : 0;
-  const restriction = dues?.restriction?.status && dues.restriction.status !== 'none' ? RESTRICTION[dues.restriction.status] : null;
+  const restriction = dues?.restriction?.status && dues.restriction.status !== 'none' ? restrictionFor(dues.restriction.status, E, duesWord) : null;
   const changed = (idOf(r.unitId) || '') !== assignUnitId;
   const picked = units.find((u) => u._id === assignUnitId);
 
@@ -273,6 +287,7 @@ export default function ResidentProfileDesktop({ resident: r, units, onBack, onT
               <h1 className="text-[22px] font-semibold text-slate-900" style={{ letterSpacing: '-0.025em' }}>{r.name}</h1>
               <Pill tone={r.isActive ? { label: 'Active', bg: '#ECFDF5', text: '#047857', dot: '#10B981' } : { label: 'Suspended', bg: '#FEF2F2', text: '#B91C1C', dot: '#EF4444' }} />
               {site.modules?.stays && r.householdRole !== 'member' && <StayChip stay={r.stay} />}
+              <RoleChip siteRole={r.siteRole} />
               {restriction && <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: `${restriction.color}1A`, color: restriction.color }}>{restriction.label}</span>}
             </div>
             <div className="mt-2 flex items-center gap-x-4 gap-y-1 flex-wrap text-[12.5px] text-slate-500">
@@ -333,7 +348,7 @@ export default function ResidentProfileDesktop({ resident: r, units, onBack, onT
             </div>
           ) : tab === 'payments' ? (
             <Card title="Payment history" Icon={Wallet} color="#10B981" delay={340} right={<Link to="/payments" className="text-[12px] font-medium text-slate-500 hover:text-slate-900 flex items-center gap-1">Payments <ChevronRight size={13} /></Link>}>
-              {!payments.length ? <Empty Icon={Wallet} text="No bills for this resident yet" /> : (
+              {!payments.length ? <Empty Icon={Wallet} text={`No bills for this ${memberWord} yet`} /> : (
                 <table className="w-full">
                   <thead>
                     <tr className="text-[10px] font-bold uppercase tracking-wider text-slate-400 text-left">
@@ -344,7 +359,7 @@ export default function ResidentProfileDesktop({ resident: r, units, onBack, onT
                     {payments.map((p) => (
                       <tr key={p._id} className="border-t border-slate-100 hover:bg-slate-50/70 transition-colors">
                         <td className="px-5 py-3">
-                          <div className="text-[13px] font-medium text-slate-900">{p.scheduleId?.title || 'Estate dues'}</div>
+                          <div className="text-[13px] font-medium text-slate-900">{p.scheduleId?.title || (E ? 'Estate dues' : T.dues)}</div>
                           <div className="text-[11px] text-slate-400 capitalize">{[p.scheduleId?.frequency, p.method && p.method.replace('_', ' ')].filter(Boolean).join(' · ')}</div>
                         </td>
                         <td className="px-3 py-3 text-[13px] font-semibold text-slate-900 tabular-nums">{naira(p.amount)}</td>
@@ -359,7 +374,7 @@ export default function ResidentProfileDesktop({ resident: r, units, onBack, onT
             </Card>
           ) : tab === 'visitors' ? (
             <Card title="Visitors hosted" Icon={VisitorIcon} color="#0EA5E9" delay={340} right={<Link to="/visitors" className="text-[12px] font-medium text-slate-500 hover:text-slate-900 flex items-center gap-1">Visitor log <ChevronRight size={13} /></Link>}>
-              {!visitors.length ? <Empty Icon={VisitorIcon} text="No visitors registered by this resident" /> : (
+              {!visitors.length ? <Empty Icon={VisitorIcon} text={`No visitors registered by this ${memberWord}`} /> : (
                 <div className="divide-y divide-slate-100">
                   {visitors.map((v) => {
                     const st = VISITOR_STATUS[v.status] || VISITOR_STATUS['checked-out'];
@@ -382,7 +397,7 @@ export default function ResidentProfileDesktop({ resident: r, units, onBack, onT
           ) : (
             <div className="space-y-4">
               <Card title="Alerts raised" Icon={ShieldAlert} color="#EF4444" delay={340} right={<Link to="/alerts" className="text-[12px] font-medium text-slate-500 hover:text-slate-900 flex items-center gap-1">Alerts <ChevronRight size={13} /></Link>}>
-                {!alerts.length ? <Empty Icon={ShieldCheck} text="This resident hasn't raised any alerts" /> : (
+                {!alerts.length ? <Empty Icon={ShieldCheck} text={`This ${memberWord} hasn't raised any alerts`} /> : (
                   <div className="divide-y divide-slate-100">
                     {alerts.map((a) => (
                       <div key={a._id} className="flex items-center gap-3 px-5 py-3">
@@ -399,7 +414,7 @@ export default function ResidentProfileDesktop({ resident: r, units, onBack, onT
                 )}
               </Card>
               {dues?.history?.length > 0 && (
-                <Card title="Dues enforcement log" Icon={Gavel} color="#F97316" delay={380}>
+                <Card title={E ? 'Dues enforcement log' : 'Payment enforcement log'} Icon={Gavel} color="#F97316" delay={380}>
                   <ol className="px-5 py-4">
                     {dues.history.map((h, i) => (
                       <li key={h._id || i} className="relative flex gap-3 pb-3 last:pb-0">
@@ -422,7 +437,7 @@ export default function ResidentProfileDesktop({ resident: r, units, onBack, onT
         <div className="col-span-4 space-y-4 min-w-0">
           {/* Dues standing */}
           <Card delay={320} className="p-5">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Dues standing</div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{E ? 'Dues standing' : 'Payment standing'}</div>
             {data.loading ? <div className="skeleton h-14 rounded-xl mt-3" /> : restriction ? (
               <div className="mt-3 rounded-xl p-3.5 border" style={{ background: `${restriction.color}0D`, borderColor: `${restriction.color}40` }}>
                 <div className="text-[13px] font-semibold" style={{ color: restriction.color }}>{restriction.label}</div>
@@ -432,19 +447,20 @@ export default function ResidentProfileDesktop({ resident: r, units, onBack, onT
             ) : overdueN ? (
               <div className="mt-3 rounded-xl p-3.5 bg-red-50 border border-red-200">
                 <div className="text-[13px] font-semibold text-red-700">{overdueN} overdue bill{overdueN === 1 ? '' : 's'}</div>
-                <p className="text-[12px] text-red-700/80 mt-1">{naira(payments.filter((p) => p.status === 'overdue').reduce((t, p) => t + p.amount, 0))} past due. You can send a dues notice from Payments.</p>
+                <p className="text-[12px] text-red-700/80 mt-1">{naira(payments.filter((p) => p.status === 'overdue').reduce((t, p) => t + p.amount, 0))} past due. You can send {E ? 'a dues notice' : 'a payment notice'} from Payments.</p>
               </div>
             ) : (
               <div className="mt-3 rounded-xl p-3.5 bg-emerald-50 border border-emerald-200 flex items-center gap-2.5">
                 <CheckCircle2 size={18} className="text-emerald-600 flex-shrink-0" />
                 <div>
                   <div className="text-[13px] font-semibold text-emerald-800">In good standing</div>
-                  <div className="text-[11.5px] text-emerald-700/80">No overdue dues</div>
+                  <div className="text-[11.5px] text-emerald-700/80">No overdue {E ? 'dues' : duesWord}</div>
                 </div>
               </div>
             )}
           </Card>
 
+          <RoleCard member={r} onChanged={onFamilyChanged} />
           <StayCard member={r} onChanged={onFamilyChanged} />
           <StaffCard member={r} onChanged={onFamilyChanged} />
 
@@ -454,7 +470,7 @@ export default function ResidentProfileDesktop({ resident: r, units, onBack, onT
               {curUnit && (
                 <div className="grid grid-cols-2 gap-2">
                   <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Housemates</div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{E ? 'Housemates' : 'Sharing'}</div>
                     <div className="text-[15px] font-semibold text-slate-900 tabular-nums">{Math.max(0, (curUnit.residentIds || []).length - 1)}</div>
                   </div>
                   <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2">
@@ -488,7 +504,7 @@ export default function ResidentProfileDesktop({ resident: r, units, onBack, onT
             <Card title={T.household} Icon={Users} color="#A855F7" delay={380}
               right={
                 <span className="flex items-center gap-2">
-                  <span className="text-[11px] text-slate-400">{r.householdRole === 'member' ? `${r.relationship || 'Family'} of ${r.householdHead?.name?.split(' ')[0] || 'head'}` : `${r.household.length} family`}</span>
+                  <span className="text-[11px] text-slate-400">{r.householdRole === 'member' ? `${r.relationship || (E ? 'Family' : T.family)} of ${r.householdHead?.name?.split(' ')[0] || 'head'}` : E ? `${r.household.length} family` : `${r.household.length} ${lower(r.household.length === 1 ? T.family : T.familyPlural)}`}</span>
                   {r.isActive !== false && (
                     <button onClick={() => setAddingFamily(true)} className="inline-flex items-center gap-1 text-[11.5px] font-semibold px-2 py-1 rounded-lg text-fuchsia-700 bg-fuchsia-50 hover:bg-fuchsia-100">
                       <UserPlus size={12} /> Add
@@ -497,7 +513,7 @@ export default function ResidentProfileDesktop({ resident: r, units, onBack, onT
                 </span>
               }>
               {r.householdRole !== 'member' && !r.household.length && (
-                <p className="px-5 py-3 text-[12px] text-slate-500">No family members yet. {r.name?.split(' ')[0]} can add them from AreaMates, or you can add them here.</p>
+                <p className="px-5 py-3 text-[12px] text-slate-500">No {E ? 'family members' : lower(T.familyPlural)} yet. {r.name?.split(' ')[0]} can add them from AreaMates, or you can add them here.</p>
               )}
               <div className="divide-y divide-slate-100">
                 {[
@@ -517,7 +533,9 @@ export default function ResidentProfileDesktop({ resident: r, units, onBack, onT
                 ))}
               </div>
               <p className="px-5 py-2.5 text-[11px] text-slate-400 bg-slate-50/60 border-t border-slate-100">
-                {r.householdRole === 'member' ? 'Not billed. Follows the head\'s unit, dues status and suspension.' : 'Added from AreaMates. Family members are never billed.'}
+                {E
+                  ? (r.householdRole === 'member' ? 'Not billed. Follows the head\'s unit, dues status and suspension.' : 'Added from AreaMates. Family members are never billed.')
+                  : (r.householdRole === 'member' ? `Not billed. Follows the head's ${lower(T.unit)}, payment status and suspension.` : `Added from AreaMates. ${T.familyPlural} are never billed.`)}
               </p>
             </Card>
           )}
@@ -536,7 +554,7 @@ export default function ResidentProfileDesktop({ resident: r, units, onBack, onT
                 ['Joined', r.createdAt ? format(new Date(r.createdAt), 'd MMM yyyy') : '—'],
                 ['Last active', r.lastSeen ? formatDistanceToNow(new Date(r.lastSeen), { addSuffix: true }) : '—'],
                 ['DM search', r.isDiscoverable === false ? 'Hidden' : 'Visible', r.isDiscoverable === false ? EyeOff : Eye],
-                ['Password', r.mustChangePassword ? 'Temporary — not changed yet' : 'Set by resident'],
+                ['Password', r.mustChangePassword ? 'Temporary — not changed yet' : `Set by ${memberWord}`],
               ].map(([k, v, I]) => (
                 <div key={k} className="flex items-center justify-between px-5 py-2.5 text-[12.5px]">
                   <span className="text-slate-500">{k}</span>

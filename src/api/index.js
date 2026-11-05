@@ -120,6 +120,7 @@ export const alertAPI = {
   create: (data) => api.post('/alerts', data),
   acknowledge: (id) => api.patch(`/alerts/${id}/acknowledge`),
   resolve: (id) => api.patch(`/alerts/${id}/resolve`),
+  respond: (id, status) => api.post(`/alerts/${id}/respond`, { status }),
   broadcast: (data) => api.post('/alerts/broadcast', data),
 };
 
@@ -328,6 +329,24 @@ export const siteAPI = {
   updateMember: (id, data) => api.patch(`/site/members/${id}`, data),
   checkOut:     (id)       => api.post(`/site/stays/${id}/checkout`),
   staffCheck:   (q)        => api.get('/site/staff-check', { params: { q } }),
+  // Site roles: staff directory (?role=doctor) and a member's own team
+  staff:        (params)   => api.get('/site/staff', { params }),
+  myTeam:       ()         => api.get('/site/my-team'),
+};
+
+// Requests members send to staff (module requests)
+export const requestAPI = {
+  list:   (params)   => api.get('/requests', { params }),
+  create: (data)     => api.post('/requests', data),
+  update: (id, data) => api.patch(`/requests/${id}`, data),
+};
+
+// Emergency roll-call (module rollcall)
+export const rollcallAPI = {
+  active:  ()         => api.get('/site/rollcall/active'),
+  start:   (data)     => api.post('/site/rollcall', data),
+  respond: (id, data) => api.post(`/site/rollcall/${id}/respond`, data),
+  end:     (id)       => api.post(`/site/rollcall/${id}/end`),
 };
 
 // Deliveries & vehicles logged at the gate (module gatelog)

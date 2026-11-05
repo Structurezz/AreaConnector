@@ -45,9 +45,15 @@ import Courtroom from './pages/Courtroom';
 import RoomBoard from './pages/RoomBoard';
 import GateLog from './pages/GateLog';
 import SiteMap from './pages/SiteMap';
+import Staff from './pages/Staff';
+import Requests from './pages/Requests';
+import RollCall from './pages/RollCall';
+import { useSite } from './context/SiteContext';
+import { lower } from './utils/siteTypes';
 
 function RequireManager({ children, allowWhenBlocked = false }) {
   const { user, loading } = useAuth();
+  const site = useSite();
   const { isBlocked, status, loading: planLoading } = usePlan();
   const location = useLocation();
 
@@ -78,7 +84,7 @@ function RequireManager({ children, allowWhenBlocked = false }) {
         <div className="flex items-center justify-center py-24 px-6">
           <div className="glass-card p-8 max-w-sm text-center">
             <p className="font-semibold mb-2" style={{ color: '#0F172A' }}>You don't have access to this page</p>
-            <p className="text-sm" style={{ color: '#64748B' }}>Ask your estate manager to give you access from the Team page.</p>
+            <p className="text-sm" style={{ color: '#64748B' }}>{site.isEstate ? 'Ask your estate manager to give you access from the Team page.' : `Ask your ${lower(site.terms.manager)} to give you access from the Team page.`}</p>
           </div>
         </div>
       </AppLayout>
@@ -114,6 +120,9 @@ function AppRoutes() {
       <Route path="/rooms" element={<RequireManager><RoomBoard /></RequireManager>} />
       <Route path="/gate-log" element={<RequireManager><GateLog /></RequireManager>} />
       <Route path="/map" element={<RequireManager><SiteMap /></RequireManager>} />
+      <Route path="/staff" element={<RequireManager><PlanGate feature="residentManagement" featureName="Resident Management"><Staff /></PlanGate></RequireManager>} />
+      <Route path="/requests" element={<RequireManager><Requests /></RequireManager>} />
+      <Route path="/rollcall" element={<RequireManager><RollCall /></RequireManager>} />
       <Route path="/units" element={<RequireManager><PlanGate feature="unitManagement" featureName="Unit Management"><Units /></PlanGate></RequireManager>} />
       <Route path="/announcements" element={<RequireManager><PlanGate feature="announcements" featureName="Announcements"><Announcements /></PlanGate></RequireManager>} />
       <Route path="/announcements/live" element={<RequireManager><PlanGate feature="announcements" featureName="Announcements"><AnnouncementBroadcast /></PlanGate></RequireManager>} />
@@ -142,10 +151,10 @@ function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <SeoTracker />
       <AuthProvider>
         <SocketProvider>
           <SiteProvider>
+          <SeoTracker />
           <CallProvider>
           <CallOverlay />
           <UpdateBanner />

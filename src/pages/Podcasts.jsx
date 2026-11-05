@@ -11,6 +11,10 @@ import DJLive from '../components/DJLive';
 import Portal from '../components/ui/Portal';
 import PodcastsDesktop from '../components/PodcastsDesktop';
 import useIsDesktop from '../hooks/useIsDesktop';
+import { useSite } from '../context/SiteContext';
+import { lower, withAn } from '../utils/siteTypes';
+
+const useW = () => { const { terms: T, isEstate: E } = useSite(); return { T, E, site: lower(T.site), Site: T.site, member: lower(T.member), Member: T.member, members: lower(T.members), Members: T.members }; };
 
 const GREEN      = '#10B981';
 const GREEN_DARK = '#059669';
@@ -128,6 +132,7 @@ function AudioPlayer({ item, kind, onClose }) {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function Podcasts() {
+  const W = useW();
   const navigate = useNavigate();
   const { subscribe } = useSocket();
   const [upcoming, setUpcoming] = useState([]);
@@ -205,7 +210,7 @@ export default function Podcasts() {
             Live rooms, mixtapes, FM shows.
           </h1>
           <p style={{ fontSize: 13, opacity: 0.9, lineHeight: 1.55, marginTop: 8 }}>
-            Catch neighbours going live, replay past sets, or start your own — prayer, chat, DJ, podcast.
+            Catch {W.E ? 'neighbours' : W.members} going live, replay past sets, or start your own — prayer, chat, DJ, podcast.
           </p>
           <button onClick={() => navigate('/podcasts/live')}
             style={{ marginTop: 14, padding: '10px 18px', borderRadius: 12, border: 'none', background: '#fff', color: GREEN_DARK, fontWeight: 800, fontSize: 13, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
@@ -297,7 +302,7 @@ export default function Podcasts() {
         <div style={{ marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
             <Headphones size={13} color={TEAL_DARK}/>
-            <h2 style={{ fontSize: 14, fontWeight: 800, color: '#0F172A', margin: 0 }}>Your estate's archive</h2>
+            <h2 style={{ fontSize: 14, fontWeight: 800, color: '#0F172A', margin: 0 }}>Your {W.site}'s archive</h2>
             <span style={{ fontSize: 11, color: '#94A3B8' }}>· {mixtapes.length}</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -338,7 +343,7 @@ export default function Podcasts() {
           </div>
           <div style={{ fontSize: 16, fontWeight: 800, color: '#0F172A', marginBottom: 6 }}>Nothing on air yet</div>
           <div style={{ fontSize: 13, color: '#64748B', maxWidth: 300, margin: '0 auto 16px' }}>
-            Start the first live room — a prayer, a chat, a DJ set — your neighbours will get notified.
+            Start the first live room — a prayer, a chat, a DJ set — your {W.E ? 'neighbours' : W.members} will get notified.
           </div>
           <button onClick={() => navigate('/podcasts/live')}
             style={{ padding: '10px 20px', borderRadius: 12, background: `linear-gradient(135deg, ${GREEN}, ${GREEN_DARK})`, color: '#fff', fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>

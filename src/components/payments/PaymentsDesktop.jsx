@@ -8,6 +8,7 @@ import { format, isToday, isYesterday } from 'date-fns';
 import Spinner from '../ui/Spinner';
 import DuesEnforcement from './DuesEnforcement';
 import { useSite } from '../../context/SiteContext';
+import { lower, withAn, billTypeLabel } from '../../utils/siteTypes';
 
 const TYPE_META = {
   security_dues: { label: 'Security dues', icon: ShieldCheck,     color: '#2563EB' },
@@ -16,6 +17,14 @@ const TYPE_META = {
   contribution:  { label: 'Contribution',  icon: Gift,            color: '#059669' },
   other:         { label: 'Other',         icon: ArrowDownCircle, color: '#64748B' },
 };
+// Bill type in the site's words (estates keep the labels above). The page
+// sets SITE_TYPE on render; there's one active site at a time.
+let SITE_TYPE = 'estate';
+const metaOf = (type) => {
+  const m = TYPE_META[type] || TYPE_META.other;
+  return SITE_TYPE === 'estate' ? m : { ...m, label: billTypeLabel(type in TYPE_META ? type : 'other', SITE_TYPE, m.label) };
+};
+
 const PAY_STATUS = {
   paid:    { label: 'Paid',    cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
   pending: { label: 'Pending', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
@@ -68,7 +77,8 @@ function Empty({ icon: Icon, title, body, action }) {
 }
 
 export default function PaymentsDesktop(p) {
-  const { terms: T } = useSite();
+  const { terms: T, isEstate, type: siteType } = useSite();
+  SITE_TYPE = siteType || 'estate';
   const mL = T.member.toLowerCase(), msL = T.members.toLowerCase();
   const {
     stats, schedules, wallet, walletLoading, hideBalance, toggleHide, refreshAll,
@@ -227,7 +237,7 @@ export default function PaymentsDesktop(p) {
         {/* Bills table */}
         {tab === 'bills' && !selectedSchedule && (
           !schedules.length ? (
-            <Empty icon={FileText} title="No bills yet" body={`Create a bill — dues, a levy or a contribution — and every ${mL} gets an invoice they can pay in the app.`}
+            <Empty icon={FileText} title="No bills yet" body={`Create a bill — ${isEstate ? 'dues' : lower(T.dues)}, a levy or a contribution — and every ${mL} gets an invoice they can pay in the app.`}
               action={<button onClick={openCreate} className="btn-primary gap-2"><Plus size={15} /> Create bill</button>} />
           ) : (
             <div className="overflow-x-auto">
@@ -245,7 +255,7 @@ export default function PaymentsDesktop(p) {
                 </thead>
                 <tbody>
                   {bills.map((s) => {
-                    const m = TYPE_META[s.type] || TYPE_META.other;
+                    const m = metaOf(s.type);
                     const st = s.stats || { paid: 0, pending: 0, overdue: 0, total: 0 };
                     const pct = st.total ? Math.round((st.paid / st.total) * 100) : 0;
                     return (
@@ -298,7 +308,7 @@ export default function PaymentsDesktop(p) {
 
         {/* Bill drill-down */}
         {tab === 'bills' && selectedSchedule && (() => {
-          const m = TYPE_META[selectedSchedule.type] || TYPE_META.other;
+          const m = metaOf(selectedSchedule.type);
           return (
             <div>
               <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-4">
@@ -439,7 +449,7 @@ export default function PaymentsDesktop(p) {
           <div>
             <div className="px-5 py-3 border-b border-slate-100 flex items-start gap-2 text-[12.5px] text-slate-600">
               <AlertCircle size={14} className="text-amber-600 mt-0.5 flex-shrink-0" />
-              Every successful Paystack charge for your {T.site.toLowerCase()}. <b className="font-semibold text-slate-800">Not linked</b> payments aren’t tied to a {mL} yet — Attach them to a {mL} and bill so they’re recorded and added to your wallet.
+              Every successful Paystack charge for your {T.site.toLowerCase()}. <b className="font-semibold text-slate-800">Not linked</b> payments aren’t tied to {withAn(mL)} yet — Attach them to {withAn(mL)} and bill so they’re recorded and added to your wallet.
             </div>
             {ledgerLoading ? <div className="flex justify-center py-16"><Spinner size={26} /></div> : !ledger.length ? (
               <Empty icon={CreditCard} title="No Paystack payments yet" body={`Online payments from ${msL} will appear here as they come in.`} />

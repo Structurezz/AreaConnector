@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSite } from '../context/SiteContext';
+import { lower, withAn, billTypeLabel } from '../utils/siteTypes';
 import api from '../api/axios';
 import Spinner, { PageLoader } from '../components/ui/Spinner';
 import InvoiceModal from '../components/ui/InvoiceModal';
@@ -26,6 +27,14 @@ const TYPE_META = {
   contribution:  { label: 'Contribution',  icon: Gift,         color: 'text-emerald-600', bg: 'bg-emerald-50' },
   other:         { label: 'Other',         icon: ArrowDownCircle, color: 'text-slate-500', bg: 'bg-slate-100' },
 };
+// Bill type in the site's words (estates keep the labels above). The page
+// sets SITE_TYPE on render; there's one active site at a time.
+let SITE_TYPE = 'estate';
+const metaOf = (type) => {
+  const m = TYPE_META[type] || TYPE_META.other;
+  return SITE_TYPE === 'estate' ? m : { ...m, label: billTypeLabel(type in TYPE_META ? type : 'other', SITE_TYPE, m.label) };
+};
+
 
 const STATUS_STYLE = {
   paid:    'bg-emerald-50 text-emerald-600',
@@ -122,7 +131,8 @@ function EmptyState({ icon: Icon, title, body, action }) {
 }
 
 export default function ManagerPayments() {
-  const { terms: T } = useSite();
+  const { terms: T, isEstate, type: siteType } = useSite();
+  SITE_TYPE = siteType || 'estate';
   const mL = T.member.toLowerCase(), msL = T.members.toLowerCase();
   const [stats, setStats] = useState(null);
   const [schedules, setSchedules] = useState([]);
@@ -247,7 +257,7 @@ export default function ManagerPayments() {
 
   const submitAttach = async () => {
     if (!attachForm.residentId || !attachForm.scheduleId) {
-      toast.error(`Pick a ${mL} and a schedule`);
+      toast.error(`Pick ${withAn(mL)} and a schedule`);
       return;
     }
     setAttaching(true);
@@ -505,12 +515,12 @@ export default function ManagerPayments() {
       {tab === 'bills' && !selectedSchedule && (
         schedules.length === 0 ? (
           <EmptyState icon={FileText} title="No bills yet"
-            body={`Create a bill (dues, levy or contribution) and every ${mL} gets an invoice to pay.`}
+            body={`Create a bill (${isEstate ? 'dues' : lower(T.dues)}, levy or contribution) and every ${mL} gets an invoice to pay.`}
             action={<button onClick={() => setShowCreate(true)} className="btn-primary gap-2"><Plus size={15} /> Create bill</button>} />
         ) : (
           <div className="grid md:grid-cols-2 2xl:grid-cols-3 gap-3">
             {schedules.map((s) => {
-              const meta = TYPE_META[s.type] || TYPE_META.other;
+              const meta = metaOf(s.type);
               const Icon = meta.icon;
               return (
                 <button key={s._id} onClick={() => openCollection(s)}
@@ -636,7 +646,7 @@ export default function ManagerPayments() {
           </div>
         ) : withdrawals.length === 0 ? (
           <EmptyState icon={ArrowUpRight} title="No withdrawals yet"
-            body="Money you move from your estate wallet to your bank will show up here."
+            body={`Money you move from your ${T.site.toLowerCase()} wallet to your bank will show up here.`}
             action={<button onClick={startWithdraw} className="btn-primary gap-2"><ArrowUpRight size={15} /> Make a withdrawal</button>} />
         ) : (
           <div className="space-y-4">
@@ -685,7 +695,7 @@ export default function ManagerPayments() {
             <div className="flex-1 min-w-0">
               <div className="text-sm font-bold text-amber-900">Live Paystack payments</div>
               <div className="text-xs mt-1 text-amber-800 leading-relaxed">
-                Every successful charge appears here. Tap <strong>Attach</strong> on a <strong>Not linked</strong> payment to match it to a {mL} and bill — it's then recorded and added to your wallet.
+                Every successful charge appears here. Tap <strong>Attach</strong> on a <strong>Not linked</strong> payment to match it to {withAn(mL)} and bill — it's then recorded and added to your wallet.
               </div>
             </div>
           </div>
@@ -797,7 +807,7 @@ export default function ManagerPayments() {
 
       {/* Attach Paystack transaction */}
       <BottomSheet open={!!attachFor} onClose={() => setAttachFor(null)} title="Attach payment"
-        subtitle={attachFor ? `Link ${naira(attachFor.amount)} to a resident and bill` : ''}
+        subtitle={attachFor ? `Link ${naira(attachFor.amount)} to ${withAn(mL)} and bill` : ''}
         footer={
           <div className="flex gap-3">
             <button onClick={() => setAttachFor(null)} className="btn-outline flex-1 py-3">Cancel</button>
@@ -814,10 +824,10 @@ export default function ManagerPayments() {
               <Row label="Paid" value={attachFor.paidAt ? format(new Date(attachFor.paidAt), 'MMM d, yyyy · h:mm a') : '—'} />
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Resident</label>
+              <label className="text-xs font-semibold text-slate-500 mb-1.5 block">{T.member}</label>
               <select className="input-field w-full py-3" value={attachForm.residentId}
                 onChange={e => setAttachForm(f => ({ ...f, residentId: e.target.value }))}>
-                <option value="">Select resident…</option>
+                <option value="">Select {mL}…</option>
                 {residents.map(r => <option key={r._id} value={r._id}>{r.name} · {r.email}</option>)}
               </select>
             </div>
@@ -835,17 +845,17 @@ export default function ManagerPayments() {
 
       {/* Create bill */}
       <SidePanel open={showCreate} onClose={() => setShowCreate(false)} title="New bill"
-        subtitle="Every active resident gets a pending invoice">
+        subtitle={`Every active ${mL} gets a pending invoice`}>
         <form id="create-bill" onSubmit={handleCreateSchedule} className="space-y-4">
           <div>
             <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Title *</label>
-            <input className="input-field py-3" placeholder="e.g. Security Dues – June 2026"
+            <input className="input-field py-3" placeholder={isEstate ? 'e.g. Security Dues – June 2026' : `e.g. ${T.dues} – June 2026`}
               value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
           </div>
           <div>
             <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Type</label>
             <div className="grid grid-cols-3 gap-2">
-              {Object.entries(TYPE_META).map(([val, { label, icon: Icon, color, bg }]) => (
+              {Object.keys(TYPE_META).map((val) => ({ val, ...metaOf(val) })).map(({ val, label, icon: Icon, color, bg }) => (
                 <button key={val} type="button" onClick={() => setForm({ ...form, type: val })}
                   className={`flex flex-col items-center gap-1.5 p-2.5 rounded-xl border text-[11px] font-semibold transition-all ${
                     form.type === val ? 'border-emerald-400 bg-emerald-50/60 text-slate-900' : 'border-slate-200 text-slate-500'

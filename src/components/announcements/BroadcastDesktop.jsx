@@ -4,6 +4,8 @@ import {
   SkipForward, Clock3, TrendingUp, Heart, Smile, Bell, Search, Check, ListChecks, Radio,
 } from 'lucide-react';
 import { ReactionLayer, ChatPanel, useMicLevel } from '../podcast/StudioPanels';
+import { useSite } from '../../context/SiteContext';
+import { lower } from '../../utils/siteTypes';
 
 const RED = '#EF4444';
 const RED_DARK = '#DC2626';
@@ -17,14 +19,16 @@ const ago = (d) => {
   return h < 1 ? 'just now' : h < 24 ? `${h}h ago` : `${Math.round(h / 24)}d ago`;
 };
 
-export const TEMPLATES = [
+// Quick headlines; the meeting line follows the site word ("estate meeting", "hospital meeting")
+export const broadcastTemplates = (T) => [
   ['🚰', 'Water will be off from 10am to 2pm today'],
   ['⚡', 'Power update — generator schedule change'],
   ['🛡️', 'Security notice — please read'],
   ['🚪', 'Main gate will be closed for repairs'],
-  ['📅', 'Reminder: estate meeting this Saturday'],
+  ['📅', `Reminder: ${lower(T?.site || 'Estate')} meeting this Saturday`],
   ['🧹', 'Environmental sanitation this weekend'],
 ];
+export const TEMPLATES = broadcastTemplates();
 
 const Panel = ({ title, Icon, color, right, children, className = '', style }) => (
   <div className={`dash-rise rounded-2xl bg-white border border-slate-200/70 overflow-hidden ${className}`} style={style}>
@@ -70,6 +74,7 @@ export function BroadcastSetupDesktop({
   user, headline, setHeadline, bgTrack, setBgTrack, library, starting, onGoLive, onBack,
   residentCount, recent,
 }) {
+  const { terms: T, isEstate: E } = useSite();
   const [q, setQ] = useState('');
   const [testStream, setTestStream] = useState(null);
   const level = useMicLevel(testStream, !!testStream);
@@ -101,9 +106,9 @@ export function BroadcastSetupDesktop({
             <Megaphone size={170} className="absolute -right-8 -bottom-10 text-white/[0.08] -rotate-12 pointer-events-none" />
             <div className="relative max-w-xl">
               <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white/15 border border-white/25"><Radio size={11} /> Live announcement</span>
-              <h1 className="mt-3 text-[24px] font-semibold" style={{ letterSpacing: '-0.025em', color: '#fff' }}>Speak to the whole estate, {first}</h1>
+              <h1 className="mt-3 text-[24px] font-semibold" style={{ letterSpacing: '-0.025em', color: '#fff' }}>Speak to the whole {lower(T.site)}, {first}</h1>
               <p className="mt-1 text-[13px] text-white/80">
-                Every resident gets an instant notification and can tap in to hear you live. Best for things they need to know right now.
+                {E ? 'Every resident' : `Everyone`} gets an instant notification and can tap in to hear you live. Best for things they need to know right now.
               </p>
 
               <div className="mt-5 flex items-end justify-between">
@@ -116,7 +121,7 @@ export function BroadcastSetupDesktop({
                 className="mt-1.5 w-full px-3.5 py-2.5 rounded-xl bg-white/15 border border-white/30 text-[14px] text-white placeholder-white/55 outline-none focus:bg-white/20 focus:border-white/60 transition-colors" />
 
               <div className="mt-3 flex flex-wrap gap-1.5">
-                {TEMPLATES.map(([emoji, text]) => (
+                {broadcastTemplates(T).map(([emoji, text]) => (
                   <button key={text} type="button" onClick={() => setHeadline(text)}
                     className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-white/12 border border-white/25 hover:bg-white/25 transition-colors"
                     style={{ background: headline === text ? 'rgba(255,255,255,0.3)' : undefined }}>
@@ -128,7 +133,7 @@ export function BroadcastSetupDesktop({
               <button onClick={goLive} disabled={starting || !headline.trim()}
                 className="mt-5 w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl bg-white font-semibold text-[14px] transition-all hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0 disabled:cursor-not-allowed"
                 style={{ color: RED_DARK, boxShadow: '0 10px 22px -10px rgba(0,0,0,0.4)' }}>
-                {starting ? <><Loader2 size={16} className="animate-spin" /> Preparing…</> : <><Megaphone size={16} /> Go live to {residentCount ? `${residentCount} resident${residentCount !== 1 ? 's' : ''}` : 'the estate'}</>}
+                {starting ? <><Loader2 size={16} className="animate-spin" /> Preparing…</> : <><Megaphone size={16} /> Go live to {residentCount ? `${residentCount} ${lower(residentCount !== 1 ? T.members : T.member)}` : `the ${lower(T.site)}`}</>}
               </button>
               <p className="mt-2.5 text-[11px] text-white/65 text-center">Needs microphone access · press Enter to go live</p>
             </div>
@@ -137,7 +142,7 @@ export function BroadcastSetupDesktop({
           {/* Banner preview + mic check */}
           <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] gap-4">
             <div className="dash-rise rounded-2xl bg-white border border-slate-200/70 p-4" style={{ animationDelay: '60ms' }}>
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5"><Bell size={12} /> What residents will see</div>
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5"><Bell size={12} /> What {lower(T.members)} will see</div>
               <div className="mt-3 rounded-2xl p-3 flex items-start gap-3 border" style={{ background: 'linear-gradient(135deg,#FEF2F2,#FFFFFF)', borderColor: '#FECACA' }}>
                 <span className="relative w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `linear-gradient(135deg, ${RED}, ${RED_DARK})` }}>
                   <Megaphone size={15} className="text-white" />
@@ -146,7 +151,7 @@ export function BroadcastSetupDesktop({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[10px] font-bold tracking-wider text-red-600">LIVE NOW</span>
-                    <span className="text-[10px] text-slate-400">· {user?.name || 'Estate manager'}</span>
+                    <span className="text-[10px] text-slate-400">· {user?.name || T.manager}</span>
                   </div>
                   <div className="text-[13px] font-semibold text-slate-900 mt-0.5 break-words">{headline.trim() || 'Your headline appears here'}</div>
                   <div className="text-[11px] text-slate-500 mt-0.5">Tap to listen{bgTrack ? ` · 🎵 ${bgTrack.title}` : ''}</div>
@@ -178,9 +183,9 @@ export function BroadcastSetupDesktop({
 
           <div className="dash-rise grid grid-cols-3 gap-3" style={{ animationDelay: '140ms' }}>
             {[
-              ['🔔', 'Instant reach', 'Every resident gets a push notification and a banner in the app.'],
+              ['🔔', 'Instant reach', E ? 'Every resident gets a push notification and a banner in the app.' : 'Everyone gets a push notification and a banner in the app.'],
               ['🎚️', 'Soft music bed', 'Optional background track, ducked low under your voice.'],
-              ['💬', 'Hear them back', 'Residents react and chat while you speak.'],
+              ['💬', 'Hear them back', `${T.members} react and chat while you speak.`],
             ].map(([e, t, d]) => (
               <div key={t} className="rounded-2xl bg-white border border-slate-200/70 p-4">
                 <div className="text-[18px]">{e}</div>
@@ -253,6 +258,7 @@ export function BroadcastSetupDesktop({
 const NOTES_KEY = 'ac_announce_points';
 
 export function TalkingPoints() {
+  const { terms: T, isEstate: E } = useSite();
   const [items, setItems] = useState(() => {
     try { return JSON.parse(localStorage.getItem(NOTES_KEY)) || []; } catch { return []; }
   });
@@ -279,7 +285,7 @@ export function TalkingPoints() {
         ))}
         <div className="flex gap-2 pt-1.5">
           <input value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={e => e.key === 'Enter' && add()}
-            placeholder="Add a point — e.g. Which blocks are affected"
+            placeholder={E ? 'Add a point — e.g. Which blocks are affected' : `Add a point — e.g. Which ${lower(T.block ? `${T.block}s` : T.units)} are affected`}
             className="flex-1 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-[12px] outline-none focus:bg-white focus:border-slate-300" />
           <button onClick={add} className="px-3 py-1.5 rounded-lg text-[12px] font-semibold text-white" style={{ background: '#6366F1' }}>Add</button>
         </div>
@@ -293,6 +299,7 @@ export function BroadcastStudioDesktop({
   musicVol, applyVolume, iframeRef, onEnd, shellRef, shellHeight,
 }) {
   const [confirmEnd, setConfirmEnd] = useState(false);
+  const { terms: T, isEstate: E } = useSite();
   const VolIcon = musicVol === 0 ? VolumeX : musicVol < 40 ? Volume1 : Volume2;
   const others = library.filter(t => t.videoId !== current?.videoId).slice(0, 20);
 
@@ -387,7 +394,7 @@ export function BroadcastStudioDesktop({
                       className="absolute inset-0 w-full h-full border-0" />
                   ) : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-white/45 text-[13px] text-center px-4">
-                      <VolumeX size={26} /> No background music — residents hear just your voice
+                      <VolumeX size={26} /> No background music — {lower(T.members)} hear just your voice
                     </div>
                   )}
                 </div>

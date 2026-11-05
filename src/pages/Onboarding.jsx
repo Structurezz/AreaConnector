@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { unitAPI, residentAPI, siteAPI } from '../api';
 import { useSite } from '../context/SiteContext';
 import SiteTypePicker from '../components/site/SiteTypePicker';
-import { TERMS } from '../utils/siteTypes';
+import { TERMS, blockWord, lower } from '../utils/siteTypes';
 import { Home, Users, CheckCircle, Plus, Trash2, ArrowRight, ArrowLeft, Building2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -82,10 +82,10 @@ function UnitsStep({ onNext, onBack, onSkip }) {
     setSaving(true);
     try {
       await Promise.all(valid.map((u) => unitAPI.create(u)));
-      toast.success(`${valid.length} unit${valid.length > 1 ? 's' : ''} created`);
+      toast.success(isEstate ? `${valid.length} unit${valid.length > 1 ? 's' : ''} created` : `${valid.length} ${lower(valid.length > 1 ? terms.units : terms.unit)} created`);
       onNext(valid.length);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to create units');
+      toast.error(err.response?.data?.message || (isEstate ? 'Failed to create units' : `Failed to create ${lower(terms.units)}`));
     } finally {
       setSaving(false);
     }
@@ -103,13 +103,13 @@ function UnitsStep({ onNext, onBack, onSkip }) {
           <div key={i} className="grid grid-cols-12 gap-2 items-center">
             <input
               className="input-field col-span-4"
-              placeholder="Unit No. *"
+              placeholder={isEstate ? 'Unit No. *' : `${terms.unit} No. *`}
               value={u.unitNumber}
               onChange={(e) => update(i, 'unitNumber', e.target.value)}
             />
             <input
               className="input-field col-span-3"
-              placeholder="Block"
+              placeholder={blockWord(terms)}
               value={u.block}
               onChange={(e) => update(i, 'block', e.target.value)}
             />
@@ -118,7 +118,7 @@ function UnitsStep({ onNext, onBack, onSkip }) {
               value={u.type}
               onChange={(e) => update(i, 'type', e.target.value)}
             >
-              <option value="apartment">Apartment</option>
+              <option value="apartment">{isEstate ? 'Apartment' : terms.unit}</option>
               <option value="house">House</option>
               <option value="shop">Shop</option>
               <option value="office">Office</option>
@@ -166,10 +166,10 @@ function ResidentsStep({ onNext, onBack, onSkip }) {
     setSaving(true);
     try {
       await Promise.all(valid.map((r) => residentAPI.add(r)));
-      toast.success(`${valid.length} resident${valid.length > 1 ? 's' : ''} added`);
+      toast.success(terms.member === 'Resident' ? `${valid.length} resident${valid.length > 1 ? 's' : ''} added` : `${valid.length} ${lower(valid.length > 1 ? terms.members : terms.member)} added`);
       onNext(valid.length);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to add residents');
+      toast.error(err.response?.data?.message || (terms.member === 'Resident' ? 'Failed to add residents' : `Failed to add ${lower(terms.members)}`));
     } finally {
       setSaving(false);
     }

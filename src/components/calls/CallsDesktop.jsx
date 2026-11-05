@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { callAPI } from '../../api';
 import useFillHeight from '../../hooks/useFillHeight';
+import { useSite } from '../../context/SiteContext';
+import { lower } from '../../utils/siteTypes';
 
 const ROLE_LABEL = { security: 'Security', estate_manager: 'Estate Manager', super_admin: 'Estate Manager', resident: 'Resident' };
 const BUZZES = [
@@ -95,6 +97,8 @@ export default function CallsDesktop({ dir, history, loading, onRefresh, call, s
   const shellRef = useRef(null);
   const height = useFillHeight(shellRef, true, { min: 560 });
   const [tab, setTab] = useState('residents');
+  const { terms: T, isEstate: E } = useSite();
+  const RL = E ? ROLE_LABEL : { ...ROLE_LABEL, estate_manager: T.manager, super_admin: T.manager, resident: T.member };
   const [q, setQ] = useState('');
   const [selectedId, setSelectedId] = useState(null);
   const [histFilter, setHistFilter] = useState('all');
@@ -109,7 +113,7 @@ export default function CallsDesktop({ dir, history, loading, onRefresh, call, s
   const people = tab === 'staff' ? dir.staff : dir.neighbours;
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
-    const list = term ? people.filter((p) => `${p.name} ${p.unit || ''} ${ROLE_LABEL[p.role] || ''}`.toLowerCase().includes(term)) : people;
+    const list = term ? people.filter((p) => `${p.name} ${p.unit || ''} ${RL[p.role] || ''}`.toLowerCase().includes(term)) : people;
     return [...list].sort((a, b) => (b.online - a.online) || a.name.localeCompare(b.name));
   }, [people, q]);
   const online = filtered.filter((p) => p.online);
@@ -160,7 +164,7 @@ export default function CallsDesktop({ dir, history, loading, onRefresh, call, s
             <h1 className="text-[22px] font-semibold text-white flex items-center gap-2" style={{ letterSpacing: '-0.025em' }}>
               <Phone size={20} /> Calls
             </h1>
-            <p className="mt-0.5 text-[13px] text-white/75 flex items-center gap-1.5"><ShieldCheck size={13} /> Call any resident or guard in your estate. Calls from estate staff are always free.</p>
+            <p className="mt-0.5 text-[13px] text-white/75 flex items-center gap-1.5"><ShieldCheck size={13} /> {E ? 'Call any resident or guard in your estate. Calls from estate staff are always free.' : `Call anyone or any guard at your ${lower(T.site)}. Calls from ${lower(T.site)} staff are always free.`}</p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {[
@@ -188,7 +192,7 @@ export default function CallsDesktop({ dir, history, loading, onRefresh, call, s
         <div className="dash-rise h-full min-h-0 flex flex-col rounded-2xl bg-white border border-slate-200/70 overflow-hidden" style={{ animationDelay: '60ms' }}>
           <div className="flex-none p-3 space-y-2 border-b border-slate-100">
             <div className="flex p-1 rounded-xl bg-slate-100">
-              {[['residents', 'Residents', dir.neighbours.length, Users], ['staff', 'Staff', dir.staff.length, Shield]].map(([id, label, n, Icon]) => (
+              {[['residents', E ? 'Residents' : T.members, dir.neighbours.length, Users], ['staff', 'Staff', dir.staff.length, Shield]].map(([id, label, n, Icon]) => (
                 <button key={id} onClick={() => { setTab(id); setQ(''); }}
                   className={`flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[12px] font-semibold transition-all ${tab === id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
                   <Icon size={13} /> {label} <span className="text-slate-400 font-normal tabular-nums">{n}</span>
@@ -197,7 +201,7 @@ export default function CallsDesktop({ dir, history, loading, onRefresh, call, s
             </div>
             <div className="relative">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tab === 'staff' ? 'Search staff' : 'Search name or unit'}
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tab === 'staff' ? 'Search staff' : `Search name or ${lower(T.unit)}`}
                 className="w-full pl-8 pr-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-[13px] outline-none focus:bg-white focus:border-slate-300" />
             </div>
           </div>
@@ -205,7 +209,7 @@ export default function CallsDesktop({ dir, history, loading, onRefresh, call, s
             {loading ? (
               <div className="p-3 space-y-2">{[0, 1, 2, 3, 4].map((k) => <div key={k} className="skeleton h-11 rounded-lg" />)}</div>
             ) : filtered.length === 0 ? (
-              <p className="px-4 py-6 text-[12px] text-slate-400 text-center">{q ? `No match for “${q}”` : tab === 'staff' ? 'No other staff yet' : 'No residents yet'}</p>
+              <p className="px-4 py-6 text-[12px] text-slate-400 text-center">{q ? `No match for “${q}”` : tab === 'staff' ? 'No other staff yet' : `No ${lower(T.members)} yet`}</p>
             ) : (
               [['Online now', online], ['Everyone else', offline]].map(([label, list]) => list.length > 0 && (
                 <div key={label}>
@@ -219,7 +223,7 @@ export default function CallsDesktop({ dir, history, loading, onRefresh, call, s
                         <Avatar person={p} size={36} />
                         <div className="flex-1 min-w-0">
                           <div className="text-[13px] font-medium text-slate-900 truncate">{p.name}</div>
-                          <div className="text-[11px] text-slate-400 truncate">{p.role === 'resident' ? (p.unit || 'Resident') : ROLE_LABEL[p.role]}</div>
+                          <div className="text-[11px] text-slate-400 truncate">{p.role === 'resident' ? (p.unit || RL.resident) : RL[p.role]}</div>
                         </div>
                         <button onClick={(e) => { e.stopPropagation(); startCall(p); }} disabled={!!call} aria-label={`Call ${p.name}`}
                           className="w-8 h-8 rounded-full flex items-center justify-center bg-emerald-500 text-white opacity-0 group-hover:opacity-100 hover:bg-emerald-600 transition-all disabled:opacity-30">
@@ -282,7 +286,7 @@ export default function CallsDesktop({ dir, history, loading, onRefresh, call, s
                   <div className="min-w-0">
                     <h2 className="text-[20px] font-semibold text-slate-900" style={{ letterSpacing: '-0.02em' }}>{selected.name}</h2>
                     <div className="mt-0.5 text-[13px] text-slate-500 flex items-center gap-2">
-                      {selected.role === 'resident' ? (selected.unit || 'Resident') : ROLE_LABEL[selected.role]}
+                      {selected.role === 'resident' ? (selected.unit || RL.resident) : RL[selected.role]}
                       <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full ${selected.online ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${selected.online ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
                         {selected.online ? 'Online now' : 'Offline'}
@@ -305,7 +309,7 @@ export default function CallsDesktop({ dir, history, loading, onRefresh, call, s
                       <span className="w-6 h-6 rounded-lg flex items-center justify-center bg-amber-500"><Hand size={12} className="text-white" /></span>
                       Check up on {selected.name.split(' ')[0]}
                     </h3>
-                    <p className="text-[12px] text-slate-500 mt-1">They'll get a notification and an email from you as Estate Manager.</p>
+                    <p className="text-[12px] text-slate-500 mt-1">They'll get a notification and an email from you as {E ? 'Estate Manager' : T.manager}.</p>
                     <div className="mt-3 grid grid-cols-3 gap-2">
                       {BUZZES.map((b) => (
                         <button key={b.kind} type="button" onClick={() => setBuzzKind(b.kind)}
@@ -319,7 +323,7 @@ export default function CallsDesktop({ dir, history, loading, onRefresh, call, s
                       placeholder="Add a short note (optional)"
                       className="mt-2 w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-[13px] outline-none resize-none focus:border-amber-300" />
                     <div className="mt-2 flex items-center justify-between">
-                      <span className="text-[11px] text-slate-400">One check-in per resident every 2 hours.</span>
+                      <span className="text-[11px] text-slate-400">One check-in per {E ? 'resident' : lower(T.member)} every 2 hours.</span>
                       <button onClick={sendBuzz} disabled={sending}
                         className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-[13px] font-semibold transition-colors disabled:opacity-60">
                         {sending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Send

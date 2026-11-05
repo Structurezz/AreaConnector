@@ -5,6 +5,8 @@ import { Siren, X, Radio, Shield, UserRound, Briefcase, Home, Phone, MapPin, Shi
 import { useNotifications } from '../../context/NotificationContext';
 import Portal from './Portal';
 import CallButton from '../calls/CallButton';
+import { useSite } from '../../context/SiteContext';
+import { lower } from '../../utils/siteTypes';
 
 const ROLE_CFG = {
   security:       { label: 'Security Guard',  Icon: Shield,    bg: '#EFF6FF', color: '#1D4ED8', border: '#BFDBFE' },
@@ -16,13 +18,14 @@ const ROLE_CFG = {
 export default function AlertModal() {
   const { activeAlert, dismissAlert } = useNotifications();
   const btnRef = useRef(null);
+  const { terms: T, isEstate } = useSite();
   const [acking, setAcking] = useState(false);
 
   const handleAcknowledge = async () => {
     setAcking(true);
     try {
       await alertAPI.acknowledge(activeAlert.meta.alertId);
-      toast.success('Acknowledged — the resident has been told you\'re on it');
+      toast.success(isEstate ? 'Acknowledged — the resident has been told you\'re on it' : 'Acknowledged — they\'ve been told you\'re on it');
       dismissAlert();
     } catch {
       toast.error('Could not acknowledge. Try again from Alerts.');
@@ -45,7 +48,12 @@ export default function AlertModal() {
   const isBroadcast = activeAlert.type === 'alert_broadcast';
   const meta = activeAlert.meta || {};
   const role = meta.raisedByRole || (isBroadcast ? 'security' : 'resident');
-  const roleCfg = ROLE_CFG[role] || ROLE_CFG.resident;
+  const baseCfg = ROLE_CFG[role] || ROLE_CFG.resident;
+  // Role labels follow the site words (estates keep "Resident" / "Estate Manager")
+  const roleCfg = isEstate ? baseCfg : {
+    ...baseCfg,
+    label: baseCfg === ROLE_CFG.resident ? T.member : (role === 'estate_manager' || role === 'super_admin') ? T.manager : baseCfg.label,
+  };
   const RoleIcon = roleCfg.Icon;
 
   const headerGradient = isBroadcast
@@ -85,10 +93,10 @@ export default function AlertModal() {
           </div>
 
           <span style={{ display: 'inline-block', background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: 99, marginBottom: 8 }}>
-            {isBroadcast ? 'Estate Broadcast'
+            {isBroadcast ? `${T.site} Broadcast`
               : role === 'security' ? 'Security Guard Alert'
               : role === 'estate_manager' || role === 'super_admin' ? 'Management Alert'
-              : 'Resident Alert'}
+              : `${isEstate ? 'Resident' : T.member} Alert`}
           </span>
 
           <h2 style={{ color: '#fff', fontSize: 17, fontWeight: 800, margin: 0, lineHeight: 1.3 }}>
@@ -132,7 +140,7 @@ export default function AlertModal() {
           {!isBroadcast && meta.raisedById && (
             <div style={{ margin: '-6px 0 14px' }}>
               <CallButton person={{ _id: meta.raisedById, name: meta.raisedByName, role: meta.raisedByRole, profilePhoto: meta.raisedByPhoto, unit: meta.raisedByUnit }}
-                label={`Call ${(meta.raisedByName || 'resident').split(' ')[0]} now (free)`} style={{ padding: '8px 14px', fontSize: 13 }} />
+                label={`Call ${(meta.raisedByName || (isEstate ? 'resident' : lower(T.member))).split(' ')[0]} now (free)`} style={{ padding: '8px 14px', fontSize: 13 }} />
             </div>
           )}
           {(meta.location || meta.actionRequired || meta.contactNumber) && (

@@ -1,6 +1,9 @@
 // Nkechi — the estate's AI neighbour — drawn as a small illustrated mascot
 // (gele headwrap, gold earrings, a 🌸 on the wrap) plus the chat sticker packs.
 
+import { useSite } from '../../context/SiteContext';
+import { lower } from '../../utils/siteTypes';
+
 let uid = 0;
 
 export function NkechiMascot({ size = 40, wave = false, bob = false, ring = true }) {
@@ -111,12 +114,17 @@ export const STICKER_PACKS = [
 const ALL = Object.fromEntries(STICKER_PACKS.flatMap((p) => p.stickers.map((s) => [s.id, s])));
 export const stickerById = (id) => ALL[id] || null;
 
+// Sticker caption in the site's words ("Good morning hospital"); estates keep the original
+export const stickerLabel = (label = '', site) => (!site || site.isEstate ? label
+  : label.replace(/\bestate\b/gi, lower(site.terms.site)).replace(/^Welcome neighbour!$/, 'Welcome!'));
+
 export function Sticker({ id, size = 132, animate = true }) {
+  const site = useSite();
   const s = stickerById(id);
   if (!s) return <span className="text-[13px] italic text-slate-400">[sticker]</span>;
   return (
     <div className={`relative select-none sticker-float ${animate ? 'sticker-pop' : ''}`}
-      style={{ width: size, '--tilt': `${s.tilt || 0}deg`, transform: `rotate(${s.tilt || 0}deg)` }} title={s.label}>
+      style={{ width: size, '--tilt': `${s.tilt || 0}deg`, transform: `rotate(${s.tilt || 0}deg)` }} title={stickerLabel(s.label, site)}>
       <div className="relative mx-auto flex items-center justify-center rounded-[28%]"
         style={{
           width: size * 0.82, height: size * 0.82,
@@ -135,7 +143,7 @@ export function Sticker({ id, size = 132, animate = true }) {
       <div className="relative -mt-3 text-center">
         <span className="inline-block px-2.5 py-1 rounded-full bg-white font-extrabold leading-tight"
           style={{ fontSize: Math.max(10, size * 0.1), color: s.to, boxShadow: '0 4px 10px -4px rgba(15,23,42,0.35)', letterSpacing: '-0.01em' }}>
-          {s.label}
+          {stickerLabel(s.label, site)}
         </span>
       </div>
     </div>

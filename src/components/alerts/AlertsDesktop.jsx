@@ -9,6 +9,10 @@ import { useCall } from '../../context/CallContext';
 import { useAuth } from '../../context/AuthContext';
 import { estateAPI } from '../../api';
 import EstateMap from '../EstateMap';
+import { useSite } from '../../context/SiteContext';
+import { blockName, lower } from '../../utils/siteTypes';
+import AlertRouting, { EscalatedBadge } from './AlertRouting';
+import { StartRollCallButton } from '../site/RollCall';
 
 // The estate (name + map pin), loaded once for the alert map
 function useEstate() {
@@ -76,6 +80,7 @@ function Timeline({ a }) {
 
 function AlertDetail({ a, onAck, onResolve, busy, estate }) {
   const { call, startCall } = useCall() || {};
+  const { terms: T, isEstate } = useSite();
   const t = typeOf(a);
   const st = STATUS_META[a.status] || STATUS_META.open;
   const who = a.residentId;
@@ -119,7 +124,7 @@ function AlertDetail({ a, onAck, onResolve, busy, estate }) {
               <div className="text-[11px] font-medium text-slate-400">Raised by</div>
               <div className="text-[14px] font-semibold text-slate-900 truncate">{who.name}</div>
               <div className="text-[12px] text-slate-500">
-                {a.unitId?.unitNumber ? `${a.unitId.block ? `Block ${a.unitId.block} · ` : ''}Unit ${a.unitId.unitNumber}` : (a.raisedByRole === 'resident' ? 'Resident' : a.raisedByRole?.replace('_', ' '))}
+                {a.unitId?.unitNumber ? `${a.unitId.block ? `${blockName(a.unitId.block, T)} · ` : ''}${T.unit} ${a.unitId.unitNumber}` : (a.raisedByRole === 'resident' ? T.member : a.raisedByRole === 'estate_manager' && !isEstate ? T.manager : a.raisedByRole?.replace('_', ' '))}
               </div>
             </div>
             {startCall && who._id && (
@@ -142,7 +147,7 @@ function AlertDetail({ a, onAck, onResolve, busy, estate }) {
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
               <div className="text-[11px] font-medium text-slate-400 flex items-center gap-1.5"><MapPin size={12} /> Reported location</div>
               <div className="mt-1 text-[14px] font-medium text-slate-900">
-                {a.location || (a.unitId?.unitNumber ? `Unit ${a.unitId.unitNumber}` : 'Not specified')}
+                {a.location || (a.unitId?.unitNumber ? `${T.unit} ${a.unitId.unitNumber}` : 'Not specified')}
               </div>
             </div>
             {a.contactNumber && (
@@ -168,11 +173,13 @@ function AlertDetail({ a, onAck, onResolve, busy, estate }) {
             )}
           </div>
 
+          {!a.isEmergencyBroadcast && <AlertRouting a={a} />}
+
           {/* Map */}
           <div className="rounded-2xl border border-slate-200/70 overflow-hidden">
             <div className="p-1.5">
               <EstateMap
-                name={a.location || estate?.name || 'Estate'}
+                name={a.location || estate?.name || T.site}
                 address={estate?.address}
                 location={estate?.location}
                 height={200}
@@ -180,7 +187,7 @@ function AlertDetail({ a, onAck, onResolve, busy, estate }) {
               />
             </div>
             <div className="px-3 py-2 border-t border-slate-100 text-[11px] text-slate-400 truncate">
-              Pin marks {estate?.name || 'the estate'}
+              Pin marks {estate?.name || `the ${lower(T.site)}`}
             </div>
           </div>
         </div>
@@ -218,6 +225,7 @@ export default function AlertsDesktop({
   const [selectedId, setSelectedId] = useState(() => new URLSearchParams(window.location.search).get('alert'));
   const [busy, setBusy] = useState(false);
   const estate = useEstate();
+  const { terms: T } = useSite();
 
   // Keep a sensible selection: first open alert, else the first in the list
   useEffect(() => {
@@ -270,6 +278,7 @@ export default function AlertsDesktop({
                 <div className="text-[10px] text-white/55 mt-1">{label}</div>
               </div>
             ))}
+            <StartRollCallButton compact className="ml-1" />
             <button onClick={onBroadcast}
               className="ml-1 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[13px] font-semibold text-white bg-red-500 hover:bg-red-600 transition-all hover:-translate-y-0.5"
               style={{ boxShadow: '0 10px 22px -10px rgba(239,68,68,0.9)' }}>
@@ -301,7 +310,7 @@ export default function AlertsDesktop({
               <div className="py-16 text-center px-6">
                 <div className="w-12 h-12 mx-auto rounded-2xl bg-emerald-50 flex items-center justify-center"><ShieldCheck size={22} className="text-emerald-500" /></div>
                 <p className="mt-3 text-[14px] font-semibold text-slate-800">No alerts here</p>
-                <p className="mt-0.5 text-[12px] text-slate-400">The estate is calm.</p>
+                <p className="mt-0.5 text-[12px] text-slate-400">The {lower(T.site)} is calm.</p>
               </div>
             ) : alerts.map((a, i) => {
               const t = typeOf(a);
@@ -319,10 +328,11 @@ export default function AlertsDesktop({
                   <span className="flex-1 min-w-0">
                     <span className="flex items-center gap-1.5">
                       <span className={`text-[13px] truncate ${a.status === 'open' ? 'font-semibold text-slate-900' : 'font-medium text-slate-700'}`}>{a.title || `${t.label} alert`}</span>
+                      <EscalatedBadge a={a} />
                       {a.isEmergencyBroadcast && <Radio size={11} className="text-red-500 flex-shrink-0" />}
                     </span>
                     <span className="block text-[12px] text-slate-500 truncate">
-                      {a.residentId?.name || 'Unknown'}{a.unitId?.unitNumber ? ` · Unit ${a.unitId.unitNumber}` : ''}{a.location ? ` · ${a.location}` : ''}
+                      {a.residentId?.name || 'Unknown'}{a.unitId?.unitNumber ? ` · ${T.unit} ${a.unitId.unitNumber}` : ''}{a.location ? ` · ${a.location}` : ''}
                     </span>
                     <span className="mt-1 flex items-center gap-2 text-[11px]">
                       <span className="font-semibold" style={{ color: st.color }}>{st.label}</span>
@@ -358,7 +368,7 @@ export default function AlertsDesktop({
                 </div>
               </div>
               <h2 className="mt-5 text-[16px] font-semibold text-slate-900">Nothing selected</h2>
-              <p className="mt-1 text-[13px] text-slate-500 max-w-xs">Alerts raised by residents and security appear on the left the moment they happen.</p>
+              <p className="mt-1 text-[13px] text-slate-500 max-w-xs">Alerts raised by {lower(T.members)} and security appear on the left the moment they happen.</p>
             </div>
           )}
         </div>

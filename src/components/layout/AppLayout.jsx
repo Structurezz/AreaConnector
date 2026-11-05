@@ -17,11 +17,12 @@ import PodcastLivePill from '../PodcastLivePill';
 import LiveNotificationModal from '../LiveNotificationModal';
 import LiveLocations from '../safety/LiveLocations';
 import CallAlertsPrompt from '../calls/CallAlertsPrompt';
+import { RollCallBanner } from '../site/RollCall';
 
 const BOTTOM_NAV = [
   { to: '/dashboard',   icon: LayoutDashboard, label: 'Home' },
   { to: '/visitors',    icon: UserCheck,        label: 'Visitors' },
-  { to: '/residents',   icon: Users,            label: (t) => t.members },
+  { to: '/residents',   icon: Users,            label: (t, site) => (site.hasRoles ? site.roleOf(site.defaultRole).plural : t.members) },
   { to: '/alerts',      icon: Bell,             label: 'Alerts' },
   { to: '/settings',    icon: Settings,         label: 'Settings' },
 ];
@@ -30,9 +31,9 @@ export default function AppLayout({ children }) {
   useFocusItem();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user } = useAuth();
-  const { terms } = useSite();
+  const site = useSite();
   const bottomNav = BOTTOM_NAV.filter(l => canOpen(user, l.to))
-    .map(l => (typeof l.label === 'function' ? { ...l, label: l.label(terms) } : l));
+    .map(l => (typeof l.label === 'function' ? { ...l, label: l.label(site.terms, site) } : l));
 
   return (
     <NotificationProvider>
@@ -94,6 +95,7 @@ export default function AppLayout({ children }) {
         <main className="flex-1 overflow-y-auto p-4 pb-24 md:p-6 lg:p-8 lg:pb-8"
           style={{ background: 'var(--bg)' }}>
           <CallAlertsPrompt appName="AreaConnector" />
+          <RollCallBanner />
           {children}
         </main>
         {/* Residents sharing live location for their safety */}

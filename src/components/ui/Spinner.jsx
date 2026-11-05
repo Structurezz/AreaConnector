@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSite } from '../../context/SiteContext';
+import { lower } from '../../utils/siteTypes';
 
 // Branded loading: the app logo breathing inside a progress ring, with phrases
 // that describe what's loading on the current page.
@@ -36,6 +38,27 @@ const PAGE_PHRASES = [
       "Loading visitors",
       "Checking who’s at the gate",
       "Fetching visitor passes"
+    ]
+  ],
+  [
+    "/staff",
+    [
+      "Loading your staff",
+      "Checking who’s on call"
+    ]
+  ],
+  [
+    "/requests",
+    [
+      "Loading requests",
+      "Checking what’s open"
+    ]
+  ],
+  [
+    "/rollcall",
+    [
+      "Loading the roll-call",
+      "Counting who’s safe"
     ]
   ],
   [
@@ -147,6 +170,23 @@ const PAGE_PHRASES = [
 
 const BOOT_PHRASES = ["Signing you in", "Loading your estate", "Checking the gate", "Almost there"];
 
+// Estate wording → the site's own words (wards, guests, rooms…)
+function sitePhrase(p, site) {
+  if (site.isEstate) return p;
+  const T = site.terms || {};
+  const memberWord = site.hasRoles ? lower(site.roleOf(site.defaultRole).plural) : lower(T.members);
+  const map = {
+    'Loading your estate': `Loading your ${lower(T.site)}`,
+    'Checking the gate': site.type === 'hospital' ? 'Checking the gate and wards' : 'Checking the gate',
+    'Loading residents': `Loading ${memberWord}`,
+    'Gathering household details': `Gathering ${lower(T.household)} details`,
+    'Loading units': `Loading ${lower(T.units)}`,
+    'Mapping your homes': `Mapping your ${lower(T.units)}`,
+    'Tallying dues': `Tallying ${lower(T.dues)}`,
+  };
+  return map[p] || p;
+}
+
 function phrasesForPath() {
   const path = typeof window !== 'undefined' ? window.location.pathname : '/';
   const hit = PAGE_PHRASES.find(([prefix]) => path === prefix || path.startsWith(`${prefix}/`) || (prefix !== '/' && path.startsWith(prefix)));
@@ -176,7 +216,8 @@ function Logo({ size }) {
 
 export function LogoLoader({ size = 56, phrases, showPhrase = true, className = '', style }) {
   const [auto] = useState(phrasesForPath);
-  const list = phrases || auto;
+  const site = useSite();
+  const list = useMemo(() => (phrases || auto).map(p => sitePhrase(p, site)), [phrases, auto, site]);
   const [i, setI] = useState(0);
   useEffect(() => {
     if (!showPhrase || list.length < 2) return undefined;
@@ -239,6 +280,7 @@ export function PageLoader({ variant = 'page', className = '' }) {
 }
 
 export function LoadingScreen() {
+  const site = useSite();
   return (
     <div style={{ minHeight: '100vh', background: '#FFFFFF', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <LogoLoader size={72} phrases={BOOT_PHRASES} />
@@ -246,7 +288,7 @@ export function LoadingScreen() {
         <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em', color: '#0F172A', lineHeight: 1 }}>
           {BRAND.name[0]}<span style={{ color: BRAND.color }}>{BRAND.name[1]}</span>
         </div>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#94A3B8', marginTop: 6 }}>{BRAND.tagline}</div>
+        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#94A3B8', marginTop: 6 }}>{site.isEstate ? BRAND.tagline : site.terms.manager}</div>
       </div>
       <p style={{ position: 'fixed', bottom: 24, left: 0, right: 0, textAlign: 'center', fontSize: 11, color: '#94A3B8', letterSpacing: '0.03em', margin: 0 }}>
         Powered by <span style={{ fontWeight: 600, color: '#64748B' }}>AREA CONNECTOR TECHNOLOGIES</span> · RC&nbsp;9607864

@@ -13,6 +13,16 @@ import toast from 'react-hot-toast';
 import Portal from '../components/ui/Portal';
 import Spinner, { PageLoader } from '../components/ui/Spinner';
 import { NkechiMascot, Sticker, STICKER_PACKS, stickerById } from '../components/chat/Nkechi';
+import { useSite } from '../context/SiteContext';
+import { lower, withAn } from '../utils/siteTypes';
+
+// Role shown beside a name: "estate manager" / "resident" follow the site words
+const roleWord = (role, site) => {
+  if (!role) return '';
+  if (!site.isEstate && (role === 'estate_manager' || role === 'super_admin')) return site.terms.manager;
+  if (!site.isEstate && role === 'resident') return site.terms.member;
+  return role.replace(/_/g, ' ');
+};
 
 const NKECHI_NAME = 'Nkechi';
 const INTRO_KEY = 'chat:nkechi-intro-dismissed';
@@ -131,6 +141,7 @@ function Attachment({ msg, mine, onOpenImage }) {
 function MessageBubble({ msg, isMe, showAvatar, showName, onOpenImage }) {
   const isNkechi = msg.isNkechi;
   const sender = senderOf(msg);
+  const site = useSite();
   const senderName = isNkechi ? NKECHI_NAME : sender?.name || 'Unknown';
   const time = format(new Date(msg.createdAt), 'HH:mm');
   const hasAtt = !!(msg.attachment?.url || msg.imageUrl);
@@ -171,7 +182,7 @@ function MessageBubble({ msg, isMe, showAvatar, showName, onOpenImage }) {
           <span className="text-[11.5px] mb-1 pl-1 font-semibold flex items-center gap-1.5" style={{ color: isNkechi ? '#D97706' : '#64748B' }}>
             {senderName}
             {isNkechi && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: 'linear-gradient(90deg, #F97316, #EC4899)' }}>AI</span>}
-            {!isNkechi && sender?.role && sender.role !== 'resident' && <span className="text-[10px] font-medium text-slate-400 capitalize">· {sender.role.replace(/_/g, ' ')}</span>}
+            {!isNkechi && sender?.role && sender.role !== 'resident' && <span className="text-[10px] font-medium text-slate-400 capitalize">· {roleWord(sender.role, site)}</span>}
           </span>
         )}
         <div className="flex items-end gap-2">
@@ -185,14 +196,16 @@ function MessageBubble({ msg, isMe, showAvatar, showName, onOpenImage }) {
 
 // ─── Nkechi intro ──────────────────────────────────────────────────
 
-const ASK_NKECHI = [
-  ['📅', "What's happening in the estate this week?"],
+const askNkechi = (T) => [
+  ['📅', `What's happening in the ${lower(T.site)} this week?`],
   ['📜', 'What does the constitution say about noise?'],
   ['🗳️', 'Any polls I should vote on?'],
   ['👀', 'Wetin dey happen? Gist me!'],
 ];
 
 function NkechiIntro({ firstName, onAsk, onWave, onClose, compact }) {
+  const site = useSite();
+  const { terms: T, isEstate: E } = site;
   return (
     <div className="relative overflow-hidden rounded-3xl border border-amber-200/80 p-4 sm:p-5 mb-4 dash-rise"
       style={{ background: 'linear-gradient(120deg, #FFFBEB 0%, #FDF2F8 55%, #F5F3FF 100%)' }}>
@@ -203,18 +216,18 @@ function NkechiIntro({ firstName, onAsk, onWave, onClose, compact }) {
       <div className="relative flex items-center gap-3.5 sm:gap-5">
         <div className="relative flex-shrink-0">
           <NkechiMascot size={compact ? 64 : window.innerWidth < 640 ? 68 : 96} wave bob />
-          <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[9px] font-bold px-2 py-0.5 rounded-full text-white whitespace-nowrap" style={{ background: 'linear-gradient(90deg, #F97316, #EC4899)' }}>AI NEIGHBOUR</span>
+          <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[9px] font-bold px-2 py-0.5 rounded-full text-white whitespace-nowrap" style={{ background: 'linear-gradient(90deg, #F97316, #EC4899)' }}>{E ? 'AI NEIGHBOUR' : 'AI ASSISTANT'}</span>
         </div>
         <div className="min-w-0 flex-1">
           <div className="text-[11px] font-bold uppercase tracking-wider text-pink-600 flex items-center gap-1"><Sparkles size={11} /> Meet Nkechi</div>
           <div className="mt-1 text-[16px] sm:text-[17px] font-semibold text-slate-900 leading-snug">Hello {firstName}, I'm Nkechi 🌸</div>
           <p className="mt-1 text-[12.5px] sm:text-[13px] text-slate-600 leading-relaxed max-w-xl">
-            Your estate's AI neighbour. I know the events, polls, dues and the constitution — and I <i>love</i> gist. Mention <b className="text-amber-700">@Nkechi</b> and I'll jump in.
+            {E ? "Your estate's AI neighbour" : `Your ${lower(T.site)}'s AI assistant`}. I know the events, polls, {E ? 'dues' : lower(T.dues)} and the constitution — and I <i>love</i> gist. Mention <b className="text-amber-700">@Nkechi</b> and I'll jump in.
           </p>
         </div>
       </div>
       <div className="relative mt-4 -mx-4 px-4 sm:mx-0 sm:px-0 flex sm:flex-wrap gap-2 overflow-x-auto no-scrollbar">
-        {ASK_NKECHI.map(([e, q]) => (
+        {askNkechi(T).map(([e, q]) => (
           <button key={q} onClick={() => onAsk(q)}
             className="flex-shrink-0 whitespace-nowrap text-[12.5px] font-medium px-3 py-1.5 rounded-full bg-white/90 border border-white text-slate-700 shadow-sm hover:-translate-y-0.5 hover:shadow transition-all">
             {e} {q}
@@ -273,6 +286,8 @@ function StickerTray({ onSticker, onEmoji, onClose }) {
 // ─── New DM Modal ──────────────────────────────────────────────────
 
 function NewDMModal({ onClose, onSelect }) {
+  const site = useSite();
+  const { terms: T, isEstate: E } = site;
   const [query, setQuery] = useState('');
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -299,14 +314,14 @@ function NewDMModal({ onClose, onSelect }) {
           <div className="p-4">
             <div className="relative mb-3">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search residents and staff…"
+              <input ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder={E ? 'Search residents and staff…' : `Search ${/staff/i.test(T.members) ? lower(T.members) : `${lower(T.members)} and staff`}…`}
                 className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm outline-none bg-slate-50 border border-slate-200 focus:bg-white focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" />
             </div>
             <div className="space-y-0.5 max-h-72 overflow-y-auto">
               {loading ? (
                 <div className="flex justify-center py-6"><Spinner size={18} /></div>
               ) : users.length === 0 ? (
-                <p className="text-center text-sm py-6 text-slate-400">{query ? 'No one found' : 'No residents in this estate'}</p>
+                <p className="text-center text-sm py-6 text-slate-400">{query ? 'No one found' : `No ${lower(T.members)} in this ${lower(T.site)}`}</p>
               ) : users.map((u) => (
                 <button key={u._id} onClick={() => onSelect(u)} className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-left hover:bg-slate-50 transition-colors">
                   <Avatar user={u} size={36} />
@@ -327,6 +342,8 @@ function NewDMModal({ onClose, onSelect }) {
 // ─── Thread ────────────────────────────────────────────────────────
 
 function Thread({ thread, currentUser, subscribe, emit, estateName, showInfo, onToggleInfo, onMessages, onBack }) {
+  const site = useSite();
+  const { terms: T, isEstate: E } = site;
   const [messages, setMessages] = useState([]);
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(true);
@@ -518,7 +535,7 @@ function Thread({ thread, currentUser, subscribe, emit, estateName, showInfo, on
               <div className="font-semibold text-[15px] text-slate-900 truncate">{estateName} Community</div>
               <div className="text-[12px] text-slate-500 flex items-center gap-1.5 truncate">
                 <span className="relative flex w-1.5 h-1.5 flex-shrink-0"><span className="absolute inset-0 rounded-full bg-amber-400 animate-ping" /><span className="relative w-1.5 h-1.5 rounded-full bg-amber-500" /></span>
-                <span className="truncate">{nkechiTyping ? 'Nkechi is typing…' : <>Nkechi is moderating<span className="hidden sm:inline"> · everyone in the estate</span></>}</span>
+                <span className="truncate">{nkechiTyping ? 'Nkechi is typing…' : <>Nkechi is moderating<span className="hidden sm:inline"> · everyone in the {lower(T.site)}</span></>}</span>
               </div>
             </div>
             {introHidden && (
@@ -651,6 +668,8 @@ function Thread({ thread, currentUser, subscribe, emit, estateName, showInfo, on
 // ─── Details panel (xl) ────────────────────────────────────────────
 
 function InfoPanel({ thread, messages, estateName }) {
+  const site = useSite();
+  const { terms: T, isEstate: E } = site;
   const isGroup = thread.type === 'group';
   const media = messages.filter((m) => (m.attachment?.url && isImageType(m.attachment.type)) || (!m.attachment?.url && m.imageUrl)).slice(-9).reverse();
   const files = messages.filter((m) => m.attachment?.url && !isImageType(m.attachment.type)).slice(-6).reverse();
@@ -666,9 +685,9 @@ function InfoPanel({ thread, messages, estateName }) {
         <div className="p-5 border-b border-slate-100 text-center" style={{ background: 'linear-gradient(180deg, #FFFBEB, #FFFFFF)' }}>
           <div className="mx-auto w-fit"><NkechiMascot size={88} wave bob /></div>
           <div className="mt-2 text-[15px] font-semibold text-slate-900">Nkechi</div>
-          <div className="text-[11.5px] text-amber-700 font-medium">AI neighbour · {estateName}</div>
+          <div className="text-[11.5px] text-amber-700 font-medium">{E ? 'AI neighbour' : 'AI assistant'} · {estateName}</div>
           <div className="mt-3 grid grid-cols-2 gap-1.5 text-[11px] text-left">
-            {['📅 Events & polls', '📜 Estate rules', '💳 Dues info', '🛡️ Keeps it civil'].map((t) => (
+            {['📅 Events & polls', `📜 ${T.site} rules`, `💳 ${E ? 'Dues' : T.dues} info`, '🛡️ Keeps it civil'].map((t) => (
               <span key={t} className="px-2 py-1.5 rounded-lg bg-white border border-amber-100 text-slate-600">{t}</span>
             ))}
           </div>
@@ -677,7 +696,7 @@ function InfoPanel({ thread, messages, estateName }) {
         <div className="p-5 border-b border-slate-100 text-center">
           <div className="mx-auto w-fit"><Avatar user={thread.partner} size={72} /></div>
           <div className="mt-2 text-[15px] font-semibold text-slate-900">{thread.partner?.name}</div>
-          <div className="text-[12px] text-slate-500 capitalize">{thread.partner?.role?.replace(/_/g, ' ') || 'Resident'}</div>
+          <div className="text-[12px] text-slate-500 capitalize">{roleWord(thread.partner?.role, site) || T.member}</div>
         </div>
       )}
 
@@ -766,6 +785,8 @@ const shortTime = (d) => {
 export default function Chat() {
   const { user, estate } = useAuth();
   const { subscribe, emit } = useSocket() || {};
+  const site = useSite();
+  const { terms: T, isEstate: E } = site;
   const [conversations, setConversations] = useState([]);
   const [groupUnread, setGroupUnread] = useState(0);
   const [activeThread, setActiveThread] = useState({ type: 'group' });
@@ -929,7 +950,7 @@ export default function Chat() {
             <div className="mx-2 mt-1 rounded-2xl border border-dashed border-slate-200 text-center py-6 px-4">
               <MessageSquare size={20} className="mx-auto mb-2 text-slate-300" />
               <p className="text-[12px] text-slate-400">No direct messages yet</p>
-              <button onClick={() => setShowNewDM(true)} className="mt-2 text-[12px] font-semibold text-emerald-600 hover:text-emerald-700">Message a resident</button>
+              <button onClick={() => setShowNewDM(true)} className="mt-2 text-[12px] font-semibold text-emerald-600 hover:text-emerald-700">Message {E ? 'a resident' : withAn(lower(T.member))}</button>
             </div>
           )}
         </div>

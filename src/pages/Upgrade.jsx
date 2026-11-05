@@ -3,6 +3,8 @@ import { PageLoader, LogoLoader } from '../components/ui/Spinner';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { planAPI } from '../api';
 import { usePlan } from '../hooks/usePlan';
+import { useSite } from '../context/SiteContext';
+import { lower } from '../utils/siteTypes';
 import toast from 'react-hot-toast';
 import {
   Check, X, Zap, RefreshCw, ArrowRight, Crown, Star, Shield,
@@ -43,6 +45,18 @@ const FEATURE_META = {
 
 // Ordered list used in the comparison table (same order as admin)
 const FEATURE_KEYS = Object.keys(FEATURE_META);
+
+// Plan text in the site's own words. Estates keep the original text.
+function siteText(str, site) {
+  if (site.isEstate || typeof str !== 'string') return str;
+  const T = site.terms;
+  return str
+    .replace(/\bResidents\b/g, T.members).replace(/\bresidents\b/g, lower(T.members))
+    .replace(/\bResident\b/g, T.member).replace(/\bresident\b/g, lower(T.member))
+    .replace(/\bUnits\b/g, T.units).replace(/\bunits\b/g, lower(T.units))
+    .replace(/\bUnit\b/g, T.unit).replace(/\bunit\b/g, lower(T.unit))
+    .replace(/\bestates\b/g, 'sites').replace(/\bestate\b/g, lower(T.site));
+}
 
 // Derive a plain-English bullet list from a plan's features object
 function getBullets(features = {}) {
@@ -99,6 +113,10 @@ export default function Upgrade() {
   const location  = useLocation();
   const navigate  = useNavigate();
   const { sub, planName, planColor } = usePlan();
+  const site = useSite();
+  const st = (str) => siteText(str, site);
+  // Per-head billing word: "resident" on estates, "guest" / "patient" / "student" elsewhere
+  const perOne = site.isEstate ? 'resident' : lower(site.terms.member.split(' / ')[0]);
 
   const [plans, setPlans]               = useState([]);
   const [selectedPlanId, setSelectedPlanId] = useState(null);
@@ -184,8 +202,8 @@ export default function Upgrade() {
       const count = parseInt(residentCount) || 0;
       return {
         main:   `${fmt(ppr)}`,
-        period: '/resident/month',
-        total:  count > 0 ? `= ${fmt(ppr * count)}/month for ${count} residents` : null,
+        period: `/${perOne}/month`,
+        total:  count > 0 ? st(`= ${fmt(ppr * count)}/month for ${count} residents`) : null,
       };
     }
     if (cycle === 'annual') {
@@ -215,7 +233,7 @@ export default function Upgrade() {
   const handleActivate = useCallback(async () => {
     if (!selectedPlan) return;
     if (billingModel === 'per_resident' && !parseInt(residentCount)) {
-      toast.error('Enter your resident count first');
+      toast.error(`Enter your ${perOne} count first`);
       return;
     }
     setPaying(true);
@@ -263,7 +281,7 @@ export default function Upgrade() {
         </h1>
         <p className="text-sm" style={{ color: '#94A3B8' }}>
           {isActive
-            ? <>On <span className="font-semibold" style={{ color: planColor }}>{planName}</span> · {currentBillingModel === 'per_resident' ? 'Per-resident billing' : currentCycle === 'annual' ? 'Annual billing' : 'Monthly billing'}</>
+            ? <>On <span className="font-semibold" style={{ color: planColor }}>{planName}</span> · {currentBillingModel === 'per_resident' ? `Per-${perOne} billing` : currentCycle === 'annual' ? 'Annual billing' : 'Monthly billing'}</>
             : isTrial
             ? 'Choose a plan and billing model, then activate when ready.'
             : 'Pick the plan that fits your community.'}
@@ -279,7 +297,7 @@ export default function Upgrade() {
             <div className="font-semibold text-sm text-emerald-700">Free trial active</div>
             <div className="text-xs" style={{ color: '#475569' }}>
               Expires {new Date(sub.trialEndsAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.
-              Activate before then to keep your estate running.
+              {st('Activate before then to keep your estate running.')}
             </div>
           </div>
         </div>
@@ -401,7 +419,7 @@ export default function Upgrade() {
                       <div className="grid grid-cols-2 gap-2 mb-5">
                         {[
                           { value: 'flat',         label: 'Flat fee' },
-                          { value: 'per_resident', label: 'Per resident' },
+                          { value: 'per_resident', label: `Per ${perOne}` },
                         ].map(opt => (
                           <button key={opt.value} onClick={() => setBillingModel(opt.value)}
                             className="py-2.5 px-4 rounded-xl text-sm font-semibold transition-all"
@@ -465,7 +483,7 @@ export default function Upgrade() {
                   {billingModel === 'per_resident' && hasPerResident && (
                     <div className="mb-5">
                       <label className="text-xs mb-2 block" style={{ color: '#475569' }}>
-                        Number of residents in your estate
+                        {st('Number of residents in your estate')}
                         {residentInputMax && <span className="ml-1" style={{ color: '#94A3B8' }}>(max {residentInputMax})</span>}
                       </label>
                       <input
@@ -478,7 +496,7 @@ export default function Upgrade() {
                         onChange={e => setResidentCount(e.target.value)}
                       />
                       <p className="text-xs mt-1.5" style={{ color: '#94A3B8' }}>
-                        {fmt(selectedPlan.price.perResident)} × {parseInt(residentCount) || 0} residents
+                        {fmt(selectedPlan.price.perResident)} × {parseInt(residentCount) || 0} {st('residents')}
                         = {fmt(selectedPlan.price.perResident * (parseInt(residentCount) || 0))}/month
                       </p>
                     </div>
@@ -502,7 +520,7 @@ export default function Upgrade() {
 
                 {/* Feature bullet list — generated from real plan features */}
                 {(() => {
-                  const bullets = getBullets(selectedPlan.features);
+                  const bullets = getBullets(selectedPlan.features).map(st);
                   return bullets.length > 0 && (
                     <div className="px-6 pb-5">
                       <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#94A3B8' }}>
@@ -559,7 +577,7 @@ export default function Upgrade() {
                   <span className="font-bold text-sm" style={{ color: '#0F172A' }}>Enterprise</span>
                 </div>
                 <p className="text-sm" style={{ color: '#475569' }}>
-                  Multiple estates, custom branding, dedicated support, API access, SLA guarantee, and unlimited residents.
+                  {st('Multiple estates, custom branding, dedicated support, API access, SLA guarantee, and unlimited residents.')}
                 </p>
               </div>
               <a href="mailto:hello@areaconnect.ng"
@@ -605,7 +623,7 @@ export default function Upgrade() {
                           <td className="px-5 py-3">
                             <div className="flex items-center gap-2" style={{ color: '#475569' }}>
                               {Icon && <Icon size={12} className="flex-shrink-0" style={{ color: '#CBD5E1' }} />}
-                              {meta.label}
+                              {st(meta.label)}
                             </div>
                           </td>
                           {plans.map(p => (
@@ -631,7 +649,7 @@ export default function Upgrade() {
                     ].map(label => (
                       <tr key={label} className="transition-colors hover:bg-slate-50"
                         style={{ borderBottom: '1px solid #F1F5F9' }}>
-                        <td className="px-5 py-3" style={{ color: '#475569' }}>{label}</td>
+                        <td className="px-5 py-3" style={{ color: '#475569' }}>{st(label)}</td>
                         {plans.map(p => (
                           <td key={p._id} className="px-4 py-3 text-center">
                             <X size={14} className="mx-auto" style={{ color: '#CBD5E1' }} />

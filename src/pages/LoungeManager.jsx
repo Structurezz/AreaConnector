@@ -17,6 +17,10 @@ import Feed from '../components/lounge/Feed';
 import { LoungeBanner, LoungeNav, LoungeRightRail, EventsDesktop, EventFormPanel } from '../components/lounge/LoungeDesktop';
 import useIsDesktop from '../hooks/useIsDesktop';
 import useFillHeight from '../hooks/useFillHeight';
+import { useSite } from '../context/SiteContext';
+import { lower, withAn } from '../utils/siteTypes';
+
+const useW = () => { const { terms: T, isEstate: E } = useSite(); return { T, E, site: lower(T.site), Site: T.site, member: lower(T.member), Member: T.member, members: lower(T.members), Members: T.members }; };
 
 // ── Helpers ────────────────────────────────────────────────────────
 const inputStyle = {
@@ -222,6 +226,7 @@ const EVENT_CATEGORIES = [
 const catMap = Object.fromEntries(EVENT_CATEGORIES.map(c => [c.id, c]));
 
 function EventsTab({ desktop = false, createSignal = 0 }) {
+  const W = useW();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -291,7 +296,7 @@ function EventsTab({ desktop = false, createSignal = 0 }) {
                     {ev.isFridayFunTimes && <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background:'#FFFBEB', color:'#D97706' }}>🎉 FunTimes</span>}
                   </div>
                   <p className="text-sm font-bold" style={{ color:'#0F172A' }}>{ev.title}</p>
-                  <p className="text-xs mt-0.5" style={{ color:'#94A3B8' }}>{ev.time && `${ev.time} · `}{ev.location || 'Estate Grounds'}</p>
+                  <p className="text-xs mt-0.5" style={{ color:'#94A3B8' }}>{ev.time && `${ev.time} · `}{ev.location || `${W.Site} Grounds`}</p>
                   <p className="text-xs mt-1 flex items-center gap-1" style={{ color:'#10B981' }}>
                     <Users size={10} /> {ev.rsvps?.length || 0} going
                   </p>
@@ -499,6 +504,7 @@ function PollsTab({ createSignal = 0 }) {
 
 // ── Music Tab ─────────────────────────────────────────────────────
 function MusicTab() {
+  const W = useW();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [session, setSession] = useState(null);
@@ -549,7 +555,7 @@ function MusicTab() {
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-[10px] font-bold tracking-[0.14em] uppercase opacity-80">
-              {activeDJ ? (activeDJ.hostUserId === user?._id ? 'Your set is live' : 'A resident is live') : 'Lounge Radio'}
+              {activeDJ ? (activeDJ.hostUserId === user?._id ? 'Your set is live' : `${withAn(W.member).replace(/^a/, 'A')} is live`) : 'Lounge Radio'}
             </div>
             <div className="text-lg font-extrabold leading-tight">
               {activeDJ
@@ -559,7 +565,7 @@ function MusicTab() {
             <div className="text-xs opacity-85 mt-0.5">
               {activeDJ
                 ? (activeDJ.hostUserId === user?._id ? 'Finish the set or change track.' : 'Tune in from the banner above, or start an announcement to override.')
-                : "Play tracks and talk live, or push an urgent announcement to the whole estate."}
+                : `Play tracks and talk live, or push an urgent announcement to the whole ${W.site}.`}
             </div>
           </div>
           <button onClick={()=>navigate('/lounge/dj')}
@@ -630,7 +636,7 @@ function MusicTab() {
                   <span className="text-xs font-black w-5 text-center flex-shrink-0" style={{color:'#CBD5E1'}}>{i+1}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold truncate" style={{color:'#0F172A'}}>{t.title}</p>
-                    <p className="text-xs mt-0.5" style={{color:'#94A3B8'}}>{t.artist||t.suggestedBy?.name||'Resident'} · {t.votes?.length||0} votes</p>
+                    <p className="text-xs mt-0.5" style={{color:'#94A3B8'}}>{t.artist||t.suggestedBy?.name||W.Member} · {t.votes?.length||0} votes</p>
                   </div>
                   <a href={`https://youtube.com/watch?v=${t.videoId}`} target="_blank" rel="noopener noreferrer" className="p-1.5 flex-shrink-0" style={{color:'#CBD5E1'}} onMouseEnter={e=>e.currentTarget.style.color='#059669'} onMouseLeave={e=>e.currentTarget.style.color='#CBD5E1'}><Music size={13}/></a>
                   <button onClick={()=>handleRemove(t._id)} className="p-1.5 rounded-lg hover:bg-red-50 flex-shrink-0" style={{color:'#CBD5E1'}} onMouseEnter={e=>e.currentTarget.style.color='#EF4444'} onMouseLeave={e=>e.currentTarget.style.color='#CBD5E1'}><Trash2 size={13}/></button>

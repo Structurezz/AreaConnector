@@ -4,6 +4,8 @@
 // raised them. Only a brand-new alert from someone else should ever trigger
 // the siren / full-screen popup.
 
+import { blockName } from './siteTypes';
+
 export const isStatusUpdate = (alert) => !!alert?.action;
 
 export const raiserIdOf = (alert) => String(alert?.residentId?._id || alert?.residentId || '');
@@ -22,6 +24,7 @@ export function upsertAlert(list, alert) {
   return next;
 }
 
-export const unitLabelOf = (alert) => (alert?.unitId
-  ? `${alert.unitId.block ? `Block ${alert.unitId.block} · ` : ''}Unit ${alert.unitId.unitNumber}`
+// "Block A · Unit 4" for estates; pass the site terms for "Ward 4", "Moremi Hall · Room 12"…
+export const unitLabelOf = (alert, terms) => (alert?.unitId
+  ? `${alert.unitId.block ? `${blockName(alert.unitId.block, terms)} · ` : ''}${terms?.unit || 'Unit'} ${alert.unitId.unitNumber}`
   : null);

@@ -3,6 +3,8 @@ import { MapPin, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
 import { safetyAPI } from '../../api';
 import { useSocket } from '../../context/SocketContext';
 import CallButton from '../calls/CallButton';
+import { useSite } from '../../context/SiteContext';
+import { lower } from '../../utils/siteTypes';
 
 // Residents who are sharing their live location with estate staff (personal
 // safety). Pops up in the corner for security and estate managers, with a
@@ -16,6 +18,7 @@ const ago = (ts) => {
 
 export default function LiveLocations() {
   const { subscribe } = useSocket() || {};
+  const { terms: T } = useSite();
   const [shares, setShares] = useState({}); // userId → { person, last, startedAt }
   const [collapsed, setCollapsed] = useState(false);
   const [, tick] = useState(0);
@@ -49,7 +52,7 @@ export default function LiveLocations() {
           <span className="relative inline-flex w-2.5 h-2.5 rounded-full bg-white" />
         </span>
         <MapPin size={15} />
-        <span className="flex-1 text-left">{list.length} resident{list.length > 1 ? 's' : ''} sharing live location</span>
+        <span className="flex-1 text-left">{list.length} {lower(list.length > 1 ? T.members : T.member)} sharing live location</span>
         {collapsed ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
       </button>
       {!collapsed && (

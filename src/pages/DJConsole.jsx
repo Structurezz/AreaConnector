@@ -18,6 +18,10 @@ import useIsDesktop from '../hooks/useIsDesktop';
 import useFillHeight from '../hooks/useFillHeight';
 import { useRoomEngagement, ReactionLayer, ChatPanel, Soundboard, useMicLevel } from '../components/podcast/StudioPanels';
 import { parseYouTubeId } from '../components/podcast/MusicDeck';
+import { useSite } from '../context/SiteContext';
+import { lower, withAn } from '../utils/siteTypes';
+
+const useW = () => { const { terms: T, isEstate: E } = useSite(); return { T, E, site: lower(T.site), Site: T.site, member: lower(T.member), Member: T.member, members: lower(T.members), Members: T.members }; };
 
 const BRAND       = '#10B981';
 const BRAND_DARK  = '#059669';
@@ -108,6 +112,7 @@ function AddTracks({ onAddYouTube, onAddFiles }) {
 }
 
 export default function DJConsole() {
+  const W = useW();
   const { user } = useAuth();
   const { emit } = useSocket() || {};
   const navigate = useNavigate();
@@ -423,7 +428,7 @@ export default function DJConsole() {
               <div className="relative max-w-lg">
                 <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white/15 border border-white/20"><Radio size={11} /> Lounge radio</span>
                 <h1 className="mt-3 text-[24px] font-semibold text-white" style={{ letterSpacing: '-0.025em' }}>Hop on the decks, {user?.name?.split(' ')[0] || 'DJ'}</h1>
-                <p className="mt-1 text-[13px] text-white/75">Play tracks from the Lounge library and talk over them live. Residents get a notification, and your set is saved as a mixtape anyone can replay.</p>
+                <p className="mt-1 text-[13px] text-white/75">Play tracks from the Lounge library and talk over them live. {W.Members} get a notification, and your set is saved as a mixtape anyone can replay.</p>
                 <label className="block mt-5 text-[11px] font-semibold uppercase tracking-wider text-white/70">Set name</label>
                 <input value={setTitle} onChange={(e) => setSetTitle(e.target.value)} maxLength={80} placeholder={`${user?.name || 'DJ'}'s Live Set`}
                   className="mt-1.5 w-full px-3.5 py-2.5 rounded-xl bg-white/15 border border-white/25 text-[14px] text-white placeholder-white/50 outline-none focus:bg-white/20 focus:border-white/50 transition-colors" />
@@ -470,7 +475,7 @@ export default function DJConsole() {
                       <img src={`https://i.ytimg.com/vi/${t.videoId}/default.jpg`} alt="" className="w-11 h-8 rounded-md object-cover flex-shrink-0" loading="lazy" />
                       <span className="flex-1 min-w-0">
                         <span className="block text-[12px] font-medium text-slate-800 truncate">{t.title}</span>
-                        <span className="block text-[11px] text-slate-400 truncate">{t.artist || t.suggestedBy?.name || 'Resident'}</span>
+                        <span className="block text-[11px] text-slate-400 truncate">{t.artist || t.suggestedBy?.name || W.Member}</span>
                       </span>
                       <span className="text-[11px] text-slate-400 tabular-nums flex items-center gap-0.5"><ThumbsUp size={11} /> {t.votes?.length || 0}</span>
                     </div>
@@ -527,7 +532,7 @@ export default function DJConsole() {
             {starting ? <><Loader2 size={16} className="animate-spin" /> Preparing…</> : <><Mic size={16}/> Go live now</>}
           </button>
           <div style={{ fontSize: 11, opacity: 0.75, marginTop: 10, textAlign: 'center' }}>
-            Mic access required · Residents get a push notification instantly.
+            Mic access required · {W.Members} get a push notification instantly.
           </div>
         </div>
 
@@ -838,7 +843,7 @@ export default function DJConsole() {
                         </span>
                         <span className="flex-1 min-w-0">
                           <span className={`block text-[12px] truncate ${on ? 'font-semibold text-emerald-700' : done ? 'text-slate-400' : 'font-medium text-slate-800'}`}>{t.title}</span>
-                          <span className="block text-[11px] text-slate-400 truncate">{t.artist || t.suggestedBy?.name || 'Resident'}</span>
+                          <span className="block text-[11px] text-slate-400 truncate">{t.artist || t.suggestedBy?.name || W.Member}</span>
                         </span>
                         {done && <CheckCircle2 size={13} className="text-slate-300 flex-shrink-0" title="Played" />}
                         <span className="text-[11px] text-slate-400 tabular-nums flex-shrink-0 flex items-center gap-0.5"><ThumbsUp size={11} /> {t.votes?.length || 0}</span>
@@ -985,7 +990,7 @@ export default function DJConsole() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</div>
                   <div style={{ fontSize: 11, color: '#94A3B8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {t.artist || t.suggestedBy?.name || 'Resident'} · {t.votes?.length || 0} votes
+                    {t.artist || t.suggestedBy?.name || W.Member} · {t.votes?.length || 0} votes
                   </div>
                 </div>
               </button>

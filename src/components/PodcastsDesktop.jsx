@@ -5,6 +5,10 @@ import {
 } from 'lucide-react';
 import DJLive from './DJLive';
 import useCountUp from '../hooks/useCountUp';
+import { useSite } from '../context/SiteContext';
+import { lower, withAn } from '../utils/siteTypes';
+
+const useW = () => { const { terms: T, isEstate: E } = useSite(); return { T, E, site: lower(T.site), Site: T.site, member: lower(T.member), Member: T.member, members: lower(T.members), Members: T.members }; };
 
 const fmtMin = (s) => `${Math.round((s || 0) / 60)} min`;
 const fmtClock = (s) => `${Math.floor((s || 0) / 60)}:${String(Math.floor((s || 0) % 60)).padStart(2, '0')}`;
@@ -93,6 +97,7 @@ function useCountdown(target) {
 /* ── Spotlight ─────────────────────────────────────────────────── */
 
 function Spotlight({ activeDJ, liveFM, next, latest, onPlay, onStart }) {
+  const W = useW();
   const countdown = useCountdown(!activeDJ && !liveFM ? next?.scheduledAt : null);
   const live = activeDJ || liveFM;
 
@@ -146,7 +151,7 @@ function Spotlight({ activeDJ, liveFM, next, latest, onPlay, onStart }) {
           </>
         ) : item ? (
           <>
-            <div className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5" style={{ color: colors[0] }}><Sparkles size={12} /> Latest from your estate</div>
+            <div className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5" style={{ color: colors[0] }}><Sparkles size={12} /> Latest from your {W.site}</div>
             <h2 className="mt-2 text-[22px] font-semibold text-slate-900 truncate" style={{ letterSpacing: '-0.025em' }}>{item.title}</h2>
             <p className="mt-1 text-[13px] text-slate-500 truncate">
               {item.hostName || 'AreaConnect FM'} · {fmtMin(latest.kind === 'ep' ? item.durationSec : item.totalDurationSec)}
@@ -161,8 +166,8 @@ function Spotlight({ activeDJ, liveFM, next, latest, onPlay, onStart }) {
         ) : (
           <>
             <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-600">Off air</div>
-            <h2 className="mt-2 text-[22px] font-semibold text-slate-900" style={{ letterSpacing: '-0.025em' }}>Your estate's radio is quiet</h2>
-            <p className="mt-1 text-[13px] text-slate-500">Start the first live room: a prayer, a chat or a DJ set. Neighbours get notified.</p>
+            <h2 className="mt-2 text-[22px] font-semibold text-slate-900" style={{ letterSpacing: '-0.025em' }}>Your {W.site}'s radio is quiet</h2>
+            <p className="mt-1 text-[13px] text-slate-500">Start the first live room: a prayer, a chat or a DJ set. {W.E ? 'Neighbours' : W.Members} get notified.</p>
             <button onClick={onStart} className="mt-4 btn-primary gap-2 !text-[13px] !px-4 !py-2"><Mic size={14} /> Start a live room</button>
           </>
         )}
@@ -174,6 +179,7 @@ function Spotlight({ activeDJ, liveFM, next, latest, onPlay, onStart }) {
 /* ── Page ──────────────────────────────────────────────────────── */
 
 export default function PodcastsDesktop({ upcoming, episodes, mixtapes, activeDJ, liveFM, deleting, onPlay, onDeleteMixtape, onStart }) {
+  const W = useW();
   const [tab, setTab] = useState('all');
   const [q, setQ] = useState('');
 
@@ -218,7 +224,7 @@ export default function PodcastsDesktop({ upcoming, episodes, mixtapes, activeDJ
             ) : <span className="inline-flex items-center gap-1.5"><Radio size={12} className="text-emerald-600" /> AreaConnect FM</span>}
           </div>
           <h1 className="mt-1 text-[22px] font-semibold text-slate-900" style={{ letterSpacing: '-0.025em' }}>Podcast</h1>
-          <p className="text-[13px] text-slate-500 mt-0.5">Live rooms, mixtapes and FM shows from your estate.</p>
+          <p className="text-[13px] text-slate-500 mt-0.5">Live rooms, mixtapes and FM shows from your {W.site}.</p>
         </div>
         <button onClick={onStart} className="group inline-flex items-center gap-1.5 h-9 text-[13px] font-semibold px-3.5 rounded-xl text-white bg-slate-900 hover:bg-slate-800 transition-all">
           <Mic size={14} /> Start a live room
@@ -400,7 +406,7 @@ export default function PodcastsDesktop({ upcoming, episodes, mixtapes, activeDJ
               <BarChart3 size={14} className="text-slate-300" />
             </div>
             {!topPlayed.length ? (
-              <p className="px-4 py-5 text-[12px] text-slate-400">Plays show up here once residents start listening.</p>
+              <p className="px-4 py-5 text-[12px] text-slate-400">Plays show up here once {W.members} start listening.</p>
             ) : (
               <div className="p-2">
                 {topPlayed.map(({ kind, item }, i) => {

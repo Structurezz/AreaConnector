@@ -4,6 +4,8 @@ import { Bell, X, CheckCheck, Trash2, Siren, ChevronRight, Sparkles } from 'luci
 import { isToday, isYesterday } from 'date-fns';
 import { useNotifications, TYPE_CONFIG as TC } from '../../context/NotificationContext';
 import { linkFor } from '../../utils/notificationLinks';
+import { useSite } from '../../context/SiteContext';
+import { lower } from '../../utils/siteTypes';
 
 const PRIMARY = '#10B981';
 
@@ -19,6 +21,8 @@ const dayOf = (iso) => { const d = new Date(iso); return isToday(d) ? 'Today' : 
 
 function NotifRow({ n, i, onGo }) {
   const cfg = TC[n.type] || { Icon: Bell, color: PRIMARY, isAlert: false };
+  const site = useSite();
+  const label = n.type === 'new_resident' ? site.terms.member : cfg.label;
   const { Icon, color } = cfg;
   const link = linkFor(n);
   const url = link.to || link.action;
@@ -40,7 +44,7 @@ function NotifRow({ n, i, onGo }) {
         </div>
         {n.body && <p className="text-[12px] text-slate-500 mt-0.5 leading-snug line-clamp-2">{n.body}</p>}
         <div className="mt-1.5 flex items-center gap-1.5">
-          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md" style={{ background: `${color}14`, color }}>{cfg.label || 'Notification'}</span>
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md" style={{ background: `${color}14`, color }}>{label || 'Notification'}</span>
           {unread && <span className="w-1.5 h-1.5 rounded-full" style={{ background: cfg.isAlert ? '#EF4444' : PRIMARY }} />}
         </div>
       </div>
@@ -52,6 +56,7 @@ function NotifRow({ n, i, onGo }) {
 export default function NotificationBell() {
   const navigate = useNavigate();
   const { notifications, unreadCount, alertCount, markAllRead, markRead, openAlert, openLive, clearAll, stopSiren } = useNotifications();
+  const site = useSite();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState('all');
   const [ring, setRing] = useState(0);
@@ -188,7 +193,9 @@ export default function NotificationBell() {
                   {tab === 'unread' ? 'Nothing unread' : tab === 'alerts' ? 'No security alerts' : 'No notifications yet'}
                 </p>
                 <p className="mt-1 text-[12px] text-slate-400">
-                  {tab === 'alerts' ? 'The estate is calm. We’ll ring if anything happens.' : 'Alerts, visitors, payments and resident requests will show up here.'}
+                  {site.isEstate
+                    ? (tab === 'alerts' ? 'The estate is calm. We’ll ring if anything happens.' : 'Alerts, visitors, payments and resident requests will show up here.')
+                    : (tab === 'alerts' ? `The ${lower(site.terms.site)} is calm. We’ll ring if anything happens.` : `Alerts, visitors, payments and ${lower(site.terms.member)} requests will show up here.`)}
                 </p>
               </div>
             ) : groups.map(([day, list]) => (

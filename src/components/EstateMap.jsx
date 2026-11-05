@@ -3,6 +3,7 @@ import { GoogleMap, OverlayView } from '@react-google-maps/api';
 import { MapPin, Navigation, Layers, ExternalLink } from 'lucide-react';
 import { useGoogleMaps, GOOGLE_MAPS_API_KEY as API_KEY } from '../utils/googleMaps';
 import { KIND_INFO } from './site/placeKinds';
+import { useSite } from '../context/SiteContext';
 
 // Custom map styling — pink accents on a clean neutral base to match Tribely
 const MAP_STYLE = [
@@ -78,6 +79,7 @@ export default function EstateMap({
   location, address, name, height = 280, variant = 'card',
   onPinChange, showControls = true, places = [],
 }) {
+  const site = useSite();
   const { isLoaded, loadError } = useGoogleMaps();
 
   const [mapType, setMapType] = useState('roadmap');
@@ -189,7 +191,7 @@ export default function EstateMap({
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: '#0F172A', letterSpacing: '-0.01em' }}>
-            {name || 'Your Estate'}
+            {name || (site.isEstate ? 'Your Estate' : `Your ${site.terms.site}`)}
           </div>
           <div style={{ fontSize: 11, color: '#64748B', marginTop: 1, overflow: 'hidden',
                         textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -251,6 +253,7 @@ function ErrorState({ variant, height, message }) {
 }
 
 function NoLocationState({ variant, height, address }) {
+  const site = useSite();
   const { inner, outer } = shellStyle(variant, height);
   const content = (
     <div style={inner}>
@@ -260,7 +263,7 @@ function NoLocationState({ variant, height, address }) {
       </div>
       <div style={{ fontSize: 13, color: '#0F172A', fontWeight: 700 }}>No coordinates yet</div>
       <div style={{ fontSize: 11, color: '#64748B', maxWidth: 260 }}>
-        {address ? `"${address}" hasn't been geocoded. Go to Settings and re-save the address, or drop a pin manually.` : 'Add your estate address to see it on the map.'}
+        {address ? `"${address}" hasn't been geocoded. Go to Settings and re-save the address, or drop a pin manually.` : `Add your ${site.isEstate ? 'estate' : site.terms.site.toLowerCase()} address to see it on the map.`}
       </div>
     </div>
   );

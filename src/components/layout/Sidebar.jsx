@@ -1,12 +1,13 @@
 import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { residentAPI } from '../../api';
+import { residentAPI, requestAPI } from '../../api';
+import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, UserCheck, Users, Home, Megaphone,
   MessageSquare, Bell, Settings, LogOut, CreditCard,
   Zap, Crown, Music, Lock, Shield, Scale, Radio, Gift, PhoneCall, ShoppingBag, UsersRound, Building2, HeartHandshake,
-  BedDouble, Truck, Map as MapIcon,
+  BedDouble, Truck, Map as MapIcon, Stethoscope, Inbox, Siren,
 } from 'lucide-react';
 import { useSite } from '../../context/SiteContext';
 import { TYPE_INFO, moduleVisible } from '../../utils/siteTypes';
@@ -17,13 +18,16 @@ import EstateSwitcher from '../ui/EstateSwitcher';
 
 // label: string, or (terms) => string for words that change with the site type.
 // module: hidden when that site module is off; `when`: only shown when it's on.
+// site: (site) => bool — e.g. role pages only for non-estate sites.
 const NAV = [
   {
     section: 'Management',
     links: [
       { to: '/dashboard',     icon: LayoutDashboard, label: 'Dashboard' },
       { to: '/visitors',      icon: UserCheck,       label: 'Visitors',        feature: 'visitorManagement' },
-      { to: '/residents',     icon: Users,           label: (t) => t.members,  feature: 'residentManagement' },
+      { to: '/residents',     icon: Users,           label: (t, on, site) => (site.hasRoles ? site.roleOf(site.defaultRole).plural : t.members), feature: 'residentManagement' },
+      { to: '/staff',         icon: Stethoscope,     label: 'Staff & on-call', feature: 'residentManagement', site: (s) => s.hasRoles },
+      { to: '/requests',      icon: Inbox,           label: 'Requests',        module: 'requests', site: (s) => !s.isEstate, badge: 'requests' },
       { to: '/family-members', icon: HeartHandshake, label: (t) => t.familyPlural, feature: 'residentManagement', badge: 'family', module: 'household' },
       { to: '/rooms',         icon: BedDouble,       label: 'Room board',      feature: 'residentManagement', module: 'stays' },
       { to: '/units',         icon: Home,            label: (t) => t.units,    feature: 'unitManagement' },
@@ -43,6 +47,7 @@ const NAV = [
       { to: '/podcasts',   icon: Radio,         label: 'Podcast',         feature: 'residentLounge', module: 'community' },
       { to: '/chat',       icon: MessageSquare, label: 'Community Chat',  feature: 'communityChat' },
       { to: '/alerts',     icon: Bell,          label: 'Alerts',          feature: 'securityPortal' },
+      { to: '/rollcall',   icon: Siren,         label: 'Roll-call',       module: 'rollcall', site: (s) => !s.isEstate },
       { to: '/courtroom',  icon: Scale,         label: 'Courtroom', module: 'community' },
     ],
   },
@@ -69,10 +74,22 @@ export default function Sidebar({ mobile = false, onClose }) {
     if (!showFamily) return;
     residentAPI.familyRequests().then(({ data }) => setFamilyRequests(data.data.length)).catch(() => {});
   }, [location.pathname, showFamily]);
+  // Open requests → badge on the Requests link (live via request_update)
+  const socketCtx = useSocket();
+  const [openRequests, setOpenRequests] = useState(0);
+  const showRequests = !site.isEstate && site.on('requests') && canOpen(user, '/requests');
+  useEffect(() => {
+    if (!showRequests) return;
+    const load = () => requestAPI.list({ scope: 'all', status: 'open' }).then(({ data }) => setOpenRequests(data.counts?.open ?? (data.data || []).length)).catch(() => {});
+    load();
+    window.addEventListener('requests:changed', load);
+    const off = socketCtx?.subscribe ? socketCtx.subscribe('request_update', load) : null;
+    return () => { window.removeEventListener('requests:changed', load); off?.(); };
+  }, [location.pathname, showRequests, socketCtx]);
   const estateName =
     user?.estateId && typeof user.estateId === 'object'
       ? user.estateId.name
-      : 'Estate Manager';
+      : (site.isEstate ? 'Estate Manager' : site.terms.manager);
 
   const initials = user?.name
     ?.split(' ')
@@ -151,7 +168,7 @@ export default function Sidebar({ mobile = false, onClose }) {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-5">
-        {NAV.map(({ section, links }) => ({ section, links: links.filter(l => canOpen(user, l.to) && moduleVisible(l.module, site.on)) }))
+        {NAV.map(({ section, links }) => ({ section, links: links.filter(l => canOpen(user, l.to) && moduleVisible(l.module, site.on) && (!l.site || l.site(site))) }))
           .filter(({ links }) => links.length)
           .map(({ section, links }) => (
           <div key={section}>
@@ -161,7 +178,7 @@ export default function Sidebar({ mobile = false, onClose }) {
             </p>
             <div className="space-y-0.5">
               {links.map(({ to, icon: Icon, label: rawLabel, feature, badge }) => {
-                const label = typeof rawLabel === 'function' ? rawLabel(site.terms, site.on) : rawLabel;
+                const label = typeof rawLabel === 'function' ? rawLabel(site.terms, site.on, site) : rawLabel;
                 const locked = feature ? !can(feature) : false;
                 return (
                   <NavLink
@@ -177,6 +194,9 @@ export default function Sidebar({ mobile = false, onClose }) {
                     <span className="flex-1">{label}</span>
                     {badge === 'family' && !locked && familyRequests > 0 && (
                       <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-fuchsia-600 text-white text-[10px] font-bold flex items-center justify-center" title={`${familyRequests} waiting for approval`}>{familyRequests}</span>
+                    )}
+                    {badge === 'requests' && !locked && openRequests > 0 && (
+                      <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center" title={`${openRequests} open`}>{openRequests}</span>
                     )}
                     {locked && <Lock size={10} style={{ color: '#94A3B8', flexShrink: 0 }} />}
                   </NavLink>

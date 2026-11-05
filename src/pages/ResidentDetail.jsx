@@ -13,6 +13,7 @@ import useIsDesktop from '../hooks/useIsDesktop';
 import ResidentProfileDesktop from '../components/residents/ResidentProfileDesktop';
 import { useSite } from '../context/SiteContext';
 import { StayCard, StaffCard, StayChip } from '../components/site/MemberFields';
+import { RoleCard, RoleChip } from '../components/site/RoleFields';
 
 export default function ResidentDetail() {
   const site = useSite();
@@ -112,11 +113,13 @@ export default function ResidentDetail() {
   );
 
   if (!resident) return null;
+  // Staff (doctors, teachers…) open from the Staff page on non-estate sites
+  const backTo = site.hasRoles && site.roleOf(resident.siteRole).staff ? '/staff' : '/residents';
 
   if (isDesktop) return (
     <ResidentProfileDesktop
       resident={resident} units={units}
-      onBack={() => navigate('/residents')}
+      onBack={() => navigate(backTo)}
       onToggle={handleToggle} acting={acting}
       assignUnitId={assignUnitId} setAssignUnitId={setAssignUnitId}
       onAssign={handleAssign} savingUnit={savingUnit}
@@ -138,7 +141,7 @@ export default function ResidentDetail() {
 
   return (
     <div className="max-w-lg mx-auto space-y-5 pb-4">
-      <button onClick={() => navigate('/residents')}
+      <button onClick={() => navigate(backTo)}
         className="dash-rise inline-flex items-center gap-1 text-[13px] font-medium text-slate-500">
         <ChevronLeft size={16} /> {T.members}
       </button>
@@ -160,6 +163,7 @@ export default function ResidentDetail() {
             ? <span className="inline-flex items-center gap-1 text-[12px] font-semibold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700"><Home size={12} /> {unitDisplay}</span>
             : <span className="text-[12px] italic text-slate-400">No {unitWord.toLowerCase()}</span>}
           {site.modules?.stays && r.householdRole !== 'member' && <StayChip stay={r.stay} />}
+          <RoleChip siteRole={r.siteRole} />
           <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full ${r.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${r.isActive ? 'bg-emerald-500' : 'bg-red-500'}`} />{r.isActive ? 'Active' : 'Suspended'}
           </span>
@@ -195,7 +199,7 @@ export default function ResidentDetail() {
       {/* Stats */}
       <section className="grid grid-cols-3 gap-2.5">
         <StatTile i={0} label="Days here" value={daysIn} Icon={Calendar} color="#10B981" />
-        <StatTile i={1} label="Housemates" value={housemates} Icon={Users} color="#6366F1" />
+        <StatTile i={1} label={E ? 'Housemates' : 'Sharing'} value={housemates} Icon={Users} color="#6366F1" />
         <StatTile i={2} label="Space left" value={spaceLeft} Icon={DoorOpen} color="#F59E0B" />
       </section>
 
@@ -225,6 +229,7 @@ export default function ResidentDetail() {
         <div className="h-1.5" />
       </section>
 
+      <RoleCard member={r} onChanged={() => residentAPI.getOne(id).then(({ data }) => setResident(data.data)).catch(() => {})} />
       <StayCard member={r} onChanged={() => residentAPI.getOne(id).then(({ data }) => setResident(data.data)).catch(() => {})} />
       <StaffCard member={r} />
 
@@ -233,7 +238,7 @@ export default function ResidentDetail() {
         <section className="dash-rise rounded-[22px] bg-white border border-slate-200/70 p-4" style={{ animationDelay: '320ms' }}>
           <div className="flex items-center justify-between">
             <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{unitWord}</div>
-            {curUnit && <span className="text-[11px] text-slate-400">{(curUnit.residentIds || []).length}/{curUnit.maxOccupants || 7} living here</span>}
+            {curUnit && <span className="text-[11px] text-slate-400">{(curUnit.residentIds || []).length}/{curUnit.maxOccupants || 7} {E ? 'living here' : `in this ${T.unit.toLowerCase()}`}</span>}
           </div>
           <div className="mt-2 text-[15px] font-semibold text-slate-900">{unitDisplay || 'Not assigned yet'}</div>
           <select className="input-field text-sm mt-3" value={assignUnitId} onChange={e => setAssignUnitId(e.target.value)}>

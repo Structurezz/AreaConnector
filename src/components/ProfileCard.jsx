@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useSite } from '../context/SiteContext';
+import { lower } from '../utils/siteTypes';
 import { authAPI } from '../api';
 import { Camera, Save, Eye, EyeOff, User as UserIcon, Phone, Mail, X } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -98,6 +100,10 @@ export default function ProfileCard() {
   };
 
   const initial = (form.name || user?.name || '?')[0]?.toUpperCase();
+  const site = useSite();
+  // "residents and staff" on estates; "guests and staff", "patients & staff"… elsewhere
+  const audience = site.isEstate ? 'residents and staff'
+    : /staff/i.test(site.terms.members) ? lower(site.terms.members) : `${lower(site.terms.members)} and staff`;
 
   return (
     <div className="glass-card p-5">
@@ -108,7 +114,7 @@ export default function ProfileCard() {
         </span>
         <div className="flex-1 min-w-0">
           <h2 className="text-[15px] font-semibold text-slate-900">My profile</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Your photo, name and phone as residents and staff see them.</p>
+          <p className="text-xs text-slate-500 mt-0.5">Your photo, name and phone as {audience} see them.</p>
         </div>
       </div>
 
@@ -234,7 +240,7 @@ export default function ProfileCard() {
           </div>
           <div className="text-xs mt-0.5" style={{ color: '#64748B' }}>
             {form.isDiscoverable
-              ? 'Residents can find you when they search to start a chat.'
+              ? `${site.isEstate ? 'Residents' : site.terms.members} can find you when they search to start a chat.`
               : 'Your name is hidden from the DM search. Existing chats keep working.'}
           </div>
         </div>

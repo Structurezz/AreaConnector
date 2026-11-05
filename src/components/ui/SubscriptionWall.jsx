@@ -1,5 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, CreditCard, RefreshCw } from 'lucide-react';
+import { useSite } from '../../context/SiteContext';
+import { lower } from '../../utils/siteTypes';
 
 const MESSAGES = {
   suspended: {
@@ -27,7 +29,15 @@ const MESSAGES = {
 
 export default function SubscriptionWall({ status }) {
   const navigate = useNavigate();
-  const meta = MESSAGES[status] || MESSAGES.suspended;
+  const site = useSite();
+  const base = MESSAGES[status] || MESSAGES.suspended;
+  // Estates keep the original text; other sites get their own words
+  const meta = site.isEstate ? base : {
+    ...base,
+    body: base.body
+      .replace('your residents', `your ${lower(site.terms.members)}`)
+      .replace('your estate', `your ${lower(site.terms.site)}`),
+  };
 
   return (
     <div style={{

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { blockWord, blockName } from '../utils/siteTypes';
+import { blockWord, blockName, lower } from '../utils/siteTypes';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FamilyRequestsBanner, FamilyRequestsPanel, AddFamilyPanel, MyHouseholdCard } from '../components/residents/FamilyPanels';
 import { residentAPI, unitAPI } from '../api';
@@ -21,8 +21,15 @@ import { useSite } from '../context/SiteContext';
 import InviteResidentModal, { unitOptionLabel } from '../components/residents/InviteResidentModal';
 import UnitPicker from '../components/residents/UnitPicker';
 import { MemberSectorFields, emptySector, sectorPayload, sectorError, useSectorConfig, StayChip, StayCard, StaffCard } from '../components/site/MemberFields';
+import { RoleCard, RoleChip } from '../components/site/RoleFields';
+import { MemberWizard } from '../components/residents/OnboardWizard';
 
-function unitLabel(u) {
+// "Dr Ade, Nurse Bisi" — a member's assigned staff (care team, adviser…)
+const assignedNames = (r) => (r.assignedTo || []).filter(a => a && typeof a === 'object').map(a => a.name).join(', ');
+const shortDate = (d) => (d ? format(new Date(d), 'd MMM') : '');
+
+function unitLabel(u, site) {
+  if (site && !site.isEstate) return unitOptionLabel(u, site);
   const base = u.block ? `Block ${u.block} · Apt ${u.unitNumber}` : `Apt ${u.unitNumber}`;
   const count = (u.residentIds || []).length;
   const max   = u.maxOccupants || 7;
@@ -33,7 +40,7 @@ function unitLabel(u) {
 const hueOf = (name = '?') => (name.charCodeAt(0) * 37) % 360;
 const initialsOf = (name = '?') => name.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
 // Estates say "Apt 4"; other site types use their own word ("Room 101", "Ward A")
-const aptOf = (u, site) => (u ? `${u.block ? `${u.block} · ` : ''}${site && !site.isEstate ? site.terms.unit : 'Apt'} ${u.unitNumber}` : '');
+const aptOf = (u, site) => (u ? `${u.block ? `${site && !site.isEstate ? blockName(u.block, site.terms) : u.block} · ` : ''}${site && !site.isEstate ? site.terms.unit : 'Apt'} ${u.unitNumber}` : '');
 
 function ResidentAvatar({ r, size = 44, ring = true }) {
   const h = hueOf(r.name);
@@ -64,11 +71,12 @@ function ResidentStatus({ r }) {
 
 // Family members are added by their household head from AreaMates
 export function FamilyTag({ r, className = '' }) {
+  const site = useSite();
   if (r?.householdRole !== 'member') return null;
   const head = r.householdHead?.name?.split(' ')[0];
   return (
     <span className={`inline-flex items-center gap-1 text-[10.5px] font-semibold px-1.5 py-0.5 rounded-md bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-100 whitespace-nowrap ${className}`}>
-      <Users size={10} /> {r.relationship || 'Family'}{head ? ` of ${head}` : ''}
+      <Users size={10} /> {r.relationship || (site.isEstate ? 'Family' : site.terms.family)}{head ? ` of ${head}` : ''}
     </span>
   );
 }
@@ -217,6 +225,7 @@ function ResidentDrawer({ resident, units, onToggle, onAssignUnit, onClose, onOp
                 <h2 className="text-[17px] font-semibold text-slate-900 truncate">{r.name}</h2>
                 <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                   <ResidentStatus r={r} />
+                  <RoleChip siteRole={r.siteRole} />
                   <FamilyTag r={r} />
                   {site.modules?.stays && <StayChip stay={r.stay} />}
                   {currentUnit && (
@@ -248,6 +257,7 @@ function ResidentDrawer({ resident, units, onToggle, onAssignUnit, onClose, onOp
               })}
             </div>
 
+            <RoleCard member={r} onChanged={onChanged} />
             <StayCard member={r} onChanged={onChanged} />
             <StaffCard member={r} onChanged={onChanged} />
 
@@ -401,7 +411,9 @@ function ResidentCard({ r, i, selected, onOpen, onToggle }) {
         <ResidentAvatar r={r} size={40} />
         <div className="mt-2 text-[14px] font-semibold text-slate-900 truncate">{r.name}</div>
         {r.householdRole === 'member' && <FamilyTag r={r} className="mt-1" />}
-        <div className="text-[11px] text-slate-400">{r.createdAt ? `Joined ${format(new Date(r.createdAt), 'MMM yyyy')}` : ' '}</div>
+        {site.hasRoles && r.householdRole !== 'member' && <RoleChip siteRole={r.siteRole} size="xs" className="mt-1" />}
+        <div className="text-[11px] text-slate-400">{site.hasRoles && r.memberProfile?.idNumber ? r.memberProfile.idNumber : r.createdAt ? `Joined ${format(new Date(r.createdAt), 'MMM yyyy')}` : ' '}</div>
+        {site.hasRoles && assignedNames(r) && <div className="mt-1 text-[11px] text-pink-700 truncate">{site.assignLabel}: {assignedNames(r)}</div>}
         <div className="mt-3 space-y-1.5">
           <div className="text-[12px] text-slate-600 truncate flex items-center gap-2"><Mail size={12} className="text-slate-300 flex-shrink-0" />{r.email}</div>
           <div className="text-[12px] text-slate-600 truncate flex items-center gap-2"><Phone size={12} className="text-slate-300 flex-shrink-0" />{r.phone || 'No phone'}</div>
@@ -429,6 +441,14 @@ export default function ManagerResidents({ mode = 'residents' }) {
   const E = site.isEstate;
   const unitWordL = E ? 'apartment' : T.unit.toLowerCase();
   const sectorCfg = useSectorConfig();
+  // Non-estate sites: this page lists the default role (patients, students,
+  // guests, employees); staff have their own page (/staff)
+  const R = site.hasRoles && mode !== 'family';
+  const memberDef = site.roleOf(site.defaultRole);
+  const listTitle = R ? memberDef.plural : T.members;
+  // Bulk import: Role + ID columns on non-estate sites
+  const bulkOpts = R ? { roles: site.roles, idLabel: memberDef.form?.id || T.idLabel } : undefined;
+  const bulkGrid = R ? 'md:grid-cols-[1.1fr_1.4fr_0.9fr_0.7fr_0.9fr_0.8fr_32px]' : 'md:grid-cols-[1.2fr_1.5fr_1fr_0.7fr_32px]';
   const [addSector, setAddSector] = useState(emptySector);
   const [residents, setResidents]   = useState([]);
   const [units, setUnits]           = useState([]);
@@ -478,13 +498,13 @@ export default function ManagerResidents({ mode = 'residents' }) {
     setLoading(true);
     try {
       const [r, u] = await Promise.all([
-        residentAPI.getAll({ page: p, limit: lim, search: q || undefined, filter: nu && t !== 'family' ? 'no_unit' : undefined, type: t === 'family' ? 'family' : undefined }),
+        residentAPI.getAll({ page: p, limit: lim, search: q || undefined, filter: nu && t !== 'family' ? 'no_unit' : undefined, type: t === 'family' ? 'family' : undefined, group: site.hasRoles && t !== 'family' ? 'members' : undefined }),
         unitAPI.getAll(),
       ]);
       setResidents(r.data.data);
       const pg = r.data.pagination || { total: r.data.data.length, pages: 1 };
       setPagination(pg);
-      setTotalAll(r.data.residentCount ?? (t !== 'family' && !q && !nu ? pg.total : totalAll));
+      setTotalAll((site.hasRoles ? r.data.memberCount : undefined) ?? r.data.residentCount ?? (t !== 'family' && !q && !nu ? pg.total : totalAll));
       setFamilyTotal(r.data.familyCount || 0);
       setNoUnitCount(r.data.noUnitCount || 0);
       setUnits(u.data.data);
@@ -500,7 +520,7 @@ export default function ManagerResidents({ mode = 'residents' }) {
   const handleSearch = (q) => { setSearch(q); setPage(1); load(1, q); };
 
   // Residents and Family members share this page component: reload when switching between them
-  useEffect(() => { setPage(1); setSearch(''); setSelected(null); load(1, '', limit, noUnitOnly, mode); }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setPage(1); setSearch(''); setSelected(null); load(1, '', limit, noUnitOnly, mode); }, [mode, site.hasRoles]); // eslint-disable-line react-hooks/exhaustive-deps
   const toggleNoUnit = (on) => { setNoUnitOnly(on); setPage(1); load(1, search, limit, on); };
 
   // ── Bulk invite ──────────────────────────────────────────────────
@@ -529,14 +549,14 @@ export default function ManagerResidents({ mode = 'residents' }) {
     if (!file) return;
     setParsingFile(true);
     try {
-      const rows = await parseBulkFile(file);
+      const rows = await parseBulkFile(file, T.unit, bulkOpts);
       if (!rows.length) {
-        toast.error('No residents found — make sure the file has Name, Email, Phone and Unit columns');
+        toast.error(E ? 'No residents found — make sure the file has Name, Email, Phone and Unit columns' : `No ${lower(T.members)} found — make sure the file has Name, Email, Phone and ${T.unit} columns`);
         return;
       }
       setBulkRows(rows);
       setBulkFile(file.name);
-      toast.success(`${rows.length} resident${rows.length !== 1 ? 's' : ''} loaded from ${file.name}`);
+      toast.success(E ? `${rows.length} resident${rows.length !== 1 ? 's' : ''} loaded from ${file.name}` : `${rows.length} ${lower(rows.length !== 1 ? T.members : T.member)} loaded from ${file.name}`);
     } catch (err) {
       console.error('[bulkFile]', err);
       toast.error('Could not read that file. Use a CSV or a text-based PDF.');
@@ -600,7 +620,10 @@ export default function ManagerResidents({ mode = 'residents' }) {
   });
   const validBulkRows = bulkRows
     .filter(r => !isBlankRow(r) && r.name.trim() && isValidEmail(r.email.trim()) && !rowIssues(r).unit)
-    .map(r => ({ name: r.name.trim(), email: r.email.trim(), phone: r.phone.trim(), unitNumber: r.unitNumber.trim() }));
+    .map(r => ({
+      name: r.name.trim(), email: r.email.trim(), phone: r.phone.trim(), unitNumber: r.unitNumber.trim(),
+      ...(R && { siteRole: r.role || '', ...(r.idNumber?.trim() && { memberProfile: { idNumber: r.idNumber.trim() } }) }),
+    }));
   const invalidBulkCount = bulkRows.filter(r => !isBlankRow(r) && (rowIssues(r).name || rowIssues(r).email || rowIssues(r).unit)).length;
 
   const resetBulkRows = () => setBulkRows([emptyRow(), emptyRow(), emptyRow()]);
@@ -612,7 +635,7 @@ export default function ManagerResidents({ mode = 'residents' }) {
   const handleBulkPaste = (i, e) => {
     const text = e.clipboardData.getData('text');
     if (!/\n/.test(text.trim())) return;
-    const parsed = parseBulkText(text);
+    const parsed = parseBulkText(text, T.unit, bulkOpts);
     if (!parsed.length) return;
     e.preventDefault();
     setBulkRows(rows => [...[...rows.slice(0, i), ...parsed, ...rows.slice(i + 1)].filter(r => !isBlankRow(r)), emptyRow()]);
@@ -660,16 +683,19 @@ export default function ManagerResidents({ mode = 'residents' }) {
         />
         ) : (
         <PageHeader
-          title={T.members}
-          subtitle={E ? 'Everyone who calls the estate home' : `Everyone registered at your ${T.site.toLowerCase()}`}
-          actions={<>
+          title={listTitle}
+          subtitle={E ? 'Everyone who calls the estate home' : R ? `${memberDef.plural} at your ${T.site.toLowerCase()} — staff are on the Staff page` : `Everyone registered at your ${T.site.toLowerCase()}`}
+          actions={R ? <>
+            <button onClick={() => setShowBulk(true)} className={HEADER_BTN_GHOST}><Upload size={14} /> Bulk import</button>
+            <button onClick={() => setShowInvite(true)} className={HEADER_BTN_PRIMARY}><UserPlus size={15} /> Add {memberDef.label.toLowerCase()}</button>
+          </> : <>
             <button onClick={() => setShowBulk(true)} className={HEADER_BTN_GHOST}><Upload size={14} /> Bulk invite</button>
             <button onClick={() => setShowInvite(true)} className={sectorCfg.stays ? HEADER_BTN_PRIMARY : HEADER_BTN_GHOST}><MailPlus size={14} /> {sectorCfg.stays ? `Check in ${T.member.toLowerCase()}` : 'Invite'}</button>
             {!sectorCfg.stays && <button onClick={() => setShowAdd(true)} className={HEADER_BTN_PRIMARY}><Plus size={15} /> Add {T.member.toLowerCase()}</button>}
             {sectorCfg.stays && <button onClick={() => setShowAdd(true)} className={HEADER_BTN_GHOST}><Plus size={14} /> Add without email</button>}
           </>}
           stats={[
-            { label: T.members,     value: totalAll,           Icon: Users,     color: '#6366F1', hint: 'Registered members' },
+            { label: listTitle,     value: totalAll,           Icon: Users,     color: '#6366F1', hint: R ? `Registered ${memberDef.plural.toLowerCase()}` : 'Registered members' },
             { label: E ? 'Apartments' : T.units, value: unitStats.total, Icon: Building2, color: '#8B5CF6', hint: `${T.units} in the ${T.site.toLowerCase()}` },
             { label: 'Occupied',    value: unitStats.occupied, Icon: Home,      color: '#10B981', hint: `${T.units} with ${T.members.toLowerCase()}` },
             { label: 'Open spaces', value: unitStats.open,     Icon: DoorOpen,  color: '#F59E0B', hint: E ? 'Room left across units' : `Space left across ${T.units.toLowerCase()}` },
@@ -736,7 +762,7 @@ export default function ManagerResidents({ mode = 'residents' }) {
                       <Users size={28} className="text-white" />
                     </div>
                   </div>
-                  <p className="font-semibold text-slate-800 mt-2">{search ? `No ${tab === 'family' ? T.familyPlural.toLowerCase() : T.members.toLowerCase()} match “${search}”` : tab === 'family' ? `No ${T.familyPlural.toLowerCase()} yet` : `No ${T.members.toLowerCase()} yet`}</p>
+                  <p className="font-semibold text-slate-800 mt-2">{search ? `No ${tab === 'family' ? T.familyPlural.toLowerCase() : listTitle.toLowerCase()} match “${search}”` : tab === 'family' ? `No ${T.familyPlural.toLowerCase()} yet` : `No ${listTitle.toLowerCase()} yet`}</p>
                   <p className="text-sm text-slate-400">{tab === 'family'
                     ? (E ? 'Residents add their family from AreaMates, or you can add them here.' : `${T.members} add ${T.familyPlural.toLowerCase()} from AreaMates, or you can add them here.`)
                     : `Invite ${T.members.toLowerCase()} and they'll appear here.`}</p>
@@ -744,7 +770,7 @@ export default function ManagerResidents({ mode = 'residents' }) {
                     <button onClick={() => setAddingFamily(true)} className="btn-primary gap-2 mt-2"><UserPlus size={14} /> Add {T.family.toLowerCase()}</button>
                   )}
                   {!search && tab === 'residents' && (
-                    <button onClick={() => setShowInvite(true)} className="btn-primary gap-2 mt-2"><MailPlus size={14} /> {sectorCfg.stays ? `Check in ${T.member.toLowerCase()}` : 'Send an invite'}</button>
+                    <button onClick={() => setShowInvite(true)} className="btn-primary gap-2 mt-2"><MailPlus size={14} /> {R ? `Add ${memberDef.label.toLowerCase()}` : sectorCfg.stays ? `Check in ${T.member.toLowerCase()}` : 'Send an invite'}</button>
                   )}
                 </div>
               ) : view === 'cards' ? (
@@ -755,14 +781,14 @@ export default function ManagerResidents({ mode = 'residents' }) {
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-[2fr_1.6fr_1.1fr_0.9fr_auto] gap-4 px-5 py-3 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    <span>{T.member}</span><span>Contact</span><span>{E ? 'Apartment' : T.unit}</span><span>Status</span><span className="w-[72px]" />
+                  <div className={`grid ${R ? 'grid-cols-[2fr_1.4fr_1.1fr_1.3fr_1fr_auto]' : 'grid-cols-[2fr_1.6fr_1.1fr_0.9fr_auto]'} gap-4 px-5 py-3 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-400`}>
+                    <span>{R ? memberDef.label : T.member}</span><span>Contact</span><span>{E ? 'Apartment' : T.unit}</span>{R && <span>{site.assignLabel || 'Assigned'}</span>}<span>Status</span><span className="w-[72px]" />
                   </div>
                   {residents.map((r, i) => {
                     const sel = selected?._id === r._id;
                     return (
                       <div key={r._id} onClick={() => openResident(r)}
-                        className="dash-rise group grid grid-cols-[2fr_1.6fr_1.1fr_0.9fr_auto] gap-4 items-center px-5 py-3 border-t border-slate-100 first-of-type:border-0 cursor-pointer transition-colors hover:bg-slate-50/80"
+                        className={`dash-rise group grid ${R ? 'grid-cols-[2fr_1.4fr_1.1fr_1.3fr_1fr_auto]' : 'grid-cols-[2fr_1.6fr_1.1fr_0.9fr_auto]'} gap-4 items-center px-5 py-3 border-t border-slate-100 first-of-type:border-0 cursor-pointer transition-colors hover:bg-slate-50/80`}
                         style={{ animationDelay: `${460 + i * 30}ms`, background: sel ? '#EEF2FF' : undefined, boxShadow: `inset 3px 0 0 ${sel ? '#6366F1' : 'transparent'}` }}>
                         <div className="flex items-center gap-3 min-w-0">
                           <span className="block flex-shrink-0 transition-transform duration-300 group-hover:scale-105"><ResidentAvatar r={r} size={36} /></span>
@@ -788,7 +814,17 @@ export default function ManagerResidents({ mode = 'residents' }) {
                             <span className="text-xs italic text-slate-400">No {unitWordL}</span>
                           )}
                         </div>
-                        <div className="flex flex-wrap gap-1">{sectorCfg.stays && r.householdRole !== 'member' && <StayChip stay={r.stay} />}<ResidentStatus r={r} /></div>
+                        {R && (
+                          <div className="min-w-0 text-[12px] truncate">
+                            {assignedNames(r) ? <span className="text-pink-700 font-medium">{assignedNames(r)}</span> : <span className="italic text-slate-400">Not assigned</span>}
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap gap-1">{sectorCfg.stays && r.householdRole !== 'member' && <StayChip stay={r.stay} />}<ResidentStatus r={r} /></div>
+                          {R && sectorCfg.stays && (r.stay?.checkIn || r.stay?.checkOut) && (
+                            <div className="text-[10.5px] text-slate-400 mt-0.5 truncate">{shortDate(r.stay.checkIn)} → {shortDate(r.stay.checkOut)}</div>
+                          )}
+                        </div>
                         <div className="w-[72px] flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
                           <button onClick={() => handleToggle(r)} title={r.isActive ? 'Suspend' : 'Activate'} aria-label={r.isActive ? 'Suspend' : 'Activate'}
                             className={`p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-all ${r.isActive ? 'text-slate-400 hover:text-red-600 hover:bg-red-50' : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'}`}>
@@ -860,11 +896,14 @@ export default function ManagerResidents({ mode = 'residents' }) {
           onOpen={openResident} onToggle={handleToggle}
           onInvite={() => setShowInvite(true)} onBulk={() => setShowBulk(true)} onAdd={() => setShowAdd(true)}
           family={tab === 'family'} familyTotal={familyTotal} requestCount={familyCount} onRequests={() => setShowRequests(true)} onAddFamily={() => setAddingFamily(true)}
+          title={listTitle} addLabel={R ? `Add ${memberDef.label.toLowerCase()}` : null}
         />
       </div>
 
       {/* ── Single Invite Modal ─────────────────────────────────── */}
-      <InviteResidentModal open={showInvite} onClose={() => setShowInvite(false)} units={units} onSaved={() => load()} onUnitCreated={(u) => setUnits(list => [...list, u])} />
+      {R
+        ? <MemberWizard open={showInvite} onClose={() => setShowInvite(false)} units={units} onSaved={() => load()} onUnitCreated={(u) => setUnits(list => [...list, u])} />
+        : <InviteResidentModal open={showInvite} onClose={() => setShowInvite(false)} units={units} onSaved={() => load()} onUnitCreated={(u) => setUnits(list => [...list, u])} />}
 
       {/* ── Bulk Invite Modal ───────────────────────────────────── */}
       <Modal open={showBulk} onClose={closeBulk} title={`Bulk Invite ${T.members}`} size="lg">
@@ -874,13 +913,14 @@ export default function ManagerResidents({ mode = 'residents' }) {
               style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', color: '#818CF8' }}>
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="font-semibold mb-1">Template — Name, Email, Phone, Unit</p>
+                  <p className="font-semibold mb-1">Template — Name, Email, Phone, {E ? 'Unit' : T.unit}{R ? `, Role, ${bulkOpts.idLabel}` : ''}</p>
                   <p className="text-xs" style={{ color: 'rgba(129,140,248,0.85)' }}>
-                    Upload a CSV or PDF with these columns, or type residents into the table below.
-                    Unit is required and must match an existing unit number (e.g. 1A, 2B) — residents can't sign in without one. Phone is optional.
+                    {E ? <>Upload a CSV or PDF with these columns, or type residents into the table below.
+                    Unit is required and must match an existing unit number (e.g. 1A, 2B) — residents can't sign in without one. Phone is optional.</>
+                    : `Upload a CSV or PDF with these columns, or type ${lower(T.members)} into the table below. ${T.unit} is required and must match an existing ${lower(T.unit)} number (e.g. 1A, 2B) — ${lower(T.members)} can't sign in without one. Phone is optional.${R ? ` Role is ${site.roles.map(r => r.label).join(', ')} — leave it blank for ${memberDef.plural.toLowerCase()}.` : ''}`}
                   </p>
                 </div>
-                <button type="button" onClick={downloadTemplate}
+                <button type="button" onClick={() => downloadTemplate(E ? undefined : T, bulkOpts)}
                   className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg flex-shrink-0"
                   style={{ background: 'rgba(99,102,241,0.15)', color: '#6366F1' }}>
                   <Download size={13} /> Template
@@ -901,14 +941,14 @@ export default function ManagerResidents({ mode = 'residents' }) {
                   {parsingFile ? 'Reading file…' : bulkFile || 'Upload CSV or PDF'}
                 </p>
                 <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
-                  {bulkFile ? 'Loaded into the table below — review or edit before sending. Click to replace.' : 'Columns: Name, Email, Phone, Unit'}
+                  {bulkFile ? 'Loaded into the table below — review or edit before sending. Click to replace.' : (E ? 'Columns: Name, Email, Phone, Unit' : `Columns: Name, Email, Phone, ${T.unit}`)}
                 </p>
               </div>
             </label>
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-semibold" style={{ color: 'var(--text-sub)' }}>Resident list</label>
+                <label className="text-xs font-semibold" style={{ color: 'var(--text-sub)' }}>{E ? 'Resident list' : `${T.member} list`}</label>
                 <span className="text-xs font-semibold">
                   {validBulkRows.length > 0 && (
                     <span style={{ color: '#10B981' }}>
@@ -922,9 +962,9 @@ export default function ManagerResidents({ mode = 'residents' }) {
               </div>
 
               <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(0,0,0,0.08)' }}>
-                <div className="hidden md:grid grid-cols-[1.2fr_1.5fr_1fr_0.7fr_32px] gap-2 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide"
+                <div className={`hidden md:grid ${bulkGrid} gap-2 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide`}
                   style={{ background: '#F8FAFC', color: 'var(--text-dim)', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
-                  <span>Name *</span><span>Email *</span><span>Phone</span><span>Unit *</span><span />
+                  <span>Name *</span><span>Email *</span><span>Phone</span><span>{E ? 'Unit' : T.unit} *</span>{R && <><span>Role</span><span className="truncate">{bulkOpts.idLabel}</span></>}<span />
                 </div>
                 <div className="max-h-80 overflow-y-auto">
                   {bulkRows.map((r, i) => {
@@ -932,7 +972,7 @@ export default function ManagerResidents({ mode = 'residents' }) {
                     const bad = rowIssues(r);
                     const cell = (flag) => `input-field !py-1.5 !px-2.5 text-sm${!blank && flag ? ' !border-red-400' : ''}`;
                     return (
-                      <div key={i} className="grid grid-cols-2 md:grid-cols-[1.2fr_1.5fr_1fr_0.7fr_32px] gap-2 px-3 py-2 items-center"
+                      <div key={i} className={`grid grid-cols-2 ${bulkGrid} gap-2 px-3 py-2 items-center`}
                         style={{ borderTop: i > 0 ? '1px solid rgba(0,0,0,0.06)' : 'none' }}>
                         <input className={cell(bad.name)} placeholder="Name" value={r.name}
                           onChange={e => updateBulkRow(i, 'name', e.target.value)} onPaste={e => handleBulkPaste(i, e)} />
@@ -941,10 +981,19 @@ export default function ManagerResidents({ mode = 'residents' }) {
                         <input className={cell(false)} placeholder="Phone" type="tel" value={r.phone}
                           onChange={e => updateBulkRow(i, 'phone', e.target.value)} onPaste={e => handleBulkPaste(i, e)} />
                         <div className="flex items-center gap-2 md:contents">
-                          <input className={`${cell(bad.unit)} flex-1 min-w-0 uppercase`} placeholder="Unit" list="bulk-unit-options"
-                            title={!blank && bad.unit ? (r.unitNumber.trim() ? 'No unit with this number' : 'Unit is required') : undefined}
+                          <input className={`${cell(bad.unit)} flex-1 min-w-0 uppercase`} placeholder={E ? 'Unit' : T.unit} list="bulk-unit-options"
+                            title={!blank && bad.unit ? (r.unitNumber.trim() ? (E ? 'No unit with this number' : `No ${lower(T.unit)} with this number`) : (E ? 'Unit is required' : `${T.unit} is required`)) : undefined}
                             value={r.unitNumber}
                             onChange={e => updateBulkRow(i, 'unitNumber', e.target.value)} onPaste={e => handleBulkPaste(i, e)} />
+                          {R && (
+                            <>
+                              <select className={`${cell(false)} flex-1 min-w-0`} value={r.role || ''} onChange={e => updateBulkRow(i, 'role', e.target.value)} aria-label="Role">
+                                {site.roles.map((x, k) => <option key={x.key} value={k === 0 ? '' : x.key}>{x.label}</option>)}
+                              </select>
+                              <input className={`${cell(false)} flex-1 min-w-0`} placeholder={bulkOpts.idLabel} value={r.idNumber || ''}
+                                onChange={e => updateBulkRow(i, 'idNumber', e.target.value)} onPaste={e => handleBulkPaste(i, e)} />
+                            </>
+                          )}
                           <button type="button" onClick={() => removeBulkRow(i)} aria-label="Remove row"
                             className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 hover:bg-red-50"
                             style={{ color: '#EF4444' }}>
@@ -956,7 +1005,7 @@ export default function ManagerResidents({ mode = 'residents' }) {
                   })}
                 </div>
                 <datalist id="bulk-unit-options">
-                  {units.map(u => <option key={u._id} value={u.unitNumber}>{unitLabel(u)}</option>)}
+                  {units.map(u => <option key={u._id} value={u.unitNumber}>{unitLabel(u, site)}</option>)}
                 </datalist>
                 <div className="flex items-center justify-between px-3 py-2"
                   style={{ background: '#F8FAFC', borderTop: '1px solid rgba(0,0,0,0.06)' }}>

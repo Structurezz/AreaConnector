@@ -5,6 +5,8 @@ import {
   Eye, Loader2, Send, X, ChevronLeft, ChevronRight, Sparkles, TrendingUp,
 } from 'lucide-react';
 import DJLive from '../DJLive';
+import { useSite } from '../../context/SiteContext';
+import { lower } from '../../utils/siteTypes';
 
 const CATS = {
   general:     { label: 'General',     Icon: Info,          color: '#3B82F6' },
@@ -14,17 +16,22 @@ const CATS = {
 };
 const cat = (k) => CATS[k] || CATS.general;
 
-const TEMPLATES = [
+// Starter notices; the dues and meeting ones follow the site words (estates keep their text)
+const templatesFor = (T, E) => [
   { label: 'Water outage',     category: 'maintenance', title: 'Scheduled water outage', body: 'Water supply will be interrupted on [day] from [time] to [time] for maintenance work. Please store enough water ahead of time. We apologise for the inconvenience.' },
   { label: 'Power update',     category: 'maintenance', title: 'Power supply update', body: 'Please note: [describe the power situation / generator schedule]. We will keep you updated.' },
-  { label: 'Dues reminder',    category: 'general',     title: 'Service charge reminder', body: 'This is a friendly reminder that service charges for [month] are due by [date]. You can pay from the Payments page in the app. Thank you!' },
-  { label: 'Community meeting', category: 'event',      title: 'Residents meeting', body: 'All residents are invited to a meeting on [day] at [time] at [venue]. Agenda: [topics]. Your input matters, please attend.' },
+  E ? { label: 'Dues reminder',    category: 'general',     title: 'Service charge reminder', body: 'This is a friendly reminder that service charges for [month] are due by [date]. You can pay from the Payments page in the app. Thank you!' }
+    : { label: `${T.dues} reminder`, category: 'general',    title: `${T.dues} reminder`, body: `This is a friendly reminder that ${lower(T.dues)} for [month] are due by [date]. You can pay from the Payments page in the app. Thank you!` },
+  E ? { label: 'Community meeting', category: 'event',      title: 'Residents meeting', body: 'All residents are invited to a meeting on [day] at [time] at [venue]. Agenda: [topics]. Your input matters, please attend.' }
+    : { label: 'Community meeting', category: 'event',      title: `${T.site} meeting`, body: `All ${lower(T.members)} are invited to a meeting on [day] at [time] at [venue]. Agenda: [topics]. Your input matters, please attend.` },
   { label: 'Security notice',  category: 'urgent',      title: 'Security notice', body: 'Please be vigilant: [describe the issue]. Report anything suspicious to the security desk immediately.' },
 ];
 
 const BLANK = { title: '', body: '', category: 'general', isPinned: false };
 
 function Composer({ onPost, onClose }) {
+  const { terms: T, isEstate: E } = useSite();
+  const TEMPLATES = templatesFor(T, E);
   const [form, setForm] = useState(BLANK);
   const [saving, setSaving] = useState(false);
   const c = cat(form.category);
@@ -62,7 +69,7 @@ function Composer({ onPost, onClose }) {
           </div>
           <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Title" maxLength={120}
             className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-[15px] font-semibold outline-none focus:bg-white focus:border-amber-300 focus:ring-4 focus:ring-amber-100 transition-all" />
-          <textarea value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} rows={5} placeholder="Write your message to residents…"
+          <textarea value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} rows={5} placeholder={`Write your message to ${lower(T.members)}…`}
             className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-[14px] leading-relaxed outline-none resize-none focus:bg-white focus:border-amber-300 focus:ring-4 focus:ring-amber-100 transition-all" />
           <div className="flex items-center gap-1.5 flex-wrap">
             {Object.entries(CATS).map(([k, v]) => {
@@ -84,7 +91,7 @@ function Composer({ onPost, onClose }) {
 
         {/* Live preview */}
         <div className="p-5 bg-slate-50/60">
-          <div className="text-[11px] font-medium text-slate-400 mb-2">Preview: how residents see it</div>
+          <div className="text-[11px] font-medium text-slate-400 mb-2">Preview: how {lower(T.members)} see it</div>
           <div className="rounded-xl bg-white border border-slate-200 overflow-hidden">
             <div className="h-1" style={{ background: c.color }} />
             <div className="p-3.5">
@@ -97,9 +104,9 @@ function Composer({ onPost, onClose }) {
           </div>
           <button type="submit" disabled={!ready || saving}
             className="mt-4 w-full inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[13px] font-semibold text-white bg-amber-500 hover:bg-amber-600 transition-colors disabled:opacity-40">
-            {saving ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} Post to residents
+            {saving ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} Post to {lower(T.members)}
           </button>
-          <p className="mt-2 text-[11px] text-slate-400 text-center">Residents get a notification straight away.</p>
+          <p className="mt-2 text-[11px] text-slate-400 text-center">{T.members} get a notification straight away.</p>
         </div>
       </div>
     </form>
@@ -160,6 +167,7 @@ function NoticeCard({ a, i, onTogglePin, onDelete }) {
 }
 
 export default function AnnouncementsDesktop({ announcements, loading, page, pagination, onPage, onPost, onDelete, onTogglePin, onGoLive }) {
+  const { terms: T, isEstate: E } = useSite();
   const [composing, setComposing] = useState(false);
   const [filter, setFilter] = useState('all');
   const [q, setQ] = useState('');
@@ -193,7 +201,7 @@ export default function AnnouncementsDesktop({ announcements, loading, page, pag
             </div>
             <div className="min-w-0">
               <h1 className="text-[22px] font-semibold text-white" style={{ letterSpacing: '-0.025em' }}>Announcements</h1>
-              <p className="text-[13px] text-amber-100/75">Post notices to every resident, or go live over the air for urgent updates.</p>
+              <p className="text-[13px] text-amber-100/75">Post notices to {E ? 'every resident' : 'everyone'}, or go live over the air for urgent updates.</p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -228,7 +236,7 @@ export default function AnnouncementsDesktop({ announcements, loading, page, pag
             <button onClick={openComposer}
               className="dash-rise w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-white border border-slate-200/70 text-left hover:border-amber-300 hover:shadow-sm transition-all">
               <span className="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center"><Plus size={16} className="text-white" /></span>
-              <span className="flex-1 text-[14px] text-slate-400">Write an announcement for residents…</span>
+              <span className="flex-1 text-[14px] text-slate-400">Write an announcement for {lower(T.members)}…</span>
               <span className="text-[12px] text-slate-400">Templates available</span>
             </button>
           )}
@@ -255,7 +263,7 @@ export default function AnnouncementsDesktop({ announcements, loading, page, pag
             <div className="rounded-2xl bg-white border border-dashed border-slate-300 py-14 text-center">
               <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-50 flex items-center justify-center"><Megaphone size={24} className="text-amber-500" /></div>
               <p className="mt-3 text-[14px] font-semibold text-slate-800">{announcements.length ? 'Nothing matches' : 'No announcements yet'}</p>
-              <p className="mt-1 text-[13px] text-slate-400">{announcements.length ? 'Try another category or search.' : 'Post your first notice to residents.'}</p>
+              <p className="mt-1 text-[13px] text-slate-400">{announcements.length ? 'Try another category or search.' : `Post your first notice to ${lower(T.members)}.`}</p>
             </div>
           ) : (
             <>
@@ -292,7 +300,7 @@ export default function AnnouncementsDesktop({ announcements, loading, page, pag
             <div className="relative">
               <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center"><Mic size={18} /></div>
               <h3 className="mt-3 text-[15px] font-semibold text-white">Live broadcast</h3>
-              <p className="mt-1 text-[12px] text-white/80 leading-relaxed">For urgent updates. Residents get an instant push notification and can tap in to hear you speak. It takes over any DJ set that's playing.</p>
+              <p className="mt-1 text-[12px] text-white/80 leading-relaxed">For urgent updates. {T.members} get an instant push notification and can tap in to hear you speak. It takes over any DJ set that's playing.</p>
               <button onClick={onGoLive} className="mt-4 w-full inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-white text-red-600 text-[13px] font-semibold hover:-translate-y-0.5 transition-transform">
                 <Radio size={14} /> Go live now
               </button>

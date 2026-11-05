@@ -5,6 +5,7 @@ import {
 import toast from 'react-hot-toast';
 import api from '../../api/axios';
 import BottomSheet from './BottomSheet';
+import { useSite } from '../../context/SiteContext';
 
 const MIN_WITHDRAWAL = 100; // matches server-side minimum in requestWithdrawal
 const naira = (n) => `₦${Number(n || 0).toLocaleString('en-NG', { maximumFractionDigits: 2 })}`;
@@ -12,6 +13,7 @@ const maskAcct = (n = '') => (n.length > 4 ? `•••• ${n.slice(-4)}` : n);
 
 // Three-step bank-style transfer: amount → review → result.
 export default function WithdrawSheet({ open, onClose, wallet, onChangeBank, onWithdrawn }) {
+  const { terms: T } = useSite();
   const [step, setStep] = useState('amount');
   const [amount, setAmount] = useState('');
   const [sending, setSending] = useState(false);
@@ -109,7 +111,7 @@ export default function WithdrawSheet({ open, onClose, wallet, onChangeBank, onW
         </div>
 
         <div className="rounded-2xl border border-slate-200 overflow-hidden">
-          <Party icon={Wallet} tint="bg-emerald-50 text-emerald-600" label="From" title="Estate wallet" sub={`Balance ${naira(balance)}`} />
+          <Party icon={Wallet} tint="bg-emerald-50 text-emerald-600" label="From" title={`${T.site} wallet`} sub={`Balance ${naira(balance)}`} />
           <div className="relative h-0">
             <div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400">
               <ArrowDown size={14} />

@@ -8,31 +8,45 @@ import { useSocket } from '../context/SocketContext';
 import AlertsDesktop from '../components/alerts/AlertsDesktop';
 import AlertsMobile from '../components/alerts/AlertsMobile';
 import useIsDesktop from '../hooks/useIsDesktop';
+import { useSite } from '../context/SiteContext';
+import { lower } from '../utils/siteTypes';
 
 const PAGE_SIZE = 10;
 
-const AUDIENCE_OPTIONS = [
-  { value: 'all',            label: 'Everyone',       sub: 'All residents + staff', Icon: Users },
-  { value: 'staff',          label: 'Staff only',     sub: 'Estate manager + security', Icon: Briefcase },
-  { value: 'estate_manager', label: 'Estate Manager', sub: 'Managers only', Icon: UserCog },
-  { value: 'security',       label: 'Security only',  sub: 'Security team only', Icon: Shield },
-];
-
-const AUDIENCE_LABELS = {
-  all: 'all residents + staff',
-  staff: 'estate manager + security',
-  estate_manager: 'estate managers',
-  security: 'security team',
-};
-
-const AUDIENCE_BANNERS = {
-  all: { bg: 'bg-red-50 border-red-200 text-red-600', text: <>This broadcast will immediately notify <strong>all residents</strong> in the estate. Use only for real emergencies.</> },
-  staff: { bg: 'bg-amber-50 border-amber-200 text-amber-700', text: <>Only <strong>estate manager and security staff</strong> will see this alert. Residents will not be notified.</> },
-  estate_manager: { bg: 'bg-orange-50 border-orange-200 text-orange-700', text: <>Only <strong>estate managers</strong> will see this alert.</> },
-  security: { bg: 'bg-blue-50 border-blue-200 text-blue-700', text: <>Only the <strong>security team</strong> will see this alert.</> },
+// Audience words follow the site terms (estates keep the original text)
+const audienceText = (T, E) => {
+  const everyone = E ? 'residents + staff' : (/staff/i.test(T.members) ? lower(T.members) : `${lower(T.members)} + staff`);
+  const mgr = E ? 'estate manager' : lower(T.manager);
+  const mgrs = E ? 'estate managers' : (/desk$/i.test(T.manager) ? `${mgr} staff` : `${mgr}s`);
+  return {
+    options: [
+      { value: 'all',            label: 'Everyone',       sub: E ? 'All residents + staff' : `All ${everyone}`, Icon: Users },
+      { value: 'staff',          label: 'Staff only',     sub: E ? 'Estate manager + security' : `${T.manager} + security`, Icon: Briefcase },
+      { value: 'estate_manager', label: E ? 'Estate Manager' : T.manager, sub: 'Managers only', Icon: UserCog },
+      { value: 'security',       label: 'Security only',  sub: 'Security team only', Icon: Shield },
+    ],
+    labels: {
+      all: `all ${everyone}`,
+      staff: `${mgr} + security`,
+      estate_manager: mgrs,
+      security: 'security team',
+    },
+    banners: {
+      all: { bg: 'bg-red-50 border-red-200 text-red-600', text: E
+        ? <>This broadcast will immediately notify <strong>all residents</strong> in the estate. Use only for real emergencies.</>
+        : <>This broadcast will immediately notify <strong>all {lower(T.members)}</strong> at the {lower(T.site)}. Use only for real emergencies.</> },
+      staff: { bg: 'bg-amber-50 border-amber-200 text-amber-700', text: E
+        ? <>Only <strong>estate manager and security staff</strong> will see this alert. Residents will not be notified.</>
+        : <>Only <strong>{mgr} and security staff</strong> will see this alert. No one else will be notified.</> },
+      estate_manager: { bg: 'bg-orange-50 border-orange-200 text-orange-700', text: <>Only <strong>{mgrs}</strong> will see this alert.</> },
+      security: { bg: 'bg-blue-50 border-blue-200 text-blue-700', text: <>Only the <strong>security team</strong> will see this alert.</> },
+    },
+  };
 };
 
 export default function ManagerAlerts() {
+  const { terms: T, isEstate: E } = useSite();
+  const { options: AUDIENCE_OPTIONS, labels: AUDIENCE_LABELS, banners: AUDIENCE_BANNERS } = audienceText(T, E);
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
@@ -197,9 +211,9 @@ export default function ManagerAlerts() {
           {/* Location */}
           <div>
             <label className="text-sm text-slate-500 mb-1.5 block flex items-center gap-1.5">
-              <MapPin size={13} /> Location in Estate
+              <MapPin size={13} /> {E ? 'Location in Estate' : `Location in ${T.site}`}
             </label>
-            <input className="input-field" placeholder="e.g. Block A, Main Gate, Swimming Pool area"
+            <input className="input-field" placeholder={E ? 'e.g. Block A, Main Gate, Swimming Pool area' : `e.g. ${T.block ? `Moremi ${T.block}` : `${T.unit} 3`}, Main Gate, Car park`}
               value={broadcastForm.location}
               onChange={(e) => setBroadcastForm({ ...broadcastForm, location: e.target.value })} />
           </div>
@@ -217,7 +231,7 @@ export default function ManagerAlerts() {
           {/* Action Required */}
           <div>
             <label className="text-sm text-slate-500 mb-2 block flex items-center gap-1.5">
-              <AlertTriangle size={13} /> Action Required for Residents
+              <AlertTriangle size={13} /> Action Required for {E ? 'Residents' : T.members}
             </label>
             <div className="flex flex-wrap gap-2 mb-2">
               {['Stay indoors', 'Lock all doors', 'Evacuate immediately', 'Avoid the area', 'Call security'].map((preset) => (

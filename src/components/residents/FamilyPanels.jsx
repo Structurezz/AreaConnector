@@ -12,6 +12,7 @@ import Portal, { Z } from '../ui/Portal';
 import { residentAPI, householdAPI, unitAPI } from '../../api';
 import { useAuth } from '../../context/AuthContext';
 import { useSite } from '../../context/SiteContext';
+import { lower, withAn } from '../../utils/siteTypes';
 
 // Mirrors server utils/householdAccess
 export const FAMILY_PERMS = {
@@ -23,6 +24,31 @@ export const FAMILY_PERMS = {
   neighbours:  { label: 'Call neighbours', desc: 'Call or buzz from the directory',       Icon: PhoneCall,     color: '#EC4899' },
 };
 const ALL = Object.keys(FAMILY_PERMS);
+
+// Site words for this file (estates keep their original copy)
+const useWords = () => {
+  const site = useSite();
+  const T = site.terms;
+  return {
+    site, T, E: site.isEstate,
+    unit: lower(T.unit), units: lower(T.units), members: lower(T.members), member: lower(T.member),
+    household: lower(T.household), family: lower(T.family), familyPlural: lower(T.familyPlural),
+  };
+};
+// A permission's label and description in this site's words
+const permText = (k, w) => {
+  const p = FAMILY_PERMS[k];
+  if (k === 'payments') return { label: w.T.dues, desc: w.E ? p.desc : `See and pay the ${w.household}’s bills` };
+  if (w.E) return { label: p.label, desc: p.desc };
+  if (k === 'chat') return { label: p.label, desc: `${w.T.site} group chat and DMs` };
+  if (k === 'marketplace') return { label: p.label, desc: `Buy and sell with other ${w.members}` };
+  if (k === 'neighbours') return { label: `Call ${w.members}`, desc: p.desc };
+  return { label: p.label, desc: p.desc };
+};
+// "Block A · Apt 4" on estates; "A · Ward 4" elsewhere
+const unitText = (u, w) => !u ? '' : w.E
+  ? (u.block ? `Block ${u.block} · Apt ${u.unitNumber}` : `Apt ${u.unitNumber}`)
+  : (u.block ? `${u.block} · ${w.T.unit} ${u.unitNumber}` : `${w.T.unit} ${u.unitNumber}`);
 const PRESETS = {
   adult: { label: 'Adult', permissions: ALL },
   teen:  { label: 'Teen', permissions: ['chat', 'community', 'neighbours'] },
@@ -74,6 +100,7 @@ const Initial = ({ p, size = 36, from = '#C084FC', to = '#A855F7' }) => p?.profi
 /* ── Banner on the Residents page ─────────────────────────────────── */
 
 export function FamilyRequestsBanner({ count, onOpen }) {
+  const w = useWords();
   if (!count) return null;
   return (
     <div className="dash-rise rounded-2xl border border-fuchsia-200 bg-gradient-to-br from-fuchsia-50 to-white px-4 py-3 flex flex-wrap items-center gap-3">
@@ -82,8 +109,8 @@ export function FamilyRequestsBanner({ count, onOpen }) {
         <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-fuchsia-600 text-white text-[10px] font-bold flex items-center justify-center">{count}</span>
       </span>
       <div className="flex-1 min-w-[200px]">
-        <p className="text-[13.5px] font-semibold text-fuchsia-900">{count} family member{count !== 1 ? 's' : ''} waiting for your approval</p>
-        <p className="text-[12px] text-fuchsia-800/80">Residents asked to add people to their home. Their invites go out when you approve.</p>
+        <p className="text-[13.5px] font-semibold text-fuchsia-900">{w.E ? <>{count} family member{count !== 1 ? 's' : ''}</> : <>{count} {count !== 1 ? w.familyPlural : w.family}</>} waiting for your approval</p>
+        <p className="text-[12px] text-fuchsia-800/80">{w.E ? 'Residents asked to add people to their home.' : `${w.T.members} asked to add ${w.familyPlural}.`} Their invites go out when you approve.</p>
       </div>
       <button onClick={onOpen} className="h-9 px-3.5 rounded-xl text-[12.5px] font-semibold bg-fuchsia-600 text-white hover:bg-fuchsia-700">
         Review
@@ -95,6 +122,7 @@ export function FamilyRequestsBanner({ count, onOpen }) {
 /* ── Approval queue ───────────────────────────────────────────────── */
 
 function RequestCard({ r, i, onDone }) {
+  const w = useWords();
   const [busy, setBusy] = useState(null);
   const [declining, setDeclining] = useState(false);
   const [reason, setReason] = useState('');
@@ -123,7 +151,7 @@ function RequestCard({ r, i, onDone }) {
             <div className="text-[14px] font-semibold text-slate-900 truncate">{r.name}</div>
             <div className="text-[12px] text-slate-500 truncate">{r.email}{r.phone ? ` · ${r.phone}` : ''}</div>
             <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-              <span className="text-[10.5px] font-semibold px-1.5 py-0.5 rounded-md bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-100">{r.relationship || 'Family'}</span>
+              <span className="text-[10.5px] font-semibold px-1.5 py-0.5 rounded-md bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-100">{r.relationship || (w.E ? 'Family' : w.T.family)}</span>
               <span className="text-[11px] text-slate-400 flex items-center gap-1"><Clock size={10} /> {formatDistanceToNow(new Date(r.createdAt), { addSuffix: true })}</span>
             </div>
           </div>
@@ -135,7 +163,7 @@ function RequestCard({ r, i, onDone }) {
             <div className="min-w-0 flex-1">
               <div className="text-[12px] font-semibold text-slate-800 truncate">Requested by {r.head.name}</div>
               <div className={`text-[11px] truncate flex items-center gap-1 ${full ? 'text-red-600' : 'text-slate-400'}`}>
-                <Home size={10} /> {unit ? `${unit.label} · ${unit.occupants}/${unit.maxOccupants} occupants${full ? ' (full)' : ''}` : 'No unit'}
+                <Home size={10} /> {unit ? `${unit.label} · ${unit.occupants}/${unit.maxOccupants} occupants${full ? ' (full)' : ''}` : `No ${w.unit}`}
               </div>
             </div>
             <ChevronRight size={13} className="text-slate-300" />
@@ -144,7 +172,8 @@ function RequestCard({ r, i, onDone }) {
 
         <div className="flex flex-wrap gap-1 mt-3">
           {ALL.map(k => {
-            const { label, Icon, color } = FAMILY_PERMS[k];
+            const { Icon, color } = FAMILY_PERMS[k];
+            const { label } = permText(k, w);
             const on = r.permissions.includes(k);
             return (
               <span key={k} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10.5px] font-semibold"
@@ -157,7 +186,7 @@ function RequestCard({ r, i, onDone }) {
 
         {declining && (
           <textarea className="input-field text-sm mt-3" rows={2} maxLength={300} autoFocus
-            placeholder="Reason for the resident (optional), e.g. please bring ID to the office"
+            placeholder={`Reason for the ${w.E ? 'resident' : w.member} (optional), e.g. please bring ID to the office`}
             value={reason} onChange={e => setReason(e.target.value)} />
         )}
       </div>
@@ -190,13 +219,14 @@ export function FamilyRequestsPanel({ onClose, onChanged }) {
     residentAPI.familyRequests().then(({ data }) => setRequests(data.data)).catch(() => setRequests([]));
   }, []);
   const done = (id) => { setRequests(rs => rs.filter(r => r._id !== id)); onChanged?.(); };
+  const w = useWords();
 
   return (
-    <SideBar eyebrow="Households" title="Family requests" onClose={onClose}
+    <SideBar eyebrow={w.E ? 'Households' : w.T.household} title={w.E ? 'Family requests' : `${w.T.family} requests`} onClose={onClose}
       subtitle={requests ? `${requests.length} waiting · invites are sent when you approve` : 'Loading…'}
       footer={
         <Link to="/settings#preferences" onClick={onClose} className="flex items-center justify-center gap-1.5 text-[12px] font-medium text-slate-500 hover:text-slate-800">
-          <Settings2 size={13} /> Approval is on in Settings → Estate preferences
+          <Settings2 size={13} /> Approval is on in Settings → {w.E ? 'Estate' : w.T.site} preferences
         </Link>
       }>
       <div className="p-4 space-y-3">
@@ -206,7 +236,7 @@ export function FamilyRequestsPanel({ onClose, onChanged }) {
           <div className="text-center py-16">
             <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3"><Check size={24} /></div>
             <p className="text-[14px] font-semibold text-slate-800">All caught up</p>
-            <p className="text-[12.5px] text-slate-500 mt-1">No family members are waiting for approval.</p>
+            <p className="text-[12.5px] text-slate-500 mt-1">No {w.E ? 'family members' : w.familyPlural} are waiting for approval.</p>
           </div>
         ) : requests.map((r, i) => <RequestCard key={r._id} r={r} i={i} onDone={done} />)}
       </div>
@@ -216,20 +246,19 @@ export function FamilyRequestsPanel({ onClose, onChanged }) {
 
 /* ── Where the manager lives (their own household) ────────────────── */
 
-const unitName = (u) => u.block ? `Block ${u.block} · Apt ${u.unitNumber}` : `Apt ${u.unitNumber}`;
-
 function HomeUnitSelect({ value, onChange, currentId, required }) {
+  const w = useWords();
   const [units, setUnits] = useState(null);
   useEffect(() => { unitAPI.getAll().then(({ data }) => setUnits(data.data || [])).catch(() => setUnits([])); }, []);
   if (!units) return <div className="skeleton h-10 rounded-[9px]" />;
-  if (!units.length) return <p className="text-[12px] text-slate-500">No units yet. Create your unit on the Units page first.</p>;
+  if (!units.length) return <p className="text-[12px] text-slate-500">{w.E ? 'No units yet. Create your unit on the Units page first.' : `No ${w.units} yet. Create your ${w.unit} on the ${w.T.units} page first.`}</p>;
   return (
     <select className="input-field text-sm" value={value} onChange={e => onChange(e.target.value)} required={required}>
-      <option value="">Choose the unit you live in…</option>
+      <option value="">{w.E ? 'Choose the unit you live in…' : `Choose your ${w.unit}…`}</option>
       {units.map(u => {
         const cnt = (u.residentIds || []).length, mx = u.maxOccupants || 7;
         const full = cnt >= mx && u._id !== currentId;
-        return <option key={u._id} value={u._id} disabled={full}>{unitName(u)} — {cnt}/{mx}{full ? ' (full)' : u._id === currentId ? ' (your home)' : ''}</option>;
+        return <option key={u._id} value={u._id} disabled={full}>{unitText(u, w)} — {cnt}/{mx}{full ? ' (full)' : u._id === currentId ? (w.E ? ' (your home)' : ' (yours)') : ''}</option>;
       })}
     </select>
   );
@@ -240,6 +269,7 @@ function HomeUnitSelect({ value, onChange, currentId, required }) {
 // Pick which resident's household the family member joins (heads only)
 function HouseholdPicker({ value, onChange }) {
   const { user } = useAuth();
+  const w = useWords();
   const [q, setQ] = useState('');
   const [results, setResults] = useState(null);
   useEffect(() => {
@@ -252,14 +282,14 @@ function HouseholdPicker({ value, onChange }) {
     return () => clearTimeout(t);
   }, [q, value]);
 
-  const unitOf = (r) => r.unitId ? (r.unitId.block ? `Block ${r.unitId.block} · Apt ${r.unitId.unitNumber}` : `Apt ${r.unitId.unitNumber}`) : '';
+  const unitOf = (r) => unitText(r.unitId, w);
 
   if (value) return (
     <div className="flex items-center gap-3 rounded-xl border border-fuchsia-200 bg-fuchsia-50/60 px-3 py-2.5">
       <Initial p={value} size={34} from="#818CF8" to="#6366F1" />
       <div className="min-w-0 flex-1">
-        <div className="text-[13px] font-semibold text-slate-900 truncate flex items-center gap-1.5">{value.self ? 'My household (you)' : value.name} <Crown size={11} className="text-amber-500" /></div>
-        <div className="text-[11.5px] text-slate-500 truncate">{value.self ? 'You are the head of household' : unitOf(value) || 'Household head'}</div>
+        <div className="text-[13px] font-semibold text-slate-900 truncate flex items-center gap-1.5">{value.self ? (w.E ? 'My household (you)' : `My ${w.household} (you)`) : value.name} <Crown size={11} className="text-amber-500" /></div>
+        <div className="text-[11.5px] text-slate-500 truncate">{value.self ? (w.E ? 'You are the head of household' : `You are the head of ${w.household}`) : unitOf(value) || (w.E ? 'Household head' : `${w.T.household} head`)}</div>
       </div>
       <button type="button" onClick={() => onChange(null)} className="text-[12px] font-semibold text-fuchsia-700 hover:underline">Change</button>
     </div>
@@ -269,7 +299,7 @@ function HouseholdPicker({ value, onChange }) {
     <div className="rounded-xl border border-slate-200 overflow-hidden">
       <div className="relative border-b border-slate-100">
         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-        <input className="w-full pl-9 pr-3 py-2.5 text-sm outline-none" placeholder="Search residents by name or email…" autoFocus
+        <input className="w-full pl-9 pr-3 py-2.5 text-sm outline-none" placeholder={w.E ? 'Search residents by name or email…' : `Search ${w.members} by name or email…`} autoFocus
           value={q} onChange={e => setQ(e.target.value)} />
       </div>
       <div className="max-h-56 overflow-y-auto divide-y divide-slate-100">
@@ -278,8 +308,8 @@ function HouseholdPicker({ value, onChange }) {
             className="w-full flex items-center gap-3 px-3 py-2.5 text-left bg-fuchsia-50/40 hover:bg-fuchsia-50">
             <Initial p={{ name: user?.name, profilePhoto: user?.profilePhoto }} size={30} />
             <div className="min-w-0 flex-1">
-              <div className="text-[13px] font-semibold text-slate-900 truncate">My household <span className="font-medium text-slate-400">(you)</span></div>
-              <div className="text-[11px] text-slate-400 truncate">Add your own family — you're the head of household</div>
+              <div className="text-[13px] font-semibold text-slate-900 truncate">{w.E ? 'My household' : `My ${w.household}`} <span className="font-medium text-slate-400">(you)</span></div>
+              <div className="text-[11px] text-slate-400 truncate">{w.E ? 'Add your own family — you\'re the head of household' : `Add your own ${w.familyPlural} — you're the head of ${w.household}`}</div>
             </div>
             <ChevronRight size={13} className="text-slate-300" />
           </button>
@@ -287,7 +317,7 @@ function HouseholdPicker({ value, onChange }) {
         {results === null ? (
           <div className="p-3 space-y-2">{[0, 1, 2].map(i => <div key={i} className="skeleton h-9 rounded-lg" />)}</div>
         ) : results.length === 0 ? (
-          <p className="px-3 py-4 text-[12.5px] text-slate-400 text-center">{q ? `No active residents with a unit match “${q}”` : 'No active residents with a unit yet'}</p>
+          <p className="px-3 py-4 text-[12.5px] text-slate-400 text-center">{w.E ? (q ? `No active residents with a unit match “${q}”` : 'No active residents with a unit yet') : (q ? `No active ${w.members} with ${withAn(w.unit)} match “${q}”` : `No active ${w.members} with ${withAn(w.unit)} yet`)}</p>
         ) : results.map(r => (
           <button type="button" key={r._id} onClick={() => onChange(r)} className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-fuchsia-50/50">
             <Initial p={r} size={30} from="#818CF8" to="#6366F1" />
@@ -307,6 +337,7 @@ export function AddFamilyPanel({ head: fixedHead, member, onClose, onSaved }) {
   const editing = !!member; // editing one of the manager's own family members
   const site = useSite();
   const T = site.terms;
+  const w = useWords();
   // Site types have their own relationship lists (school: Parent, Guardian…)
   const relationships = site.relationships?.length ? site.relationships : RELATIONSHIPS;
   // Only offer access to modules that are on for this site
@@ -333,7 +364,7 @@ export function AddFamilyPanel({ head: fixedHead, member, onClose, onSaved }) {
   const save = async (e) => {
     e.preventDefault();
     if (!editing && !head) { toast.error(`Choose the ${T.member.toLowerCase()} whose ${T.household.toLowerCase()} they're joining`); return; }
-    if (!editing && head.self && !homeUnitId) { toast.error('Choose the unit you live in'); return; }
+    if (!editing && head.self && !homeUnitId) { toast.error(site.isEstate ? 'Choose the unit you live in' : `Choose your ${w.unit}`); return; }
     setSaving(true);
     try {
       let data;
@@ -360,7 +391,7 @@ export function AddFamilyPanel({ head: fixedHead, member, onClose, onSaved }) {
     <SideBar eyebrow={editing || head?.self ? `My ${T.household.toLowerCase()}` : head ? `${head.name.split(' ')[0]}'s ${T.household.toLowerCase()}` : site.isEstate ? 'Households' : T.household}
       title={editing ? member.name : `Add ${T.family.toLowerCase()}`} onClose={onClose}
       subtitle={editing ? 'Choose what they can use in AreaMates.' : head?.self
-        ? 'They get their own AreaMates login as part of your household. You decide what they can use.'
+        ? `They get their own AreaMates login as part of your ${site.isEstate ? 'household' : w.household}. You decide what they can use.`
         : `They get their own AreaMates login. Not billed. The ${T.member.toLowerCase()} can change their access later.`}
       footer={
         <div className="flex gap-2">
@@ -383,7 +414,9 @@ export function AddFamilyPanel({ head: fixedHead, member, onClose, onSaved }) {
           <div className={`rounded-xl border p-3.5 ${homeUnitId ? 'border-slate-200 bg-slate-50/60' : 'border-amber-200 bg-amber-50/60'}`}>
             <p className={`text-[12.5px] font-semibold flex items-center gap-1.5 ${homeUnitId ? 'text-slate-800' : 'text-amber-900'}`}><Home size={13} /> Where you live</p>
             <p className={`text-[11.5px] mb-2 ${homeUnitId ? 'text-slate-500' : 'text-amber-800/80'}`}>
-              {myHome ? `Your family joins you at ${myHome.label} (${myHome.occupants}/${myHome.maxOccupants}). Change it if you've moved.` : 'Choose your unit. Your family joins you there.'}
+              {site.isEstate
+                ? (myHome ? `Your family joins you at ${myHome.label} (${myHome.occupants}/${myHome.maxOccupants}). Change it if you've moved.` : 'Choose your unit. Your family joins you there.')
+                : (myHome ? `Your ${w.familyPlural} join you at ${myHome.label} (${myHome.occupants}/${myHome.maxOccupants}). Change it if you've moved.` : `Choose your ${w.unit}. Your ${w.familyPlural} join you there.`)}
             </p>
             {myHome === undefined
               ? <div className="skeleton h-10 rounded-[9px]" />
@@ -429,8 +462,8 @@ export function AddFamilyPanel({ head: fixedHead, member, onClose, onSaved }) {
           </div>
           <div className="rounded-xl border border-slate-200 divide-y divide-slate-100 overflow-hidden">
             {shownPerms.map(k => {
-              const { desc, Icon, color } = FAMILY_PERMS[k];
-              const label = k === 'payments' ? T.dues : FAMILY_PERMS[k].label;
+              const { Icon, color } = FAMILY_PERMS[k];
+              const { label, desc } = permText(k, w);
               const on = form.permissions.includes(k);
               return (
                 <button type="button" key={k} onClick={() => toggle(k)} className="w-full flex items-center gap-3 px-3.5 py-2.5 text-left hover:bg-slate-50">
@@ -457,6 +490,7 @@ export function AddFamilyPanel({ head: fixedHead, member, onClose, onSaved }) {
 /* ── The manager's own household (Family Members page rail) ───────── */
 
 export function MyHouseholdCard({ onChanged }) {
+  const w = useWords();
   const [data, setData] = useState(null);
   const [panel, setPanel] = useState(null); // 'add' | member
   const load = () => householdAPI.get().then(({ data }) => setData(data.data)).catch(() => setData({ members: [] }));
@@ -476,7 +510,7 @@ export function MyHouseholdCard({ onChanged }) {
     if (!homeId) return;
     setSavingHome(true);
     try { const { data: r } = await householdAPI.setHome(homeId); toast.success(r.message); setEditingHome(false); changed(); }
-    catch (err) { toast.error(err.response?.data?.message || 'Could not set your unit'); }
+    catch (err) { toast.error(err.response?.data?.message || (w.E ? 'Could not set your unit' : `Could not set your ${w.unit}`)); }
     finally { setSavingHome(false); }
   };
   return (
@@ -484,8 +518,8 @@ export function MyHouseholdCard({ onChanged }) {
       <div className="flex items-center gap-2.5 px-5 pt-4 pb-3">
         <span className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #F59E0B, #F97316)' }}><Crown size={14} className="text-white" /></span>
         <div className="flex-1 min-w-0">
-          <div className="text-[13.5px] font-semibold text-slate-900">My household</div>
-          <div className="text-[11.5px] text-slate-400 truncate">{data?.unit ? `${data.unit.occupants}/${data.unit.maxOccupants} people in your unit` : 'Your own family on AreaMates'}</div>
+          <div className="text-[13.5px] font-semibold text-slate-900">{w.E ? 'My household' : `My ${w.household}`}</div>
+          <div className="text-[11.5px] text-slate-400 truncate">{data?.unit ? `${data.unit.occupants}/${data.unit.maxOccupants} people in your ${w.E ? 'unit' : w.unit}` : (w.E ? 'Your own family on AreaMates' : `Your own ${w.familyPlural} on AreaMates`)}</div>
         </div>
         <button onClick={() => setPanel('add')} className="inline-flex items-center gap-1 text-[11.5px] font-semibold px-2 py-1 rounded-lg text-fuchsia-700 bg-fuchsia-50 hover:bg-fuchsia-100">
           <UserPlus size={12} /> Add
@@ -511,7 +545,7 @@ export function MyHouseholdCard({ onChanged }) {
                 <span className={`font-semibold ${data.unit ? 'text-slate-800' : 'text-amber-800'}`}>{data.unit ? data.unit.label : 'Not set'}</span>
               </div>
               <button onClick={() => { setHomeId(data.unit?._id ? String(data.unit._id) : ''); setEditingHome(true); }}
-                className="text-[11.5px] font-semibold text-fuchsia-700 hover:underline">{data.unit ? 'Change' : 'Set unit'}</button>
+                className="text-[11.5px] font-semibold text-fuchsia-700 hover:underline">{data.unit ? 'Change' : (w.E ? 'Set unit' : `Set ${w.unit}`)}</button>
             </div>
           )}
         </div>
@@ -519,7 +553,7 @@ export function MyHouseholdCard({ onChanged }) {
       {!data ? (
         <div className="px-5 pb-4"><div className="skeleton h-10 rounded-xl" /></div>
       ) : members.length === 0 ? (
-        <p className="px-5 pb-4 text-[12px] text-slate-500 leading-relaxed">Live in the estate? Add your spouse, kids or house help so they get AreaMates too. You choose what each can use.</p>
+        <p className="px-5 pb-4 text-[12px] text-slate-500 leading-relaxed">{w.E ? 'Live in the estate? Add your spouse, kids or house help so they get AreaMates too.' : `Add your own ${w.familyPlural} so they get AreaMates too.`} You choose what each can use.</p>
       ) : (
         <div className="divide-y divide-slate-100 border-t border-slate-100">
           {members.map(m => (
@@ -527,14 +561,14 @@ export function MyHouseholdCard({ onChanged }) {
               <Initial p={m} size={30} />
               <div className="min-w-0 flex-1">
                 <div className="text-[12.5px] font-semibold text-slate-900 truncate">{m.name}</div>
-                <div className="text-[11px] text-slate-400 truncate">{m.relationship || 'Family'} · {!m.isActive ? 'Paused' : m.pendingFirstLogin ? 'Invite sent' : `${m.permissions.length} features`}</div>
+                <div className="text-[11px] text-slate-400 truncate">{m.relationship || (w.E ? 'Family' : w.T.family)} · {!m.isActive ? 'Paused' : m.pendingFirstLogin ? 'Invite sent' : `${m.permissions.length} features`}</div>
               </div>
               <div className="flex items-center lg:opacity-0 lg:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                 <button title="Edit access" onClick={() => setPanel(m)} className="p-1.5 rounded-lg text-slate-400 hover:text-fuchsia-700 hover:bg-fuchsia-50"><Pencil size={13} /></button>
                 {m.pendingFirstLogin && m.isActive && <button title="Resend invite" onClick={() => act(() => householdAPI.resendInvite(m._id))} className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50"><Send size={13} /></button>}
                 <button title={m.isActive ? 'Pause' : 'Resume'} onClick={() => act(() => householdAPI.update(m._id, { isActive: !m.isActive }), m.isActive ? `${m.name.split(' ')[0]} paused` : `${m.name.split(' ')[0]} can sign in again`)}
                   className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50">{m.isActive ? <PauseCircle size={13} /> : <PlayCircle size={13} />}</button>
-                <button title="Remove" onClick={() => { if (window.confirm(`Remove ${m.name} from your household?`)) act(() => householdAPI.remove(m._id)); }}
+                <button title="Remove" onClick={() => { if (window.confirm(`Remove ${m.name} from your ${w.E ? 'household' : w.household}?`)) act(() => householdAPI.remove(m._id)); }}
                   className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50"><Trash2 size={13} /></button>
               </div>
             </div>

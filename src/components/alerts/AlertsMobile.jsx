@@ -7,6 +7,10 @@ import {
 import useCountUp from '../../hooks/useCountUp';
 import Pagination from '../ui/Pagination';
 import Spinner from '../ui/Spinner';
+import { useSite } from '../../context/SiteContext';
+import { lower } from '../../utils/siteTypes';
+import AlertRouting, { EscalatedBadge } from './AlertRouting';
+import { StartRollCallButton } from '../site/RollCall';
 
 const TYPE = {
   security: { Icon: Shield,        color: '#6366F1', label: 'Security' },
@@ -38,6 +42,7 @@ function Count({ value, label, color, delay }) {
 }
 
 function StatusCard({ counts, onBroadcast }) {
+  const { terms: T } = useSite();
   const open = counts?.open ?? 0;
   const alarm = open > 0;
   return (
@@ -77,7 +82,7 @@ function StatusCard({ counts, onBroadcast }) {
             <div className="text-[18px] font-semibold leading-tight" style={{ letterSpacing: '-0.02em' }}>
               {alarm ? `${open} open alert${open !== 1 ? 's' : ''}` : 'All secure'}
             </div>
-            <div className="text-[12px] text-white/65">{alarm ? 'Acknowledge so residents know help is coming' : 'No one needs help right now'}</div>
+            <div className="text-[12px] text-white/65">{alarm ? `Acknowledge so ${lower(T.members)} know help is coming` : 'No one needs help right now'}</div>
           </div>
         </div>
 
@@ -124,12 +129,13 @@ function Progress({ status, color }) {
 function AlertCard({ a, i, onAck, onResolve }) {
   const [open, setOpen] = useState(a.status === 'open');
   const [busy, setBusy] = useState(null);
+  const { terms: T } = useSite();
   const t = TYPE[a.type] || TYPE.other;
   const sev = SEVERITY[a.severity] || (a.status === 'open' ? SEVERITY.high : null);
   const live = a.status === 'open';
   const accent = live ? '#EF4444' : a.status === 'acknowledged' ? '#F59E0B' : '#10B981';
   const phone = a.contactNumber || a.residentId?.phone;
-  const who = a.residentId?.name || (a.isEmergencyBroadcast ? 'Estate management' : 'Resident');
+  const who = a.residentId?.name || (a.isEmergencyBroadcast ? `${T.site} management` : T.member);
   const act = async (kind, fn) => { setBusy(kind); try { await fn(a._id); } finally { setBusy(null); } };
 
   return (
@@ -147,6 +153,7 @@ function AlertCard({ a, i, onAck, onResolve }) {
               <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: t.color }}>{t.label}</span>
               {sev && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md" style={{ background: `${sev.color}18`, color: sev.color }}>{sev.label}</span>}
               {a.isEmergencyBroadcast && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-slate-900 text-white inline-flex items-center gap-1"><Radio size={9} /> Broadcast</span>}
+              <EscalatedBadge a={a} />
               <span className="ml-auto text-[11px] text-slate-400 flex-shrink-0">{ago(a.createdAt)}</span>
             </div>
             <div className="mt-1 text-[15px] font-semibold text-slate-900 leading-snug" style={{ letterSpacing: '-0.01em' }}>
@@ -156,7 +163,7 @@ function AlertCard({ a, i, onAck, onResolve }) {
               {a.residentId?.profilePhoto
                 ? <img src={a.residentId.profilePhoto} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
                 : <span className="w-4 h-4 rounded-full bg-slate-100 text-[8px] font-bold text-slate-500 flex items-center justify-center flex-shrink-0">{who[0]?.toUpperCase()}</span>}
-              <span className="truncate">{who}{a.unitId?.unitNumber ? ` · Unit ${a.unitId.unitNumber}` : ''}</span>
+              <span className="truncate">{who}{a.unitId?.unitNumber ? ` · ${T.unit} ${a.unitId.unitNumber}` : ''}</span>
               {a.location && <span className="truncate flex items-center gap-0.5"><MapPin size={11} className="flex-shrink-0" />{a.location}</span>}
             </div>
           </div>
@@ -174,6 +181,7 @@ function AlertCard({ a, i, onAck, onResolve }) {
               <AlertTriangle size={13} className="mt-0.5 flex-shrink-0" /> <span><span className="font-semibold">Action:</span> {a.actionRequired}</span>
             </div>
           )}
+          {!a.isEmergencyBroadcast && <div className="mt-2.5"><AlertRouting a={a} compact /></div>}
           <div className="mt-2.5 text-[11px] text-slate-400">
             {format(new Date(a.createdAt), "EEE d MMM · HH:mm")}{a.resolvedBy ? ` · Resolved by ${a.resolvedBy.name}` : ''}
           </div>
@@ -211,6 +219,7 @@ export default function AlertsMobile({
   alerts, loading, counts, statusFilter, setStatusFilter, page, pagination, pageSize, onPage, onAck, onResolve, onBroadcast,
 }) {
   const total = counts ? counts.open + counts.acknowledged + counts.resolved : null;
+  const { terms: T } = useSite();
   const FILTERS = [
     ['', 'All', total],
     ['open', 'Open', counts?.open],
@@ -226,6 +235,7 @@ export default function AlertsMobile({
       </header>
 
       <StatusCard counts={counts} onBroadcast={onBroadcast} />
+      <StartRollCallButton className="w-full" />
 
       <div className="sticky -top-4 z-10 -mx-4 px-4 py-2 bg-[#F8FAFC]/90 backdrop-blur">
         <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
@@ -259,7 +269,7 @@ export default function AlertsMobile({
             <Bell size={24} className="relative text-emerald-600" />
           </span>
           <div className="mt-4 text-[15px] font-semibold text-slate-900">Nothing here</div>
-          <div className="text-[13px] text-slate-500 mt-1">{statusFilter ? `No ${statusFilter} alerts.` : 'The estate is calm.'}</div>
+          <div className="text-[13px] text-slate-500 mt-1">{statusFilter ? `No ${statusFilter} alerts.` : `The ${lower(T.site)} is calm.`}</div>
         </div>
       ) : (
         <div className="space-y-3">

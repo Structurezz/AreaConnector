@@ -5,6 +5,8 @@ import toast from 'react-hot-toast';
 import useCountUp from '../../hooks/useCountUp';
 import { VISITOR_STATUS, STATUS_CHIPS, purposeIcon, VisitorsPager } from './MobileVisitors';
 import { CategoryBadge } from './CategoryIcon';
+import { useSite } from '../../context/SiteContext';
+import { lower } from '../../utils/siteTypes';
 
 // Phone layout for the estate manager Visitors page. Desktop keeps the table.
 
@@ -57,12 +59,13 @@ function Act({ children, tone = 'plain', color, onClick }) {
 }
 
 function VisitorCard({ v, i, onOpen, onCheckIn, onCheckOut, onCancel }) {
+  const { terms: T } = useSite();
   const st = VISITOR_STATUS[v.status] || VISITOR_STATUS['checked-out'];
   const [PIcon, pColor, pBg] = purposeIcon(v.purpose);
   const when = new Date(v.expectedDate);
   const inside = v.status === 'checked-in';
   const expected = v.status === 'active';
-  const host = v.hostResidentId?.name || 'Estate manager';
+  const host = v.hostResidentId?.name || T.manager;
   const unit = v.hostUnitId ? `${v.hostUnitId.block ? `${v.hostUnitId.block} · ` : ''}${v.hostUnitId.unitNumber}` : '';
   const initials = (v.visitorName || '?').split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
   const timeLine = inside && v.checkedInAt ? `Arrived ${rel(new Date(v.checkedInAt))}`
@@ -126,6 +129,7 @@ export default function VisitorsMobile({
   page, pagination, limit, onPage, onOpen, onCreate, onCheckIn, onCheckOut, onCancel,
 }) {
   const [focus, setFocus] = useState(false);
+  const { terms: T } = useSite();
 
   const groups = useMemo(() => {
     const out = [];
@@ -209,7 +213,7 @@ export default function VisitorsMobile({
           <div className="mt-4 text-[15px] font-semibold text-slate-900">
             {search ? `No visitors match “${search}”` : statusFilter ? 'No visitors here' : 'No visitors yet'}
           </div>
-          <div className="text-[13px] text-slate-500 mt-1">Guest passes you or residents create show up here.</div>
+          <div className="text-[13px] text-slate-500 mt-1">Guest passes you or {lower(T.members)} create show up here.</div>
           {!search && !statusFilter && (
             <button onClick={onCreate} className="mt-4 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[13px] font-semibold text-white"
               style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}>

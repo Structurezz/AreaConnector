@@ -4,10 +4,15 @@ import toast from 'react-hot-toast';
 import { postAPI } from '../../api';
 import BottomSheet from '../payments/BottomSheet';
 import { Avatar } from './shared';
+import { useSite } from '../../context/SiteContext';
+import { lower, withAn } from '../../utils/siteTypes';
+
+const useW = () => { const { terms: T, isEstate: E } = useSite(); return { T, E, site: lower(T.site), Site: T.site, member: lower(T.member), Member: T.member, members: lower(T.members), Members: T.members }; };
 
 // New post: text and/or up to 4 photos.
 // mode 'story' → posts to the stories row only (24h), never the timeline.
 export default function Composer({ open, me, onClose, onPosted, startWithPhoto, mode = 'post' }) {
+  const W = useW();
   const isStory = mode === 'story';
   const [content, setContent] = useState('');
   const [files, setFiles] = useState([]);
@@ -60,7 +65,7 @@ export default function Composer({ open, me, onClose, onPosted, startWithPhoto, 
         <div className="flex gap-3">
           <Avatar person={me} size={40} />
           <textarea autoFocus={!startWithPhoto} rows={4} value={content} onChange={(e) => setContent(e.target.value.slice(0, 1000))}
-            placeholder={isStory ? 'Say something for your story… (or just add a photo)' : `What's happening in the estate, ${me?.name?.split(' ')[0] || ''}?`}
+            placeholder={isStory ? 'Say something for your story… (or just add a photo)' : `What's happening in the ${W.site}, ${me?.name?.split(' ')[0] || ''}?`}
             className="flex-1 resize-none text-[16px] leading-relaxed outline-none placeholder:text-slate-400" />
         </div>
         {previews.length > 0 && (

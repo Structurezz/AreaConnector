@@ -6,6 +6,7 @@ import {
   Wallet, Shield, CalendarDays, BarChart3, Clock, AlertTriangle, BedDouble, Truck, LogOut,
 } from 'lucide-react';
 import { useSite } from '../../context/SiteContext';
+import { lower } from '../../utils/siteTypes';
 import useSitePlaces from '../site/useSitePlaces';
 import { siteAPI, gateLogAPI } from '../../api';
 import { format, subDays, formatDistanceToNow, isAfter, startOfDay } from 'date-fns';
@@ -379,7 +380,7 @@ function FinanceCard({ pay, wallet, loading }) {
         <div className="mt-auto pt-4 flex gap-2">
           <Link to="/payments" className="flex-1 text-center text-[12.5px] font-semibold px-3 py-2 rounded-xl text-white bg-emerald-600 hover:bg-emerald-700 transition-colors" style={{ textDecoration: 'none' }}>Withdraw</Link>
           <Link to="/payments" className="flex-1 text-center text-[12.5px] font-medium px-3 py-2 rounded-xl text-slate-700 border border-slate-200 hover:bg-slate-50 transition-colors" style={{ textDecoration: 'none' }}>
-            {pay?.activeSchedules ?? 0} active dues
+            {pay?.activeSchedules ?? 0} active {site.isEstate ? 'dues' : lower(site.terms.dues)}
           </Link>
         </div>
       </div>

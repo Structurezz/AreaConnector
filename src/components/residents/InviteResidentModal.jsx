@@ -8,11 +8,12 @@ import { residentAPI } from '../../api';
 import { useSite } from '../../context/SiteContext';
 import UnitPicker from './UnitPicker';
 import { MemberSectorFields, emptySector, sectorPayload, sectorError, useSectorConfig, defaultStay } from '../site/MemberFields';
+import { blockName, withAn, lower } from '../../utils/siteTypes';
 
 export function unitOptionLabel(u, site) {
   const base = site.isEstate
     ? (u.block ? `Block ${u.block} · Apt ${u.unitNumber}` : `Apt ${u.unitNumber}`)
-    : (u.block ? `${u.block} · ${site.terms.unit} ${u.unitNumber}` : `${site.terms.unit} ${u.unitNumber}`);
+    : (u.block ? `${blockName(u.block, site.terms)} · ${site.terms.unit} ${u.unitNumber}` : `${site.terms.unit} ${u.unitNumber}`);
   const count = (u.residentIds || []).length;
   const max   = u.maxOccupants || 7;
   // Classes, departments and wards have no per-unit limit (server returns 10000)
@@ -42,7 +43,8 @@ export default function InviteResidentModal({ open, onClose, units = [], onSaved
     else if (cfg.stays) setSector(s => (s.stay.checkIn ? s : { ...s, stay: defaultStay() }));
   }, [open, initial, cfg.stays]);
 
-  const unitWord = site.isEstate ? 'Apartment' : T.unit;
+  // Non-estate sites: the member role's own unit label ('Room', 'Ward & bed'…)
+  const unitWord = site.isEstate ? 'Apartment' : (site.hasRoles && site.roleOf(site.defaultRole).form?.unit) || T.unit;
 
   const submit = async (e) => {
     e.preventDefault();
@@ -64,7 +66,7 @@ export default function InviteResidentModal({ open, onClose, units = [], onSaved
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={cfg.stays ? `Check in a ${T.member.toLowerCase()}` : 'Send Invitation'}>
+    <Modal open={open} onClose={onClose} title={cfg.stays ? `Check in ${withAn(lower(T.member))}` : 'Send Invitation'}>
       <div className="space-y-3 mb-4 p-3 rounded-xl text-sm"
         style={{ background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.18)', color: '#34D399' }}>
         <p className="font-medium">📧 What happens when you invite:</p>

@@ -7,7 +7,7 @@ import { useSocket } from '../context/SocketContext';
 import { useSite } from '../context/SiteContext';
 import VisitorSiteDetails from '../components/visitors/VisitorSiteDetails';
 import PlaceCard from '../components/visitors/PlaceCard';
-import { CATEGORY_INFO } from '../utils/siteTypes';
+import { CATEGORY_INFO, blockName, lower } from '../utils/siteTypes';
 import Badge, { visitorStatusBadge } from '../components/ui/Badge';
 import Spinner, { PageLoader } from '../components/ui/Spinner';
 import {
@@ -78,9 +78,9 @@ const drawShieldLogo = (ctx, x, y, size, text, opts = {}) => {
   ctx.restore();
 };
 
-const generatePassCanvas = async (v, estate) => {
+const generatePassCanvas = async (v, estate, siteWord = 'Estate') => {
   const W = 580, H = 820;
-  const estateName    = truncate(estate?.name || 'Your Estate', 36);
+  const estateName    = truncate(estate?.name || `Your ${siteWord}`, 36);
   const estateAddress = truncate(estate?.address || '', 60);
 
   const canvas = document.createElement('canvas');
@@ -187,14 +187,14 @@ const generatePassCanvas = async (v, estate) => {
   return canvas;
 };
 
-const shareVisitorPass = async (v, estate) => {
+const shareVisitorPass = async (v, estate, siteWord = 'Estate') => {
   const date = format(new Date(v.expectedDate), 'MMM d, yyyy · h:mm a');
-  const estateLine = estate?.name ? `\n*Estate:* ${estate.name}` : '';
+  const estateLine = estate?.name ? `\n*${siteWord}:* ${estate.name}` : '';
   const waText = `🏠 *Visitor Pass — ${v.visitorName}*${estateLine}\n\n*Code:* ${v.visitorCode}\n*Purpose:* ${v.purpose}\n*Expected:* ${date}${v._place?.directionsUrl ? `\n*Where:* ${v._place.name} — ${v._place.directionsUrl}` : ''}\n\n_Powered by Area Connector Technologies · RC 9607864_\n${BRAND_URL}`;
 
   let file = null;
   try {
-    const canvas = await generatePassCanvas(v, estate);
+    const canvas = await generatePassCanvas(v, estate, siteWord);
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
     if (blob) file = new File([blob], `visitor-pass-${v.visitorCode}.png`, { type: 'image/png' });
   } catch { /* image generation failed — we'll still share text */ }
@@ -396,10 +396,10 @@ export default function VisitorDetailPage() {
     visitor.status === 'cancelled'
       ? { label: 'Cancelled', at: visitor.cancelledAt, done: true, color: '#64748B' }
       : { label: 'Arrived at the gate', at: visitor.entryTime, done: !!visitor.entryTime, color: '#10B981' },
-    ...(visitor.status === 'cancelled' ? [] : [{ label: 'Left the estate', at: visitor.exitTime, done: !!visitor.exitTime, color: '#3B82F6' }]),
+    ...(visitor.status === 'cancelled' ? [] : [{ label: `Left the ${lower(site.terms.site)}`, at: visitor.exitTime, done: !!visitor.exitTime, color: '#3B82F6' }]),
   ];
   const host = visitor.hostResidentId?.name || site.terms.manager;
-  const unit = visitor.hostUnitId ? `${visitor.hostUnitId.block ? `Block ${visitor.hostUnitId.block} · ` : ''}${site.terms.unit} ${visitor.hostUnitId.unitNumber}` : '';
+  const unit = visitor.hostUnitId ? `${visitor.hostUnitId.block ? `${blockName(visitor.hostUnitId.block, site.terms)} · ` : ''}${site.terms.unit} ${visitor.hostUnitId.unitNumber}` : '';
   const rows = [
     { Icon: Home, color: '#10B981', label: 'Visiting', value: unit ? `${host} · ${unit}` : host },
     { Icon: Calendar, color: '#6366F1', label: 'Date', value: format(expectedAt, 'EEEE, d MMMM yyyy') },
@@ -515,7 +515,7 @@ export default function VisitorDetailPage() {
           {isHeld && (
             <>
               <p className="text-[12px] text-center text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-xl px-3 py-2">
-                The host's visitor passes need approval (overdue estate bills). The visitor gets their code once you approve.
+                The host's visitor passes need approval (overdue {lower(site.terms.dues)}). The visitor gets their code once you approve.
               </p>
               <button onClick={approvePass} className="w-full flex items-center justify-center gap-2 rounded-2xl font-bold text-white py-3.5 active:scale-[0.99] transition-transform" style={{ background: 'linear-gradient(135deg,#6366F1,#4F46E5)' }}>
                 <CheckCircle size={17} /> Approve pass
@@ -534,7 +534,7 @@ export default function VisitorDetailPage() {
           )}
           <div className="grid grid-cols-3 gap-2">
             {canShare ? (
-              <button onClick={() => shareVisitorPass(visitor, user?.estateId)} className="flex flex-col items-center gap-1 rounded-xl py-2.5 text-[12px] font-semibold bg-white border border-slate-200 text-slate-700">
+              <button onClick={() => shareVisitorPass(visitor, user?.estateId, site.terms.site)} className="flex flex-col items-center gap-1 rounded-xl py-2.5 text-[12px] font-semibold bg-white border border-slate-200 text-slate-700">
                 <span style={{ color: '#25D366' }}><WhatsAppIcon /></span> Share
               </button>
             ) : (
@@ -554,7 +554,7 @@ export default function VisitorDetailPage() {
             )}
           </div>
           {canCancel && (
-            <button onClick={handleBlacklist} className="w-full py-2 text-[12px] font-semibold text-slate-400 hover:text-red-600">Block this visitor from the estate</button>
+            <button onClick={handleBlacklist} className="w-full py-2 text-[12px] font-semibold text-slate-400 hover:text-red-600">Block this visitor from the {lower(site.terms.site)}</button>
           )}
         </div>
       </div>

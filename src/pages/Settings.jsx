@@ -92,6 +92,12 @@ function pwStrength(p) {
   ][s];
 }
 
+// Name placeholder per site type (estates keep "e.g. Sunrise Estate")
+const NAME_EXAMPLE = {
+  estate: 'e.g. Sunrise Estate', school: 'e.g. Sunrise College', university: 'e.g. Sunrise University',
+  hotel: 'e.g. Sunrise Hotel', industrial: 'e.g. Sunrise Industrial Park', hospital: 'e.g. Sunrise Hospital',
+};
+
 export default function ManagerSettings() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -197,7 +203,7 @@ export default function ManagerSettings() {
   };
 
   const handleDelete = async () => {
-    if (!confirm('Remove the estate constitution? The AI judge and lawyers will fall back to generic reasoning.')) return;
+    if (!confirm(site.isEstate ? 'Remove the estate constitution? The AI judge and lawyers will fall back to generic reasoning.' : `Remove the ${siteWord} constitution? The AI judge and lawyers will fall back to generic reasoning.`)) return;
     try {
       await estateAPI.deleteConstitution(estateId);
       toast.success('Constitution removed');
@@ -229,7 +235,7 @@ export default function ManagerSettings() {
   const handleSaveInfo = async () => {
     const name = (infoDraft.name || '').trim();
     const address = (infoDraft.address || '').trim();
-    if (!name)    { toast.error('Estate name is required'); return; }
+    if (!name)    { toast.error(site.isEstate ? 'Estate name is required' : `${T.site} name is required`); return; }
     if (!address) { toast.error('Address is required'); return; }
     setInfoSaving(true);
     try {
@@ -255,10 +261,10 @@ export default function ManagerSettings() {
           toast.success('Address saved');
         }
       } else {
-        toast.success('Estate info saved');
+        toast.success(site.isEstate ? 'Estate info saved' : `${T.site} info saved`);
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to save estate info');
+      toast.error(err.response?.data?.message || (site.isEstate ? 'Failed to save estate info' : `Failed to save ${siteWord} info`));
     } finally {
       setInfoSaving(false);
     }
@@ -391,7 +397,7 @@ export default function ManagerSettings() {
                 <label className="text-xs font-semibold mb-1.5 block text-slate-600">{T.site} name</label>
                 <input className={inputCls} value={infoDraft.name}
                        onChange={e => setInfoDraft({ ...infoDraft, name: e.target.value })}
-                       placeholder="e.g. Sunrise Estate" />
+                       placeholder={NAME_EXAMPLE[site.type] || 'e.g. Sunrise Estate'} />
               </div>
               <div>
                 <label className="text-xs font-semibold mb-1.5 block text-slate-600">{T.manager}</label>
@@ -481,8 +487,8 @@ export default function ManagerSettings() {
 
           {/* ─── Estate Constitution ─── */}
           {site.on('community') && <Section id="constitution" icon={ScrollText} color="#EC4899" delay={160}
-            title="Estate constitution"
-            desc="Upload your estate's constitution as a PDF. The AI Judge and AI lawyers in the Courtroom will be grounded on these rules for every case in this estate."
+            title={site.isEstate ? 'Estate constitution' : `${T.site} constitution`}
+            desc={site.isEstate ? "Upload your estate's constitution as a PDF. The AI Judge and AI lawyers in the Courtroom will be grounded on these rules for every case in this estate." : `Upload your ${siteWord}'s constitution as a PDF. The AI Judge and AI lawyers in the Courtroom will be grounded on these rules for every case in this ${siteWord}.`}
             badge={<Badge icon={Sparkles} color="#EC4899">AI-grounded</Badge>}>
             {constitution?.hasConstitution ? (
               <div className="rounded-xl p-4 flex items-center gap-3"
@@ -539,7 +545,7 @@ export default function ManagerSettings() {
                   <Upload size={20} className="text-white" />
                 </span>
                 <div className="text-sm font-semibold mb-1 text-slate-900">
-                  {uploading ? 'Uploading and indexing…' : 'Upload your estate constitution'}
+                  {uploading ? 'Uploading and indexing…' : (site.isEstate ? 'Upload your estate constitution' : `Upload your ${siteWord} constitution`)}
                 </div>
                 <div className="text-xs text-slate-500">Drag & drop a PDF here, or click to browse · Max 15MB</div>
               </div>
@@ -623,7 +629,7 @@ export default function ManagerSettings() {
               <div className="grid gap-3 md:grid-cols-2">
                 {[
                   { to: '/team', icon: UsersRound, color: '#10B981', title: 'Team', desc: 'Invite co-managers and choose what each one can access.' },
-                  { to: '/settings/password-requests', icon: KeyRound, color: '#6366F1', title: 'Password reset requests', desc: 'Approve or deny password resets from your residents and security staff.' },
+                  { to: '/settings/password-requests', icon: KeyRound, color: '#6366F1', title: 'Password reset requests', desc: site.isEstate ? 'Approve or deny password resets from your residents and security staff.' : `Approve or deny password resets from your ${T.members.toLowerCase()} and security staff.` },
                 ].map(({ to, icon, color, title, desc }) => (
                   <Link key={to} to={to}
                         className="group rounded-xl p-4 flex items-center gap-3 border border-slate-200 bg-white transition-all hover:-translate-y-0.5 hover:shadow-card-md"

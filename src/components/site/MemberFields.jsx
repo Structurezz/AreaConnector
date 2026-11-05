@@ -38,6 +38,9 @@ export function useSectorConfig() {
     // Schools and universities record a class / department & level
     school: site.type === 'school' || site.type === 'university',
     terms: site.terms,
+    // Stay date labels: "Check-in" / "Check-out", hospitals "Admission" / "Discharge"
+    stayIn: site.terms.stayIn || 'Check-in',
+    stayOut: site.terms.stayOut || 'Check-out',
     idLabel: site.terms.idLabel || 'Staff ID',
     classLabel: site.terms.classLabel || 'Class',
   };
@@ -62,8 +65,8 @@ export function sectorPayload(v, cfg) {
 // Returns an error message or null
 export function sectorError(v, cfg, { requireStay = false } = {}) {
   if (cfg.stays) {
-    if (requireStay && (!v.stay.checkIn || !v.stay.checkOut)) return 'Add the check-in and check-out dates';
-    if (v.stay.checkIn && v.stay.checkOut && new Date(v.stay.checkOut) <= new Date(v.stay.checkIn)) return 'Check-out must be after check-in';
+    if (requireStay && (!v.stay.checkIn || !v.stay.checkOut)) return `Add the ${cfg.stayIn.toLowerCase()} and ${cfg.stayOut.toLowerCase()} dates`;
+    if (v.stay.checkIn && v.stay.checkOut && new Date(v.stay.checkOut) <= new Date(v.stay.checkIn)) return `${cfg.stayOut} must be after ${cfg.stayIn.toLowerCase()}`;
   }
   if (cfg.shifts && (v.shift.start || v.shift.end) && !(v.shift.start && v.shift.end)) return 'Add both shift start and end times';
   return null;
@@ -89,30 +92,32 @@ export function DayChips({ value = [], onChange }) {
   );
 }
 
-// The block of fields inside the invite / add forms
-export function MemberSectorFields({ value, onChange, requireStay = false }) {
-  const cfg = useSectorConfig();
+// The block of fields inside the invite / add forms. hideStay: staff roles
+// have no stay / admission dates; hideShift: members have no shift hours.
+export function MemberSectorFields({ value, onChange, requireStay = false, hideStay = false, hideShift = false }) {
+  const base = useSectorConfig();
+  const cfg = { ...base, stays: base.stays && !hideStay, shifts: base.shifts && !hideShift };
   if (!cfg.stays && !cfg.shifts && !cfg.school) return null;
   const set = (group, k, x) => onChange({ ...value, [group]: { ...value[group], [k]: x } });
   return (
     <div className="space-y-4">
       {cfg.stays && (
         <div className="rounded-xl p-3 border border-teal-100" style={{ background: 'linear-gradient(135deg, #F0FDFA, #FFFFFF 70%)' }}>
-          <p className="text-[12px] font-semibold text-teal-800 flex items-center gap-1.5 mb-2"><BedDouble size={13} /> Stay{requireStay ? ' *' : ''}</p>
+          <p className="text-[12px] font-semibold text-teal-800 flex items-center gap-1.5 mb-2"><BedDouble size={13} /> {cfg.terms.stayIn === 'Admission' ? 'Admission' : 'Stay'}{requireStay ? ' *' : ''}</p>
           <div className="grid grid-cols-2 gap-2.5">
             <div>
-              <label className={label} style={labelStyle}>Check-in</label>
+              <label className={label} style={labelStyle}>{cfg.stayIn}</label>
               <input type="datetime-local" className="input-field text-sm" value={value.stay.checkIn} required={requireStay}
                 onChange={e => set('stay', 'checkIn', e.target.value)} />
             </div>
             <div>
-              <label className={label} style={labelStyle}>Check-out</label>
+              <label className={label} style={labelStyle}>{cfg.stayOut}</label>
               <input type="datetime-local" className="input-field text-sm" value={value.stay.checkOut} required={requireStay}
                 min={value.stay.checkIn || undefined}
                 onChange={e => set('stay', 'checkOut', e.target.value)} />
             </div>
           </div>
-          <p className="text-[11px] text-teal-700/70 mt-1.5">They can sign in from check-in and are signed out automatically at check-out.</p>
+          <p className="text-[11px] text-teal-700/70 mt-1.5">They can sign in from {cfg.stayIn.toLowerCase()} and are signed out automatically at {cfg.stayOut.toLowerCase()}.</p>
         </div>
       )}
       {cfg.school && (
@@ -163,12 +168,14 @@ const fmtStay = (d) => (d ? format(new Date(d), 'EEE d MMM, HH:mm') : '—');
 // Stay card for the resident drawer / profile: dates, extend, check out
 export function StayCard({ member, onChanged }) {
   const cfg = useSectorConfig();
+  const site = useSite();
   const [stay, setStay] = useState(member.stay || {});
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({ checkIn: '', checkOut: '' });
   const [busy, setBusy] = useState(false);
   useEffect(() => { setStay(member.stay || {}); setEditing(false); }, [member._id, member.stay]);
-  if (!cfg.stays || member.householdRole === 'member') return null;
+  // Staff (doctors, nurses, housekeeping…) have no stay / admission dates
+  if (!cfg.stays || member.householdRole === 'member' || (site.hasRoles && site.roleOf(member.siteRole).staff)) return null;
   const state = stayStateOf(stay);
   const has = state !== 'none';
 
@@ -178,7 +185,7 @@ export function StayCard({ member, onChanged }) {
   };
   const saveStay = async () => {
     if (!draft.checkIn || !draft.checkOut) { toast.error('Add both dates'); return; }
-    if (new Date(draft.checkOut) <= new Date(draft.checkIn)) { toast.error('Check-out must be after check-in'); return; }
+    if (new Date(draft.checkOut) <= new Date(draft.checkIn)) { toast.error(`${cfg.stayOut} must be after ${cfg.stayIn.toLowerCase()}`); return; }
     setBusy(true);
     try {
       const { data } = await siteAPI.updateMember(member._id, { stay: { checkIn: fromLocalInput(draft.checkIn), checkOut: fromLocalInput(draft.checkOut) } });
@@ -209,18 +216,18 @@ export function StayCard({ member, onChanged }) {
         <span className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #14B8A6, #0D9488)', boxShadow: '0 4px 10px -4px #0D9488' }}>
           <BedDouble size={13} className="text-white" />
         </span>
-        <span className="text-[13px] font-semibold text-slate-900 flex-1">Stay</span>
+        <span className="text-[13px] font-semibold text-slate-900 flex-1">{cfg.stayIn === 'Admission' ? 'Admission' : 'Stay'}</span>
         <StayChip stay={stay} />
       </div>
       {editing ? (
         <div className="p-4 space-y-2.5">
           <div className="grid grid-cols-2 gap-2.5">
             <div>
-              <label className="text-[11px] font-semibold mb-1 block text-slate-500">Check-in</label>
+              <label className="text-[11px] font-semibold mb-1 block text-slate-500">{cfg.stayIn}</label>
               <input type="datetime-local" className="input-field text-sm" value={draft.checkIn} onChange={e => setDraft(d => ({ ...d, checkIn: e.target.value }))} />
             </div>
             <div>
-              <label className="text-[11px] font-semibold mb-1 block text-slate-500">Check-out</label>
+              <label className="text-[11px] font-semibold mb-1 block text-slate-500">{cfg.stayOut}</label>
               <input type="datetime-local" className="input-field text-sm" value={draft.checkOut} min={draft.checkIn || undefined} onChange={e => setDraft(d => ({ ...d, checkOut: e.target.value }))} />
             </div>
           </div>
@@ -238,16 +245,16 @@ export function StayCard({ member, onChanged }) {
           {has ? (
             <div className="grid grid-cols-2 gap-2.5">
               <div className="rounded-xl bg-slate-50 px-3 py-2">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Check-in</div>
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{cfg.stayIn}</div>
                 <div className="text-[12.5px] font-semibold text-slate-900 mt-0.5">{fmtStay(stay.checkIn)}</div>
               </div>
               <div className="rounded-xl bg-slate-50 px-3 py-2">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Check-out</div>
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{cfg.stayOut}</div>
                 <div className="text-[12.5px] font-semibold text-slate-900 mt-0.5">{fmtStay(stay.checkOut)}</div>
                 {state === 'in_house' && stay.checkOut && <div className="text-[11px] text-teal-700 mt-0.5">in {formatDistanceToNowStrict(new Date(stay.checkOut))}</div>}
               </div>
             </div>
-          ) : <p className="text-[12px] text-slate-500">No stay dates. Add them so access ends automatically at check-out.</p>}
+          ) : <p className="text-[12px] text-slate-500">No stay dates. Add them so access ends automatically at {cfg.stayOut.toLowerCase()}.</p>}
           {state !== 'checked_out' ? (
             <div className="flex gap-2 mt-3">
               <button type="button" onClick={startEdit} disabled={busy}
@@ -257,11 +264,11 @@ export function StayCard({ member, onChanged }) {
               {has && (
                 <button type="button" onClick={checkOut} disabled={busy}
                   className="inline-flex items-center justify-center gap-1.5 rounded-[9px] px-3 py-2 text-[12.5px] font-semibold text-rose-600 bg-rose-50 border border-rose-100 hover:bg-rose-100 disabled:opacity-60">
-                  <LogOut size={13} /> Check out
+                  <LogOut size={13} /> {cfg.stayOut === 'Discharge' ? 'Discharge' : 'Check out'}
                 </button>
               )}
             </div>
-          ) : <p className="text-[11.5px] text-slate-400 mt-3">Checked out. To host them again, check them in as a new stay.</p>}
+          ) : <p className="text-[11.5px] text-slate-400 mt-3">{cfg.stayOut === 'Discharge' ? 'Discharged. To admit them again, add a new admission.' : 'Checked out. To host them again, check them in as a new stay.'}</p>}
         </div>
       )}
     </div>

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axios';
+import { useSite } from '../context/SiteContext';
+import { lower } from '../utils/siteTypes';
 
 let cached = null;
 let expiryNotified = false;
@@ -7,6 +9,7 @@ let expiryNotified = false;
 export function usePlan() {
   const [sub, setSub] = useState(cached);
   const [loading, setLoading] = useState(!cached);
+  const siteWord = lower(useSite().terms?.site || 'Estate');
 
   useEffect(() => {
     if (cached) return;
@@ -27,7 +30,7 @@ export function usePlan() {
               type: isUrgent ? 'plan_expiry_urgent' : 'plan_expiry_warning',
               title: isUrgent ? `Your ${label} expires in ${days} day${days === 1 ? '' : 's'}!` : `${label.charAt(0).toUpperCase() + label.slice(1)} expiring soon`,
               body: isUrgent
-                ? `Renew now to avoid losing access to your estate features.`
+                ? `Renew now to avoid losing access to your ${siteWord} features.`
                 : `Your ${label} expires in ${days} days. Visit Upgrade to renew.`,
               days,
             },

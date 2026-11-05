@@ -8,6 +8,8 @@ import { callAPI } from '../api';
 import { useCall } from '../context/CallContext';
 import CallsDesktop from '../components/calls/CallsDesktop';
 import useIsDesktop from '../hooks/useIsDesktop';
+import { useSite } from '../context/SiteContext';
+import { lower } from '../utils/siteTypes';
 
 // Estate staff calling: managers can call any resident or guard in the
 // estate for free, and see their recent calls (incl. emergency calls in).
@@ -40,6 +42,8 @@ function Avatar({ person, size = 44 }) {
 export default function Calls() {
   const { call, startCall } = useCall() || {};
   const isDesktop = useIsDesktop();
+  const { terms: T, isEstate: E } = useSite();
+  const RL = E ? ROLE_LABEL : { ...ROLE_LABEL, estate_manager: T.manager, super_admin: T.manager, resident: T.member };
   const [dir, setDir] = useState({ neighbours: [], staff: [] });
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -79,7 +83,7 @@ export default function Calls() {
   const people = tab === 'staff' ? dir.staff : dir.neighbours;
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
-    const list = term ? people.filter((p) => `${p.name} ${p.unit || ''} ${ROLE_LABEL[p.role] || ''}`.toLowerCase().includes(term)) : people;
+    const list = term ? people.filter((p) => `${p.name} ${p.unit || ''} ${RL[p.role] || ''}`.toLowerCase().includes(term)) : people;
     return [...list].sort((a, b) => (b.online - a.online) || a.name.localeCompare(b.name));
   }, [people, q]);
 
@@ -98,8 +102,8 @@ export default function Calls() {
         <div className="relative flex items-start gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 text-emerald-100/90 text-sm"><Phone size={15} /> Calls</div>
-            <p className="text-lg font-bold mt-1">Call any resident or guard in your estate</p>
-            <p className="text-xs text-emerald-50/80 mt-1 flex items-center gap-1.5"><ShieldCheck size={12} /> Calls from estate staff are always free</p>
+            <p className="text-lg font-bold mt-1">{E ? 'Call any resident or guard in your estate' : `Call anyone or any guard at your ${lower(T.site)}`}</p>
+            <p className="text-xs text-emerald-50/80 mt-1 flex items-center gap-1.5"><ShieldCheck size={12} /> Calls from {E ? 'estate' : lower(T.site)} staff are always free</p>
           </div>
           <button onClick={load} aria-label="Refresh" className="w-9 h-9 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 shrink-0">
             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
@@ -108,7 +112,7 @@ export default function Calls() {
       </div>
 
       <div className="flex p-1 rounded-2xl bg-slate-100">
-        {[['residents', `Residents${dir.neighbours.length ? ` (${dir.neighbours.length})` : ''}`], ['staff', 'Security & staff'], ['recent', 'Recent']].map(([id, label]) => (
+        {[['residents', `${E ? 'Residents' : T.members}${dir.neighbours.length ? ` (${dir.neighbours.length})` : ''}`], ['staff', 'Security & staff'], ['recent', 'Recent']].map(([id, label]) => (
           <button key={id} onClick={() => { setTab(id); setQ(''); }}
             className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${tab === id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>
             {label}
@@ -123,14 +127,14 @@ export default function Calls() {
         <>
           <div className="relative">
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tab === 'staff' ? 'Search staff' : 'Search by name or unit'}
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tab === 'staff' ? 'Search staff' : `Search by name or ${lower(T.unit)}`}
               className="input-field pl-10 py-3" />
           </div>
           {loading ? (
             <PageLoader variant="section" />
           ) : filtered.length === 0 ? (
             <div className="glass-card py-12 text-center text-sm text-slate-400">
-              {q ? `No match for “${q}”` : tab === 'staff' ? 'No other staff in this estate yet' : 'No residents yet'}
+              {q ? `No match for “${q}”` : tab === 'staff' ? `No other staff in this ${lower(T.site)} yet` : `No ${lower(T.members)} yet`}
             </div>
           ) : (
             <div className="grid md:grid-cols-2 2xl:grid-cols-3 gap-3">
@@ -140,7 +144,7 @@ export default function Calls() {
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-semibold text-slate-900 truncate">{p.name}</div>
                     <div className="text-xs text-slate-400 truncate">
-                      {p.role === 'resident' ? (p.unit || 'Resident') : ROLE_LABEL[p.role]}{p.online ? ' · online' : ''}
+                      {p.role === 'resident' ? (p.unit || RL.resident) : RL[p.role]}{p.online ? ' · online' : ''}
                     </div>
                   </div>
                   {p.role === 'resident' && (
@@ -194,7 +198,7 @@ export default function Calls() {
       )}
       {/* ── Check up on a resident ── */}
       <BottomSheet open={!!buzzFor} onClose={() => !sending && setBuzzFor(null)} title={buzzFor ? `Check up on ${buzzFor.name.split(' ')[0]}` : ''}
-        subtitle="They'll get a notification and an email from you as Estate Manager"
+        subtitle={`They'll get a notification and an email from you as ${E ? 'Estate Manager' : T.manager}`}
         footer={<button onClick={sendBuzz} disabled={sending} className="btn-primary w-full py-3.5 text-base gap-2">
           {sending ? 'Sending…' : <><Hand size={17} /> Send</>}
         </button>}>
@@ -204,7 +208,7 @@ export default function Calls() {
               <Avatar person={buzzFor} size={48} />
               <div className="min-w-0">
                 <div className="font-semibold text-slate-900 truncate">{buzzFor.name}</div>
-                <div className="text-xs text-slate-400">{buzzFor.unit || 'Resident'}</div>
+                <div className="text-xs text-slate-400">{buzzFor.unit || RL.resident}</div>
               </div>
             </div>
             <div className="grid grid-cols-3 gap-2">
@@ -218,7 +222,7 @@ export default function Calls() {
             </div>
             <textarea value={buzzNote} onChange={(e) => setBuzzNote(e.target.value.slice(0, 200))} rows={2}
               placeholder="Add a short note (optional) — e.g. Hope you're settling in well" className="input-field resize-none" />
-            <p className="text-[11px] text-slate-400">One check-in per resident every 2 hours.</p>
+            <p className="text-[11px] text-slate-400">One check-in per {lower(E ? 'Resident' : T.member)} every 2 hours.</p>
           </div>
         )}
       </BottomSheet>

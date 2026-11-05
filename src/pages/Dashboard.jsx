@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { estateAPI, visitorAPI, alertAPI, announcementAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
+import { useSite } from '../context/SiteContext';
 import Spinner, { PageLoader } from '../components/ui/Spinner';
 import DesktopDashboard from '../components/dashboard/DesktopDashboard';
 import MobileDashboard from '../components/dashboard/MobileDashboard';
 import useIsDesktop from '../hooks/useIsDesktop';
+import { RollCallStrip } from '../components/site/RollCall';
 import { CampaignModal } from '../components/campaigns/CampaignSlots';
 
 export default function ManagerDashboard() {
@@ -17,6 +19,7 @@ export default function ManagerDashboard() {
   const [estate, setEstate]           = useState(null);
   const [loading, setLoading]         = useState(true);
   const isDesktop = useIsDesktop();
+  const site = useSite();
 
   const estateId = user?.estateId?._id || user?.estateId;
 
@@ -47,12 +50,13 @@ export default function ManagerDashboard() {
 
   const estateName = user?.estateId && typeof user.estateId === 'object'
     ? user.estateId.name
-    : 'Your Estate';
+    : (site.isEstate ? 'Your Estate' : `Your ${site.terms.site}`);
   const firstName = user?.name?.split(' ')[0] || 'Manager';
 
   if (isDesktop) return (
     <>
     <CampaignModal />
+    <RollCallStrip className="max-w-[1400px] mx-auto mb-5" />
     <DesktopDashboard
       user={user}
       stats={stats}
@@ -69,6 +73,7 @@ export default function ManagerDashboard() {
   return (
     <>
     <CampaignModal />
+    <RollCallStrip className="mb-4" />
     <MobileDashboard
       user={user}
       stats={stats}

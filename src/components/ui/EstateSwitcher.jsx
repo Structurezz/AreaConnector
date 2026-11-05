@@ -8,9 +8,13 @@ import toast from 'react-hot-toast';
 import { Z_INDEX } from './Portal';
 import { isTeamMember } from '../../utils/teamAccess';
 import SiteTypePicker from '../site/SiteTypePicker';
+import { useSite } from '../../context/SiteContext';
 
 export default function EstateSwitcher({ compact = false, variant = 'inline' }) {
   const { user, estate, switchEstate } = useAuth();
+  const site = useSite();
+  // A manager's sites can be of mixed types, so non-estates get the neutral "site"
+  const E = site.isEstate;
   const [open, setOpen] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [estates, setEstates] = useState([]);
@@ -19,7 +23,7 @@ export default function EstateSwitcher({ compact = false, variant = 'inline' }) 
   const [form, setForm] = useState({ name: '', address: '', siteType: 'estate' });
   const [adding, setAdding] = useState(false);
 
-  const currentName = typeof estate === 'object' ? estate?.name : 'My Estate';
+  const currentName = typeof estate === 'object' ? estate?.name : (E ? 'My Estate' : `My ${site.terms.site}`);
   const currentCode = typeof estate === 'object' ? estate?.estateCode : '';
 
   // Close on Escape
@@ -48,7 +52,7 @@ export default function EstateSwitcher({ compact = false, variant = 'inline' }) 
       const { data } = await estateAPI.getMine();
       setEstates(data.data);
     } catch {
-      toast.error('Could not load estates');
+      toast.error(E ? 'Could not load estates' : 'Could not load sites');
     } finally {
       setLoadingList(false);
     }
@@ -67,10 +71,10 @@ export default function EstateSwitcher({ compact = false, variant = 'inline' }) 
     try {
       await switchEstate(id);
       closeModal();
-      toast.success('Estate switched');
+      toast.success(E ? 'Estate switched' : 'Site switched');
       window.location.reload();
     } catch {
-      toast.error('Could not switch estate');
+      toast.error(E ? 'Could not switch estate' : 'Could not switch site');
     } finally {
       setSwitching(null);
     }
@@ -81,14 +85,18 @@ export default function EstateSwitcher({ compact = false, variant = 'inline' }) 
     if (!form.name.trim() || !form.address.trim()) return;
     setAdding(true);
     try {
-      const { data } = await estateAPI.addEstate(form);
+      // Exact pin when a Google suggestion was picked for this address
+      const location = form.picked && form.picked.address === form.address.trim() && form.picked.lat != null
+        ? { lat: form.picked.lat, lng: form.picked.lng, formattedAddress: form.picked.address, placeId: form.picked.placeId } : undefined;
+      const { picked, ...body } = form;
+      const { data } = await estateAPI.addEstate({ ...body, location });
       toast.success(`"${data.data.name}" created`);
       setForm({ name: '', address: '', siteType: 'estate' });
       setShowAdd(false);
       const res = await estateAPI.getMine();
       setEstates(res.data.data);
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Could not create estate');
+      toast.error(err?.response?.data?.message || (E ? 'Could not create estate' : 'Could not create site'));
     } finally {
       setAdding(false);
     }
@@ -133,10 +141,10 @@ export default function EstateSwitcher({ compact = false, variant = 'inline' }) 
         }}>
           <div>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#0F172A', letterSpacing: '-0.02em' }}>
-              Switch Estate
+              {E ? 'Switch Estate' : 'Switch Site'}
             </h2>
             <p style={{ margin: '3px 0 0', fontSize: 12, color: '#94A3B8' }}>
-              Select or add an estate to manage
+              {E ? 'Select or add an estate to manage' : 'Select or add a site to manage'}
             </p>
           </div>
           <button
@@ -159,10 +167,10 @@ export default function EstateSwitcher({ compact = false, variant = 'inline' }) 
           {loadingList ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '32px 0' }}>
               <Loader2 size={22} style={{ color: '#10B981', animation: 'spin 1s linear infinite' }} />
-              <span style={{ fontSize: 13, color: '#94A3B8' }}>Loading estates…</span>
+              <span style={{ fontSize: 13, color: '#94A3B8' }}>{E ? 'Loading estates…' : 'Loading sites…'}</span>
             </div>
           ) : estates.length === 0 ? (
-            <p style={{ fontSize: 13, color: '#94A3B8', textAlign: 'center', padding: '24px 0' }}>No estates found</p>
+            <p style={{ fontSize: 13, color: '#94A3B8', textAlign: 'center', padding: '24px 0' }}>{E ? 'No estates found' : 'No sites found'}</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {estates.map((e) => {
@@ -243,14 +251,14 @@ export default function EstateSwitcher({ compact = false, variant = 'inline' }) 
               onMouseEnter={e => { e.currentTarget.style.borderColor = '#10B981'; e.currentTarget.style.color = '#10B981'; e.currentTarget.style.background = '#F0FDF4'; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = '#CBD5E1'; e.currentTarget.style.color = '#64748B'; e.currentTarget.style.background = 'transparent'; }}
             >
-              <Plus size={15} /> Add New Estate
+              <Plus size={15} /> {E ? 'Add New Estate' : 'Add New Site'}
             </button>
           ) : (
             <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#0F172A' }}>New Estate</p>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#0F172A' }}>{E ? 'New Estate' : 'New Site'}</p>
               <input
                 autoFocus
-                placeholder="Estate name *"
+                placeholder={E ? 'Estate name *' : 'Site name *'}
                 value={form.name}
                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                 required
@@ -266,6 +274,7 @@ export default function EstateSwitcher({ compact = false, variant = 'inline' }) 
                 placeholder="Address * — start typing"
                 value={form.address}
                 onChange={(address) => setForm(f => ({ ...f, address }))}
+                onSelect={(picked) => setForm(f => ({ ...f, picked }))}
                 required
                 style={{
                   padding: '10px 12px', borderRadius: 10, border: '1.5px solid #E2E8F0',
@@ -291,7 +300,7 @@ export default function EstateSwitcher({ compact = false, variant = 'inline' }) 
                   }}
                 >
                   {adding && <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />}
-                  {adding ? 'Creating…' : 'Create Estate'}
+                  {adding ? 'Creating…' : (E ? 'Create Estate' : 'Create Site')}
                 </button>
                 <button
                   type="button"
@@ -319,7 +328,7 @@ export default function EstateSwitcher({ compact = false, variant = 'inline' }) 
   if (variant === 'card') {
     return (
       <>
-        <button onClick={openModal} title="Switch estate"
+        <button onClick={openModal} title={E ? 'Switch estate' : 'Switch site'}
           className="group w-full flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-all"
           style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}
           onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#A7F3D0'; e.currentTarget.style.background = '#F0FDF4'; }}
@@ -328,8 +337,8 @@ export default function EstateSwitcher({ compact = false, variant = 'inline' }) 
             <Building2 size={15} />
           </span>
           <span className="flex-1 min-w-0 leading-tight">
-            <span className="block text-[13px] font-semibold truncate" style={{ color: '#0F172A' }}>{currentName || 'My Estate'}</span>
-            <span className="block text-[11px] truncate" style={{ color: '#94A3B8' }}>{currentCode ? `Code ${currentCode} · Switch` : 'Switch estate'}</span>
+            <span className="block text-[13px] font-semibold truncate" style={{ color: '#0F172A' }}>{currentName || (E ? 'My Estate' : `My ${site.terms.site}`)}</span>
+            <span className="block text-[11px] truncate" style={{ color: '#94A3B8' }}>{currentCode ? `Code ${currentCode} · Switch` : (E ? 'Switch estate' : 'Switch site')}</span>
           </span>
           <span className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 bg-white" style={{ border: '1px solid #E2E8F0', color: '#475569' }}>
             <ChevronsUpDown size={13} />
@@ -349,7 +358,7 @@ export default function EstateSwitcher({ compact = false, variant = 'inline' }) 
           background: 'transparent', border: 'none', cursor: 'pointer',
           padding: '2px 4px', borderRadius: 6,
         }}
-        title="Switch estate"
+        title={E ? 'Switch estate' : 'Switch site'}
       >
         {!compact && (
           <span

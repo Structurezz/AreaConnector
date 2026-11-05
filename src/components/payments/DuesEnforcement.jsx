@@ -7,6 +7,8 @@ import { format } from 'date-fns';
 import { paymentAPI } from '../../api';
 import Modal from '../ui/Modal';
 import Spinner, { PageLoader } from '../ui/Spinner';
+import { useSite } from '../../context/SiteContext';
+import { blockName, lower } from '../../utils/siteTypes';
 
 // Dues enforcement — pause convenience services for residents with overdue
 // bills: notice → grace period → manager confirms → auto-lifts on payment.
@@ -21,12 +23,24 @@ const STATUS = {
   eligible: { label: 'Eligible',      cls: 'bg-slate-50 text-slate-600 border-slate-200' },
   owing:    { label: 'Owing',         cls: 'bg-slate-50 text-slate-500 border-slate-200' },
 };
+// Site words for this screen — estates keep the original wording exactly
+function useWords() {
+  const { terms: T, isEstate: E } = useSite();
+  return {
+    T, E,
+    site: E ? 'estate' : lower(T.site),
+    member: lower(T.member), Member: T.member, Members: T.members, members: lower(T.members),
+    dues: E ? 'dues' : lower(T.dues), Dues: E ? 'Dues' : T.dues,
+  };
+}
+
 const ACTION_LABEL = {
   notice: 'Notice sent', applied: 'Restrictions applied', lifted: 'Restrictions lifted by manager',
   auto_lifted: 'Restored — bills paid', cancelled: 'Notice withdrawn', dispute: 'Resident disputed',
 };
 
 function SettingsModal({ open, onClose, onSaved }) {
+  const W = useWords();
   const [meta, setMeta] = useState(null);
   const [f, setF] = useState(null);
   const [confirm, setConfirm] = useState(false);
@@ -41,7 +55,7 @@ function SettingsModal({ open, onClose, onSaved }) {
 
   const toggleService = (k) => setF((x) => ({ ...x, services: x.services.includes(k) ? x.services.filter((s) => s !== k) : [...x.services, k] }));
   const save = async () => {
-    if (f.enabled && !confirm) return toast.error('Please confirm the estate has the right to do this');
+    if (f.enabled && !confirm) return toast.error(`Please confirm the ${W.site} has the right to do this`);
     setSaving(true);
     try {
       const { data } = await paymentAPI.saveEnforcementSettings(f);
@@ -52,19 +66,19 @@ function SettingsModal({ open, onClose, onSaved }) {
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="Dues enforcement settings" size="lg">
+    <Modal open={open} onClose={onClose} title={`${W.Dues} enforcement settings`} size="lg">
       {!f ? <PageLoader variant="section" /> : (
         <div className="space-y-5">
           <label className="flex items-center justify-between gap-4 p-3.5 rounded-xl border border-slate-200">
             <span>
-              <span className="block text-[13.5px] font-semibold text-slate-900">Allow restricting services for overdue dues</span>
+              <span className="block text-[13.5px] font-semibold text-slate-900">Allow restricting services for overdue {W.dues}</span>
               <span className="block text-[12px] text-slate-500">You still confirm every restriction yourself.</span>
             </span>
             <input type="checkbox" className="w-5 h-5 accent-emerald-600" checked={f.enabled} onChange={(e) => setF({ ...f, enabled: e.target.checked })} />
           </label>
 
           <div>
-            <p className="text-[12px] font-semibold text-slate-600 mb-2">What allows the estate to do this? *</p>
+            <p className="text-[12px] font-semibold text-slate-600 mb-2">What allows the {W.site} to do this? *</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
               {meta.bases.map((b) => (
                 <button key={b.key} type="button" onClick={() => setF({ ...f, basisType: b.key })}
@@ -82,8 +96,8 @@ function SettingsModal({ open, onClose, onSaved }) {
                   <input className="input-field mt-1" placeholder={`e.g. ${b.example}`}
                     value={f.constitutionClause} onChange={(e) => setF({ ...f, constitutionClause: e.target.value })} />
                   <p className="text-[11.5px] text-slate-400 mt-1">
-                    Notices will read: “Under <span className="text-slate-600">{isConst ? `${f.constitutionClause || b.example} of the estate constitution` : (f.constitutionClause || b.example)}</span>, …”
-                    {isConst && !meta.hasConstitution && ' Tip: upload your constitution in Settings so residents can read it.'}
+                    Notices will read: “Under <span className="text-slate-600">{isConst ? `${f.constitutionClause || b.example} of the ${W.site} constitution` : (f.constitutionClause || b.example)}</span>, …”
+                    {isConst && !meta.hasConstitution && ` Tip: upload your constitution in Settings so ${W.members} can read it.`}
                   </p>
                 </>
               );
@@ -124,14 +138,14 @@ function SettingsModal({ open, onClose, onSaved }) {
             <ul className="mt-1.5 text-[12px] text-emerald-900/80 list-disc pl-5 space-y-0.5">
               {meta.protected.map((p) => <li key={p}>{p}</li>)}
             </ul>
-            <p className="text-[11.5px] text-emerald-900/70 mt-2">Guards are never told why a pass is held, and debts are never shown to other residents.</p>
+            <p className="text-[11.5px] text-emerald-900/70 mt-2">Guards are never told why a pass is held, and debts are never shown to other {W.members}.</p>
           </div>
 
           {f.enabled && (
             <label className="flex items-start gap-3 p-3.5 rounded-xl border border-amber-200 bg-amber-50">
               <input type="checkbox" className="mt-0.5 w-4 h-4 accent-amber-600" checked={confirm} onChange={(e) => setConfirm(e.target.checked)} />
               <span className="text-[12.5px] text-amber-900">
-                I confirm the basis above gives the estate the right to restrict these services for unpaid dues, and residents have been told about this rule.
+                I confirm the basis above gives the {W.site} the right to restrict these services for unpaid {W.dues}, and {W.members} have been told about this rule.
                 A written, agreed basis (constitution, AGM resolution or agreement) is strongest — we recommend a lawyer reviews it.
               </span>
             </label>
@@ -148,6 +162,7 @@ function SettingsModal({ open, onClose, onSaved }) {
 }
 
 function NoticeModal({ row, services, settings, onClose, onDone }) {
+  const W = useWords();
   const manual = row && !row.eligible;
   const [picked, setPicked] = useState([]);
   const [note, setNote] = useState('');
@@ -166,7 +181,7 @@ function NoticeModal({ row, services, settings, onClose, onDone }) {
 
   const allowed = services.filter((s) => settings?.services?.includes(s.key));
   return (
-    <Modal open={!!row} onClose={onClose} title={row ? `Send dues notice to ${row.resident.name}` : ''}>
+    <Modal open={!!row} onClose={onClose} title={row ? `Send ${W.dues} notice to ${row.resident.name}` : ''}>
       {row && (
         <div className="space-y-4">
           <div className="rounded-xl p-3.5 bg-amber-50 border border-amber-200 text-[12.5px] text-amber-900">
@@ -189,7 +204,7 @@ function NoticeModal({ row, services, settings, onClose, onDone }) {
           <div>
             <label className="text-[12px] font-semibold text-slate-600">Personal message (optional)</label>
             <textarea className="input-field mt-1" rows={3} value={note} onChange={(e) => setNote(e.target.value)}
-              placeholder="e.g. Happy to agree a payment plan — please reach out to the estate office." />
+              placeholder={`e.g. Happy to agree a payment plan — please reach out to the ${W.E ? 'estate office' : 'office'}.`} />
           </div>
           <div className="flex gap-3">
             <button onClick={onClose} className="btn-outline flex-1">Cancel</button>
@@ -202,6 +217,7 @@ function NoticeModal({ row, services, settings, onClose, onDone }) {
 }
 
 function ResidentRow({ row, onNotice, onAction, busy }) {
+  const W = useWords();
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState(null);
   const r = row.restriction || {};
@@ -224,10 +240,10 @@ function ResidentRow({ row, onNotice, onAction, busy }) {
           <span className="min-w-0">
             <span className="flex items-center gap-1.5 text-[13.5px] font-semibold text-slate-900 truncate">
               {row.resident.name}
-              {r.dispute?.at && <MessageSquareWarning size={14} className="text-amber-600" title="Resident disputed" />}
+              {r.dispute?.at && <MessageSquareWarning size={14} className="text-amber-600" title={`${W.Member} disputed`} />}
             </span>
             <span className="block text-[11.5px] text-slate-400 truncate">
-              {unit ? `${unit.block ? `Block ${unit.block} · ` : ''}Unit ${unit.unitNumber} · ` : ''}
+              {unit ? `${unit.block ? `${blockName(unit.block, W.T)} · ` : ''}${W.T.unit} ${unit.unitNumber} · ` : ''}
               {row.overdue ? `${NGN(row.overdue)} overdue · since ${day(row.oldestDue)}` : 'Nothing overdue'}
             </span>
           </span>
@@ -292,7 +308,7 @@ function ResidentRow({ row, onNotice, onAction, busy }) {
                 <p className="text-[11.5px] font-semibold text-slate-500 mb-1">History</p>
                 {!detail.history.length ? <p className="text-[12px] text-slate-400">No enforcement actions yet</p> : detail.history.map((h) => (
                   <div key={h._id} className="text-[12px] text-slate-600 py-0.5">
-                    <span className="text-slate-400">{format(new Date(h.createdAt), 'd MMM yyyy, HH:mm')}</span> · {ACTION_LABEL[h.action] || h.action}
+                    <span className="text-slate-400">{format(new Date(h.createdAt), 'd MMM yyyy, HH:mm')}</span> · {h.action === 'dispute' ? `${W.Member} disputed` : (ACTION_LABEL[h.action] || h.action)}
                     {h.byId?.name && h.action !== 'dispute' ? ` by ${h.byId.name}` : ''}{h.amountOwed ? ` · ${NGN(h.amountOwed)} owed` : ''}
                     {h.note && h.action !== 'dispute' ? <span className="text-slate-400"> — “{h.note}”</span> : null}
                   </div>
@@ -307,6 +323,7 @@ function ResidentRow({ row, onNotice, onAction, busy }) {
 }
 
 export default function DuesEnforcement() {
+  const W = useWords();
   const [data, setData] = useState(null);
   const [filter, setFilter] = useState('all');
   const [showSettings, setShowSettings] = useState(false);
@@ -362,8 +379,10 @@ export default function DuesEnforcement() {
             <>
               <p className="text-[13.5px] font-semibold text-slate-900">Encourage payment by pausing convenience services</p>
               <p className="text-[12px] text-slate-600 mt-0.5">
-                Residents with overdue bills get a written notice, a grace period, then — only if you confirm — services like visitor passes, the lounge, events and marketplace are paused until they pay.
-                Essentials (home access, emergencies, medical visitors) are never touched. Needs a basis such as your constitution, an AGM resolution, the service-charge agreement or estate rules.
+                {W.Members} with overdue bills get a written notice, a grace period, then — only if you confirm — services like visitor passes, the lounge, events and marketplace are paused until they pay.
+                {W.E
+                  ? 'Essentials (home access, emergencies, medical visitors) are never touched. Needs a basis such as your constitution, an AGM resolution, the service-charge agreement or estate rules.'
+                  : `Essentials (${lower(W.T.unit)} and site access, emergencies, medical visitors) are never touched. Needs a basis such as your constitution, a board resolution, a fees agreement or ${W.site} rules.`}
               </p>
             </>
           )}
@@ -392,7 +411,7 @@ export default function DuesEnforcement() {
         <div className="py-14 text-center">
           <CheckCircle2 size={26} className="mx-auto text-emerald-500" />
           <p className="mt-2 text-[13.5px] font-semibold text-slate-800">{filter === 'all' ? 'Nobody has overdue bills' : 'No one here'}</p>
-          <p className="text-[12px] text-slate-400">Residents with overdue bills show up here.</p>
+          <p className="text-[12px] text-slate-400">{W.Members} with overdue bills show up here.</p>
         </div>
       ) : (
         <div className="max-h-[70vh] overflow-y-auto">
@@ -415,8 +434,8 @@ export default function DuesEnforcement() {
               {confirm.kind === 'apply'
                 ? <>The notice period has ended and <b>{NGN(confirm.row.overdue)}</b> is still overdue. These will be paused until they pay: <b>{(confirm.row.restriction.services || []).map((k) => services.find((s) => s.key === k)?.label || k).join(', ')}</b>. They'll be notified, and everything restores automatically on payment.</>
                 : confirm.row.restriction.status === 'active'
-                  ? 'Everything that was paused will work again straight away, and the resident will be notified.'
-                  : 'The notice will be withdrawn and the resident told no services will be paused.'}
+                  ? `Everything that was paused will work again straight away, and the ${W.member} will be notified.`
+                  : `The notice will be withdrawn and the ${W.member} told no services will be paused.`}
             </p>
             <div>
               <label className="text-[12px] font-semibold text-slate-600">Reason for the record (optional)</label>
