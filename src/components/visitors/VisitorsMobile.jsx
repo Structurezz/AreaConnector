@@ -4,6 +4,7 @@ import { Search, X, Plus, ChevronRight, Calendar, LogIn, LogOut, Clock, UserChec
 import toast from 'react-hot-toast';
 import useCountUp from '../../hooks/useCountUp';
 import { VISITOR_STATUS, STATUS_CHIPS, purposeIcon, VisitorsPager } from './MobileVisitors';
+import { CategoryBadge } from './CategoryIcon';
 
 // Phone layout for the estate manager Visitors page. Desktop keeps the table.
 
@@ -91,7 +92,9 @@ function VisitorCard({ v, i, onOpen, onCheckIn, onCheckOut, onCancel }) {
               </span>
             </div>
             <p className="mt-0.5 text-[12px] text-slate-500 truncate flex items-center gap-1">
-              <span className="font-semibold capitalize px-1.5 py-px rounded-md" style={{ background: pBg, color: pColor }}>{v.purpose}</span>
+              {v.category && v.category !== 'guest'
+                ? <CategoryBadge category={v.category} />
+                : <span className="font-semibold capitalize px-1.5 py-px rounded-md" style={{ background: pBg, color: pColor }}>{v.purpose}</span>}
               <Clock size={11} className="flex-shrink-0 text-slate-400 ml-0.5" /> {timeLine}
             </p>
             <p className="text-[12px] text-slate-400 truncate">For {host}{unit ? ` · ${unit}` : ''}</p>

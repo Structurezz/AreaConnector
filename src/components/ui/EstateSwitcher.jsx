@@ -1,3 +1,4 @@
+import AddressAutocomplete from './AddressAutocomplete';
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, ChevronsUpDown, X, Plus, Check, Building2, Loader2, ArrowRight } from 'lucide-react';
@@ -6,6 +7,7 @@ import { estateAPI } from '../../api';
 import toast from 'react-hot-toast';
 import { Z_INDEX } from './Portal';
 import { isTeamMember } from '../../utils/teamAccess';
+import SiteTypePicker from '../site/SiteTypePicker';
 
 export default function EstateSwitcher({ compact = false, variant = 'inline' }) {
   const { user, estate, switchEstate } = useAuth();
@@ -14,7 +16,7 @@ export default function EstateSwitcher({ compact = false, variant = 'inline' }) 
   const [estates, setEstates] = useState([]);
   const [loadingList, setLoadingList] = useState(false);
   const [switching, setSwitching] = useState(null);
-  const [form, setForm] = useState({ name: '', address: '' });
+  const [form, setForm] = useState({ name: '', address: '', siteType: 'estate' });
   const [adding, setAdding] = useState(false);
 
   const currentName = typeof estate === 'object' ? estate?.name : 'My Estate';
@@ -55,7 +57,7 @@ export default function EstateSwitcher({ compact = false, variant = 'inline' }) 
   const closeModal = () => {
     setOpen(false);
     setShowAdd(false);
-    setForm({ name: '', address: '' });
+    setForm({ name: '', address: '', siteType: 'estate' });
   };
 
   const handleSwitch = async (id) => {
@@ -81,7 +83,7 @@ export default function EstateSwitcher({ compact = false, variant = 'inline' }) 
     try {
       const { data } = await estateAPI.addEstate(form);
       toast.success(`"${data.data.name}" created`);
-      setForm({ name: '', address: '' });
+      setForm({ name: '', address: '', siteType: 'estate' });
       setShowAdd(false);
       const res = await estateAPI.getMine();
       setEstates(res.data.data);
@@ -260,19 +262,21 @@ export default function EstateSwitcher({ compact = false, variant = 'inline' }) 
                 onFocus={e => { e.target.style.borderColor = '#10B981'; }}
                 onBlur={e => { e.target.style.borderColor = '#E2E8F0'; }}
               />
-              <input
-                placeholder="Address *"
+              <AddressAutocomplete
+                placeholder="Address * — start typing"
                 value={form.address}
-                onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
+                onChange={(address) => setForm(f => ({ ...f, address }))}
                 required
                 style={{
                   padding: '10px 12px', borderRadius: 10, border: '1.5px solid #E2E8F0',
                   fontSize: 13, color: '#0F172A', outline: 'none',
                   width: '100%', boxSizing: 'border-box',
                 }}
-                onFocus={e => { e.target.style.borderColor = '#10B981'; }}
-                onBlur={e => { e.target.style.borderColor = '#E2E8F0'; }}
               />
+              <div>
+                <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Type of site</p>
+                <SiteTypePicker variant="compact" value={form.siteType} onChange={(v) => setForm(f => ({ ...f, siteType: v }))} />
+              </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   type="submit"
@@ -291,7 +295,7 @@ export default function EstateSwitcher({ compact = false, variant = 'inline' }) 
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setShowAdd(false); setForm({ name: '', address: '' }); }}
+                  onClick={() => { setShowAdd(false); setForm({ name: '', address: '', siteType: 'estate' }); }}
                   style={{
                     padding: '11px 16px', borderRadius: 10,
                     background: '#F1F5F9', color: '#64748B',

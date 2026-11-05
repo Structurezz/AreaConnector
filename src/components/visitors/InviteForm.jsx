@@ -3,6 +3,17 @@ import { format, addDays } from 'date-fns';
 import { Zap, CalendarClock, CalendarDays, Users, UserCheck, Package, Wrench, Heart, MoreHorizontal, Mail, FileText, RefreshCw, QrCode, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { visitorAPI } from '../../api';
+import { useSite } from '../../context/SiteContext';
+import { CATEGORY_STYLE, CATEGORY_INFO, DETAIL_LABELS } from '../../utils/siteTypes';
+import CategoryIcon from './CategoryIcon';
+
+// Placeholders for the extra fields each pass category asks for
+const DETAIL_PLACEHOLDER = {
+  studentName: 'Student’s full name', studentClass: 'Class (e.g. JSS 2B)', company: 'Company name',
+  job: 'Job (e.g. AC repair in Block C)', goods: 'Goods (e.g. 20 cartons of water)', vehiclePlate: 'Vehicle plate (optional)',
+  patientName: 'Patient’s full name', ward: 'Ward / room (optional)',
+};
+const REQUIRED_DETAIL = { contractor: 'company', supplier: 'company', patient_visit: 'patientName', pickup: 'studentName' };
 
 const ACCENT = '#10B981';
 
@@ -22,6 +33,14 @@ const ymd = (d) => format(d, 'yyyy-MM-dd');
  * scheduled one. Used full-screen on phones and in the desktop drawer.
  */
 export default function InviteForm({ onCreated, onCancel, sticky = false }) {
+  const site = useSite();
+  // Estates keep the classic form; other site types pick a pass category
+  const categories = site.isEstate ? [] : (site.passCategories || []);
+  const [category, setCategory] = useState('guest');
+  const [details, setDetails] = useState({});
+  const catInfo = categories.find(c => c.key === category) || CATEGORY_INFO[category] || {};
+  const catFields = category === 'guest' ? [] : (catInfo.fields || []);
+  const setDetail = (k, v) => setDetails(d => ({ ...d, [k]: v }));
   const [mode, setMode] = useState('instant');
   const [form, setForm] = useState({
     visitorName: '', visitorPhone: '', visitorEmail: '', purpose: '',
@@ -54,18 +73,28 @@ export default function InviteForm({ onCreated, onCancel, sticky = false }) {
   const when = instant
     ? `Valid now · for ${DURATIONS.find(([v]) => v === form.duration)?.[1] || `${form.duration} min`}`
     : (() => { try { return `${format(new Date(`${form.day}T${form.time}`), 'EEE d MMM · h:mm a')} · ${DURATIONS.find(([v]) => v === form.duration)?.[1]}`; } catch { return ''; } })();
-  const ready = form.visitorName.trim() && form.purpose.trim() && (instant || (form.day && form.time));
+  // Non-guest categories use the category as the reason for the visit
+  const purpose = category !== 'guest' && !form.purpose.trim() ? (catInfo.label || '') : form.purpose;
+  const needDetail = REQUIRED_DETAIL[category];
+  const ready = form.visitorName.trim() && purpose.trim() && (instant || (form.day && form.time));
 
   const submit = async (e) => {
     e?.preventDefault();
     if (!ready) return toast.error(!form.visitorName.trim() ? 'Enter your visitor\'s name' : 'Pick a reason for the visit');
+    if (needDetail && !details[needDetail]?.trim()) {
+      return toast.error(needDetail === 'company' ? 'Add the company name' : needDetail === 'patientName' ? 'Add the patient’s name' : 'Add the student’s name');
+    }
     setSaving(true);
     try {
       const { data } = await visitorAPI.preRegister({
         visitorName: form.visitorName.trim(),
         visitorPhone: form.visitorPhone.trim() || undefined,
         visitorEmail: form.visitorEmail.trim() || undefined,
-        purpose: form.purpose.trim(),
+        purpose: purpose.trim(),
+        ...(categories.length ? {
+          category,
+          details: Object.fromEntries(catFields.map(k => [k, (details[k] || '').trim()]).filter(([, v]) => v)),
+        } : {}),
         instant,
         expectedDate: instant ? new Date().toISOString() : new Date(`${form.day}T${form.time}`).toISOString(),
         expectedDuration: form.duration,
@@ -103,6 +132,42 @@ export default function InviteForm({ onCreated, onCancel, sticky = false }) {
           </div>
         )}
 
+        {/* Pass category (schools, hotels, industry, hospitals) */}
+        {categories.length > 1 && (
+          <section>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Type of visitor</h3>
+            <div className="grid grid-cols-3 gap-2">
+              {categories.map(c => {
+                const st = CATEGORY_STYLE[c.key] || CATEGORY_STYLE.guest;
+                const on = category === c.key;
+                return (
+                  <button key={c.key} type="button" onClick={() => { setCategory(c.key); if (c.key !== 'guest') { setOther(false); set('purpose', ''); } }}
+                    className="flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-xl border-2 text-[12px] font-semibold transition-all active:scale-[0.97] text-center"
+                    style={on ? { background: st.bg, borderColor: st.color, color: st.color } : { background: '#fff', borderColor: '#E2E8F0', color: '#475569' }}>
+                    <span className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: on ? st.color : st.bg }}>
+                      <CategoryIcon category={c.key} size={16} style={{ color: on ? '#fff' : st.color }} />
+                    </span>
+                    <span className="leading-tight">{c.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {catFields.length > 0 && (
+              <div className="mt-3 space-y-2 rounded-2xl p-3 border" style={{ borderColor: `${(CATEGORY_STYLE[category] || CATEGORY_STYLE.guest).color}33`, background: (CATEGORY_STYLE[category] || CATEGORY_STYLE.guest).bg }}>
+                {catFields.map(k => (
+                  <input key={k} value={details[k] || ''} onChange={(e) => setDetail(k, e.target.value)}
+                    placeholder={`${DETAIL_PLACEHOLDER[k] || DETAIL_LABELS[k] || k}${needDetail === k ? ' *' : ''}`}
+                    style={k === 'vehiclePlate' ? { textTransform: 'uppercase' } : undefined}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-[14px] text-slate-900 outline-none focus:border-emerald-300" />
+                ))}
+                {catInfo.induction && site.inductionText && (
+                  <p className="text-[11.5px] text-slate-500 px-0.5">The guard will show them the safety induction at the gate before they can enter.</p>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
         {/* Who */}
         <section className="space-y-3">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Who's coming</h3>
@@ -119,7 +184,7 @@ export default function InviteForm({ onCreated, onCancel, sticky = false }) {
         </section>
 
         {/* Why */}
-        <section>
+        {category === 'guest' && <section>
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Reason for visit</h3>
           <div className="grid grid-cols-3 gap-2">
             {PURPOSES.map(({ label, Icon, color, tint }) => {
@@ -138,7 +203,7 @@ export default function InviteForm({ onCreated, onCancel, sticky = false }) {
           </div>
           {other && <input autoFocus value={form.purpose} onChange={(e) => set('purpose', e.target.value)} placeholder="What's the visit for?"
             className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[15px] outline-none focus:bg-white focus:border-emerald-300" />}
-        </section>
+        </section>}
 
         {/* When */}
         <section>
@@ -187,7 +252,7 @@ export default function InviteForm({ onCreated, onCancel, sticky = false }) {
         style={sticky ? { paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' } : undefined}>
         {ready && (
           <p className="text-[12px] text-slate-500 mb-2 flex items-center gap-1.5 truncate">
-            <ShieldCheck size={13} className="text-emerald-500 shrink-0" /> {form.visitorName.trim()} · {form.purpose} · {when}
+            <ShieldCheck size={13} className="text-emerald-500 shrink-0" /> {form.visitorName.trim()} · {purpose} · {when}
           </p>
         )}
         <div className="flex gap-2">

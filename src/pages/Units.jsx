@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useSite } from '../context/SiteContext';
+import { blockWord, blockName } from '../utils/siteTypes';
 import { unitAPI, residentAPI } from '../api';
 import Spinner, { PageLoader } from '../components/ui/Spinner';
 import SidePanel from '../components/payments/SidePanel';
@@ -82,6 +85,7 @@ function MiniRing({ pct, color }) {
 
 /* ── Grid card ─────────────────────────────────────────────────────── */
 function UnitCard({ u, onOpen, i }) {
+  const site = useSite();
   const people = occ(u);
   const count = people.length;
   const max = u.maxOccupants || 7;
@@ -101,7 +105,7 @@ function UnitCard({ u, onOpen, i }) {
           </span>
           <div className="min-w-0">
             <p className="text-[16px] font-semibold text-slate-900 leading-tight truncate" style={{ letterSpacing: '-0.02em' }}>{u.unitNumber}</p>
-            <p className="text-[11px] text-slate-400 capitalize">{u.block ? `Block ${u.block} · ` : ''}{u.type}</p>
+            <p className="text-[11px] text-slate-400 capitalize">{u.block ? `${blockName(u.block, site.terms)} · ` : ''}{u.type}</p>
           </div>
         </div>
         <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1" style={{ background: state[2], color: state[1] }}>
@@ -209,6 +213,7 @@ function ResidentRow({ r, rec, open, onToggle, onRemove }) {
 
 /* ── Unit detail side panel ────────────────────────────────────────── */
 function UnitPanel({ unit, allResidents, onAddResident, onRemoveResident, onDelete, onSaved, onClose }) {
+  const site = useSite();
   const [addId, setAddId] = useState('');
   const [q, setQ] = useState('');
   const [busy, setBusy] = useState(false);
@@ -251,7 +256,7 @@ function UnitPanel({ unit, allResidents, onAddResident, onRemoveResident, onDele
 
   return (
     <SidePanel open={!!u} onClose={onClose}
-      title={u ? `${u.block ? `Block ${u.block} · ` : ''}Unit ${u.unitNumber}` : ''}
+      title={u ? `${u.block ? `${blockName(u.block, site.terms)} · ` : ''}${site.terms.unit} ${u.unitNumber}` : ''}
       subtitle={u ? `${u.type?.[0]?.toUpperCase()}${u.type?.slice(1)} · ${count}/${max} occupants` : ''}
       footer={u && (confirmDelete ? (
         <div className="flex gap-2">
@@ -271,7 +276,7 @@ function UnitPanel({ unit, allResidents, onAddResident, onRemoveResident, onDele
             <span className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #10B981, #047857)', boxShadow: '0 8px 18px -10px #047857' }}><TypeIcon size={21} className="text-white" /></span>
             <div className="flex-1 min-w-0">
               <p className="text-[22px] font-semibold text-slate-900 leading-tight" style={{ letterSpacing: '-0.02em' }}>{u.unitNumber}</p>
-              <p className="text-[12px] text-slate-500 capitalize">{u.block ? `Block ${u.block} · ` : ''}{u.type}</p>
+              <p className="text-[12px] text-slate-500 capitalize">{u.block ? `${blockName(u.block, site.terms)} · ` : ''}{u.type}</p>
             </div>
           </div>
 
@@ -280,7 +285,7 @@ function UnitPanel({ unit, allResidents, onAddResident, onRemoveResident, onDele
               <p className="text-[12px] font-semibold text-emerald-800 flex items-center gap-1.5"><Pencil size={13} /> Edit unit</p>
               <div className="grid grid-cols-2 gap-2.5">
                 <label><span className="text-[11.5px] text-slate-500">Unit number</span><input className="input-field mt-1" value={form.unitNumber} onChange={(e) => setForm({ ...form, unitNumber: e.target.value })} /></label>
-                <label><span className="text-[11.5px] text-slate-500">Block</span><input className="input-field mt-1" value={form.block} onChange={(e) => setForm({ ...form, block: e.target.value })} placeholder="Optional" /></label>
+                <label><span className="text-[11.5px] text-slate-500">{blockWord(site.terms)}</span><input className="input-field mt-1" value={form.block} onChange={(e) => setForm({ ...form, block: e.target.value })} placeholder="Optional" /></label>
               </div>
               <div className="grid grid-cols-4 gap-1.5">
                 {TYPES.map(({ v, label, icon: I }) => (
@@ -388,6 +393,7 @@ function UnitPanel({ unit, allResidents, onAddResident, onRemoveResident, onDele
 
 /* ── Add units panel: one, or a whole range at once ────────────────── */
 function AddUnitsPanel({ open, onClose, onDone, existing }) {
+  const site = useSite();
   const [mode, setMode] = useState('single');
   const [f, setF] = useState({ unitNumber: '', block: '', type: 'apartment', prefix: '', from: 1, to: 10, pad: 0 });
   const [busy, setBusy] = useState(false);
@@ -448,7 +454,7 @@ function AddUnitsPanel({ open, onClose, onDone, existing }) {
           {mode === 'single'
             ? <label><span className="text-[12px] font-medium text-slate-600">Unit number *</span><input className="input-field mt-1" value={f.unitNumber} onChange={(e) => setF({ ...f, unitNumber: e.target.value })} placeholder="e.g. 4B" autoFocus /></label>
             : <label><span className="text-[12px] font-medium text-slate-600">Prefix</span><input className="input-field mt-1" value={f.prefix} onChange={(e) => setF({ ...f, prefix: e.target.value })} placeholder="e.g. A or Flat " /></label>}
-          <label><span className="text-[12px] font-medium text-slate-600">Block</span><input className="input-field mt-1" value={f.block} onChange={(e) => setF({ ...f, block: e.target.value })} placeholder="Optional" /></label>
+          <label><span className="text-[12px] font-medium text-slate-600">{blockWord(site.terms)}</span><input className="input-field mt-1" value={f.block} onChange={(e) => setF({ ...f, block: e.target.value })} placeholder="Optional" /></label>
         </div>
 
         {mode === 'range' && (
@@ -489,6 +495,7 @@ function AddUnitsPanel({ open, onClose, onDone, existing }) {
 
 /* ── Page ───────────────────────────────────────────────────────────── */
 export default function Units() {
+  const site = useSite(); // words only — layout untouched
   const [units, setUnits] = useState([]);
   const [allResidents, setAllResidents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -607,8 +614,8 @@ export default function Units() {
       {/* Header */}
       <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-[22px] font-semibold text-slate-900" style={{ letterSpacing: '-0.02em' }}>Units</h1>
-          <p className="text-slate-500 text-[13px] mt-0.5">Homes in your estate — who lives where, and whose dues are up to date.</p>
+          <h1 className="text-[22px] font-semibold text-slate-900" style={{ letterSpacing: '-0.02em' }}>{site.terms.units}</h1>
+          <p className="text-slate-500 text-[13px] mt-0.5">{site.isEstate ? 'Homes in your estate — who lives where, and whose dues are up to date.' : `${site.terms.units} in your ${site.terms.site.toLowerCase()} and who is in each one.`}</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="hidden sm:flex p-0.5 rounded-xl bg-slate-100">
@@ -616,16 +623,17 @@ export default function Units() {
               <button key={v} onClick={() => setView(v)} className={`flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12.5px] font-medium ${view === v ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><I size={14} />{l}</button>
             ))}
           </div>
-          <button onClick={() => setShowAdd(true)} className="btn-primary gap-2"><Plus size={16} /> Add units</button>
+          <Link to="/map" className="btn-outline !text-[13px] !px-3 !py-2">Map</Link>
+          <button onClick={() => setShowAdd(true)} className="btn-primary gap-2"><Plus size={16} /> Add {site.terms.units.toLowerCase()}</button>
         </div>
       </div>
 
       {loading ? <PageLoader variant="section" /> : units.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center">
           <span className="mx-auto w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #10B981, #047857)' }}><Home size={24} className="text-white" /></span>
-          <p className="mt-4 text-[16px] font-semibold text-slate-900">Add your first units</p>
+          <p className="mt-4 text-[16px] font-semibold text-slate-900">Add your first {site.terms.units.toLowerCase()}</p>
           <p className="mt-1 text-[13px] text-slate-500 max-w-sm mx-auto">Create each home once — or a whole block at a time — then assign residents and track their dues.</p>
-          <button onClick={() => setShowAdd(true)} className="btn-primary mt-5 gap-2 inline-flex"><Plus size={15} /> Add units</button>
+          <button onClick={() => setShowAdd(true)} className="btn-primary mt-5 gap-2 inline-flex"><Plus size={15} /> Add {site.terms.units.toLowerCase()}</button>
         </div>
       ) : (
         <>
@@ -652,7 +660,7 @@ export default function Units() {
                   <button key={b.key} onClick={() => setBlockFilter(on ? 'all' : b.key)}
                     className={`flex-shrink-0 w-[170px] text-left rounded-2xl border p-3 transition-all ${on ? 'border-emerald-500 bg-emerald-50/50 ring-2 ring-emerald-500/10' : 'border-slate-200/80 bg-white hover:border-slate-300'}`}>
                     <div className="flex items-center justify-between">
-                      <span className="text-[13px] font-semibold text-slate-900 flex items-center gap-1.5"><Layers size={13} className="text-emerald-600" />{b.key === '__none' ? 'No block' : `Block ${b.key}`}</span>
+                      <span className="text-[13px] font-semibold text-slate-900 flex items-center gap-1.5"><Layers size={13} className="text-emerald-600" />{b.key === '__none' ? `No ${blockWord(site.terms).toLowerCase()}` : blockName(b.key, site.terms)}</span>
                       <span className="text-[11px] text-slate-400 tabular-nums">{b.units}</span>
                     </div>
                     <div className="mt-2 h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${pct}%` }} /></div>
@@ -714,7 +722,7 @@ export default function Units() {
                       const people = occ(u); const max = u.maxOccupants || 7; const dv = duesView(u); const t = TONE[dv.tone]; const TI = TYPE_ICON[u.type] || Building2;
                       return (
                         <tr key={u._id} onClick={() => setSelectedId(u._id)} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/70 cursor-pointer">
-                          <td className="px-4 py-2.5"><span className="font-semibold text-slate-900">{u.unitNumber}</span>{u.block && <span className="ml-1.5 text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-medium">Block {u.block}</span>}</td>
+                          <td className="px-4 py-2.5"><span className="font-semibold text-slate-900">{u.unitNumber}</span>{u.block && <span className="ml-1.5 text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-medium">{blockName(u.block, site.terms)}</span>}</td>
                           <td className="px-3 py-2.5 text-slate-600 capitalize"><span className="inline-flex items-center gap-1.5"><TI size={13} className="text-slate-400" />{u.type}</span></td>
                           <td className="px-3 py-2.5">{people.length ? <div className="flex items-center gap-2"><div className="flex -space-x-2">{people.slice(0, 3).map((r) => <Avatar key={r._id} r={r} size={24} />)}</div><span className="text-[12px] text-slate-500 truncate max-w-[140px]">{people.map((r) => r.name?.split(' ')[0]).join(', ')}</span></div> : <span className="text-slate-300 text-[12px]">Vacant</span>}</td>
                           <td className="px-3 py-2.5"><div className="flex items-center gap-2"><div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full" style={{ width: `${(people.length / max) * 100}%`, background: people.length >= max ? '#F87171' : '#10B981' }} /></div><span className="text-[11.5px] tabular-nums text-slate-600">{people.length}/{max}</span></div></td>
@@ -738,7 +746,7 @@ export default function Units() {
               </div>
               {grouped.map(([block, list]) => (
                 <div key={block}>
-                  <p className="text-[11.5px] font-semibold uppercase tracking-wider text-slate-500 mb-2">{block === '__none' ? 'No block' : `Block ${block}`} <span className="text-slate-300 normal-case tracking-normal">· {list.length}</span></p>
+                  <p className="text-[11.5px] font-semibold uppercase tracking-wider text-slate-500 mb-2">{block === '__none' ? `No ${blockWord(site.terms).toLowerCase()}` : blockName(block, site.terms)} <span className="text-slate-300 normal-case tracking-normal">· {list.length}</span></p>
                   <div className="grid gap-1.5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(64px, 1fr))' }}>
                     {list.map((u) => {
                       const c = occ(u).length; const dv = duesView(u); const t = TONE[dv.tone];
@@ -760,7 +768,7 @@ export default function Units() {
               {grouped.map(([block, list]) => (
                 <div key={block}>
                   <div className="flex items-center gap-2.5 mb-3">
-                    <span className="text-[12px] font-semibold text-slate-700 flex items-center gap-1.5"><Layers size={13} className="text-emerald-600" />{block === '__none' ? 'No block' : `Block ${block}`}</span>
+                    <span className="text-[12px] font-semibold text-slate-700 flex items-center gap-1.5"><Layers size={13} className="text-emerald-600" />{block === '__none' ? `No ${blockWord(site.terms).toLowerCase()}` : blockName(block, site.terms)}</span>
                     <span className="text-[10.5px] font-semibold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700">{list.length}</span>
                     <div className="flex-1 h-px bg-slate-200/70" />
                   </div>

@@ -6,6 +6,10 @@ import { useAuth } from '../context/AuthContext';
 import Spinner from '../components/ui/Spinner';
 import TablePager from '../components/dashboard/TablePager';
 import InviteForm from '../components/visitors/InviteForm';
+import VisitorSiteDetails from '../components/visitors/VisitorSiteDetails';
+import PlaceCard from '../components/visitors/PlaceCard';
+import { CategoryBadge } from '../components/visitors/CategoryIcon';
+import { useSite } from '../context/SiteContext';
 import { VISITOR_STATUS, purposeIcon } from '../components/visitors/MobileVisitors';
 import VisitorsMobile from '../components/visitors/VisitorsMobile';
 import useCountUp from '../hooks/useCountUp';
@@ -750,6 +754,16 @@ function PassStatus({ visitor: v }) {
 }
 
 function VisitorDetailDrawer({ visitor, onClose, onCheckIn, onCheckOut, onBlacklist }) {
+  const site = useSite();
+  // The host's hall / building (only GET /visitors/:id returns it)
+  const [place, setPlace] = useState(null);
+  useEffect(() => {
+    setPlace(null);
+    if (!visitor?._id) return;
+    let alive = true;
+    visitorAPI.getOne(visitor._id).then(({ data }) => { if (alive) setPlace(data.place || null); }).catch(() => {});
+    return () => { alive = false; };
+  }, [visitor?._id]);
   const { user } = useAuth();
   const [copied, setCopied] = useState(false);
 
@@ -769,7 +783,7 @@ function VisitorDetailDrawer({ visitor, onClose, onCheckIn, onCheckOut, onBlackl
   const [PIcon, pColor, pBg] = purposeIcon(v.purpose);
   const entry = v.entryTime || v.checkInTime;
   const exit  = v.exitTime  || v.checkOutTime;
-  const unit  = v.hostUnitId?.unitNumber ? `${v.hostUnitId.block ? `${v.hostUnitId.block} · ` : ''}Unit ${v.hostUnitId.unitNumber}` : '';
+  const unit  = v.hostUnitId?.unitNumber ? `${v.hostUnitId.block ? `${v.hostUnitId.block} · ` : ''}${site.terms.unit} ${v.hostUnitId.unitNumber}` : '';
   const dt = (d) => format(new Date(d), 'EEE d MMM · h:mm a');
 
   const copyCode = () => {
@@ -790,7 +804,7 @@ function VisitorDetailDrawer({ visitor, onClose, onCheckIn, onCheckOut, onBlackl
   if (v.status === 'expired')     journey.push({ label: 'Expired', done: true, color: '#D97706' });
 
   const facts = [
-    { icon: Home,     label: 'Host',     value: v.hostResidentId?.name || 'Estate manager', sub: unit, color: '#10B981' },
+    { icon: Home,     label: 'Host',     value: v.hostResidentId?.name || site.terms.manager, sub: unit, color: '#10B981' },
     { icon: PIcon,    label: 'Purpose',  value: v.purpose, color: pColor },
     { icon: Phone,    label: 'Phone',    value: v.visitorPhone, href: v.visitorPhone && `tel:${v.visitorPhone}`, color: '#0EA5E9' },
     { icon: Mail,     label: 'Email',    value: v.visitorEmail, href: v.visitorEmail && `mailto:${v.visitorEmail}`, color: '#8B5CF6' },
@@ -836,6 +850,7 @@ function VisitorDetailDrawer({ visitor, onClose, onCheckIn, onCheckOut, onBlackl
                       style={{ background: st.bg, color: st.text }}>
                   <span className="w-1.5 h-1.5 rounded-full" style={{ background: st.dot }} /> {st.label}
                 </span>
+                <CategoryBadge category={v.category} />
                 {v.expectedDate && (
                   <span className="text-[11px] text-slate-500 flex items-center gap-1">
                     <Calendar size={11} /> {format(new Date(v.expectedDate), 'd MMM, h:mm a')}
@@ -870,6 +885,9 @@ function VisitorDetailDrawer({ visitor, onClose, onCheckIn, onCheckOut, onBlackl
               </div>
             </div>
           )}
+
+          <PlaceCard place={place} />
+          <VisitorSiteDetails visitor={v} />
 
           {/* Facts */}
           {facts.length > 0 && (
@@ -1066,6 +1084,7 @@ function VisitorCard({ v, i, selected, onOpen, actions }) {
           <div className="min-w-0 flex-1">
             <div className="text-[14px] font-semibold text-slate-900 truncate">{v.visitorName}</div>
             <div className="text-[11px] text-slate-500 truncate">{v.visitorPhone || v.visitorEmail || 'No contact'}</div>
+            {v.category && v.category !== 'guest' && <CategoryBadge category={v.category} className="mt-1" />}
           </div>
           <StatusPill v={v} />
         </div>
@@ -1231,6 +1250,7 @@ function VisitorsHeroBanner({ counts, now, statusFilter, onPick, onAll, onCreate
 const PAGE_SIZE = 20;
 
 export default function ManagerVisitors() {
+  const site = useSite();
   const navigate = useNavigate();
   const [visitors,      setVisitors]      = useState([]);
   const [loading,       setLoading]       = useState(true);
@@ -1479,14 +1499,14 @@ export default function ManagerVisitors() {
                         <div className="flex items-center gap-3">
                           <VisitorAvatar v={v} size={38} />
                           <div className="min-w-0">
-                            <div className="font-semibold text-[13px] text-slate-900 truncate">{v.visitorName}</div>
+                            <div className="font-semibold text-[13px] text-slate-900 truncate flex items-center gap-1.5">{v.visitorName}<CategoryBadge category={v.category} /></div>
                             <div className="text-[11px] text-slate-400 truncate">{v.visitorPhone || v.visitorEmail || '—'}</div>
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="text-[13px] text-slate-700">{v.hostResidentId?.name || 'Manager'}</div>
-                        {unit && <div className="text-[11px] text-slate-400">Unit {unit}</div>}
+                        {unit && <div className="text-[11px] text-slate-400">{site.terms.unit} {unit}</div>}
                       </td>
                       <td className="px-4 py-3">
                         <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold capitalize px-2 py-1 rounded-lg max-w-[140px]"

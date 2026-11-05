@@ -10,6 +10,8 @@ import { paymentAPI, visitorAPI, alertAPI } from '../../api';
 import { VISITOR_STATUS, purposeIcon } from '../visitors/MobileVisitors';
 import useCountUp from '../../hooks/useCountUp';
 import { AddFamilyPanel } from './FamilyPanels';
+import { useSite } from '../../context/SiteContext';
+import { StayCard, StaffCard, StayChip } from '../site/MemberFields';
 
 const naira = (n) => `₦${Math.round(n || 0).toLocaleString()}`;
 const idOf = (x) => (x && typeof x === 'object' ? x._id : x);
@@ -197,6 +199,10 @@ function Timeline({ payments, visitors, alerts }) {
 
 export default function ResidentProfileDesktop({ resident: r, units, onBack, onToggle, acting, assignUnitId, setAssignUnitId, onAssign, savingUnit, onFamilyChanged }) {
   const [addingFamily, setAddingFamily] = useState(false);
+  const site = useSite();
+  const T = site.terms;
+  const E = site.isEstate;
+  const unitWord = E ? 'Apartment' : T.unit;
   const [tab, setTab] = useState('overview');
   const [data, setData] = useState({ loading: true, payments: [], visitors: [], alerts: [], dues: null });
 
@@ -229,7 +235,8 @@ export default function ResidentProfileDesktop({ resident: r, units, onBack, onT
   const hue = (r.name.charCodeAt(0) * 37) % 360;
   const initials = r.name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
   const curUnit = units.find((u) => u._id === idOf(r.unitId));
-  const unitDisplay = r.unitId ? (r.unitId.block ? `Block ${r.unitId.block} · Apt ${r.unitId.unitNumber}` : `Apt ${r.unitId.unitNumber}`) : null;
+  const aptWord = E ? 'Apt' : T.unit;
+  const unitDisplay = r.unitId ? (r.unitId.block ? `${E ? 'Block ' : ''}${r.unitId.block} · ${aptWord} ${r.unitId.unitNumber}` : `${aptWord} ${r.unitId.unitNumber}`) : null;
   const daysIn = r.createdAt ? Math.max(0, Math.floor((Date.now() - new Date(r.createdAt)) / 86400000)) : 0;
   const restriction = dues?.restriction?.status && dues.restriction.status !== 'none' ? RESTRICTION[dues.restriction.status] : null;
   const changed = (idOf(r.unitId) || '') !== assignUnitId;
@@ -245,7 +252,7 @@ export default function ResidentProfileDesktop({ resident: r, units, onBack, onT
   return (
     <div className="max-w-[1400px] mx-auto space-y-5 animate-fade-in">
       <button onClick={onBack} className="dash-rise inline-flex items-center gap-1 text-[13px] font-medium text-slate-500 hover:text-slate-900 transition-colors">
-        <ChevronLeft size={16} /> Residents
+        <ChevronLeft size={16} /> {T.members}
       </button>
 
       {/* ── Profile header ── */}
@@ -265,12 +272,13 @@ export default function ResidentProfileDesktop({ resident: r, units, onBack, onT
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-[22px] font-semibold text-slate-900" style={{ letterSpacing: '-0.025em' }}>{r.name}</h1>
               <Pill tone={r.isActive ? { label: 'Active', bg: '#ECFDF5', text: '#047857', dot: '#10B981' } : { label: 'Suspended', bg: '#FEF2F2', text: '#B91C1C', dot: '#EF4444' }} />
+              {site.modules?.stays && r.householdRole !== 'member' && <StayChip stay={r.stay} />}
               {restriction && <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: `${restriction.color}1A`, color: restriction.color }}>{restriction.label}</span>}
             </div>
             <div className="mt-2 flex items-center gap-x-4 gap-y-1 flex-wrap text-[12.5px] text-slate-500">
               {unitDisplay
                 ? <span className="inline-flex items-center gap-1 font-semibold text-indigo-700"><Home size={13} /> {unitDisplay}</span>
-                : <span className="italic text-slate-400">No apartment</span>}
+                : <span className="italic text-slate-400">No {unitWord.toLowerCase()}</span>}
               <span className="inline-flex items-center gap-1.5"><Mail size={13} className="text-slate-400" />{r.email}</span>
               {r.phone && <span className="inline-flex items-center gap-1.5"><Phone size={13} className="text-slate-400" />{r.phone}</span>}
               {r.createdAt && <span className="inline-flex items-center gap-1.5"><Calendar size={13} className="text-slate-400" />Joined {format(new Date(r.createdAt), 'd MMM yyyy')}</span>}
@@ -437,8 +445,11 @@ export default function ResidentProfileDesktop({ resident: r, units, onBack, onT
             )}
           </Card>
 
+          <StayCard member={r} onChanged={onFamilyChanged} />
+          <StaffCard member={r} onChanged={onFamilyChanged} />
+
           {/* Apartment */}
-          <Card title="Apartment" Icon={Building2} color="#6366F1" delay={360}>
+          <Card title={unitWord} Icon={Building2} color="#6366F1" delay={360}>
             <div className="p-5 space-y-3">
               {curUnit && (
                 <div className="grid grid-cols-2 gap-2">
@@ -453,11 +464,11 @@ export default function ResidentProfileDesktop({ resident: r, units, onBack, onT
                 </div>
               )}
               <select className="input-field text-sm" value={assignUnitId} onChange={(e) => setAssignUnitId(e.target.value)}>
-                <option value="">— No apartment —</option>
+                <option value="">— No {unitWord.toLowerCase()} —</option>
                 {units.map((u) => {
                   const cnt = (u.residentIds || []).length, mx = u.maxOccupants || 7;
                   const full = cnt >= mx && u._id !== idOf(r.unitId);
-                  return <option key={u._id} value={u._id} disabled={full}>{u.block ? `Block ${u.block} · Apt ${u.unitNumber}` : `Apt ${u.unitNumber}`} — {cnt}/{mx}{full ? ' (full)' : ''}</option>;
+                  return <option key={u._id} value={u._id} disabled={full}>{u.block ? `${E ? 'Block ' : ''}${u.block} · ${aptWord} ${u.unitNumber}` : `${aptWord} ${u.unitNumber}`} — {cnt}/{mx}{full ? ' (full)' : ''}</option>;
                 })}
               </select>
               {picked && (
@@ -467,14 +478,14 @@ export default function ResidentProfileDesktop({ resident: r, units, onBack, onT
               )}
               <button onClick={onAssign} disabled={!changed || savingUnit}
                 className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all bg-indigo-50 text-indigo-700 border border-indigo-100 hover:bg-indigo-100 disabled:opacity-50">
-                {savingUnit ? 'Saving…' : !changed ? 'Current apartment' : assignUnitId ? 'Save assignment' : 'Remove from apartment'}
+                {savingUnit ? 'Saving…' : !changed ? `Current ${unitWord.toLowerCase()}` : assignUnitId ? 'Save assignment' : `Remove from ${unitWord.toLowerCase()}`}
               </button>
             </div>
           </Card>
 
           {/* Household */}
-          {r.household && (
-            <Card title="Household" Icon={Users} color="#A855F7" delay={380}
+          {r.household && site.on('household') && (
+            <Card title={T.household} Icon={Users} color="#A855F7" delay={380}
               right={
                 <span className="flex items-center gap-2">
                   <span className="text-[11px] text-slate-400">{r.householdRole === 'member' ? `${r.relationship || 'Family'} of ${r.householdHead?.name?.split(' ')[0] || 'head'}` : `${r.household.length} family`}</span>
@@ -499,7 +510,7 @@ export default function ResidentProfileDesktop({ resident: r, units, onBack, onT
                       : <span className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-[12px] font-bold text-white" style={{ background: 'linear-gradient(135deg,#C084FC,#A855F7)' }}>{p.name?.[0]?.toUpperCase()}</span>}
                     <div className="min-w-0 flex-1">
                       <div className="text-[13px] font-semibold text-slate-900 truncate flex items-center gap-1.5">{p.name}{p._head && <Crown size={11} className="text-amber-500" />}</div>
-                      <div className="text-[11px] text-slate-400 truncate">{p._head ? 'Head of household' : `${p.relationship || 'Family member'}${p.isActive === false ? ' · paused' : ''}`}</div>
+                      <div className="text-[11px] text-slate-400 truncate">{p._head ? (E ? 'Head of household' : `Head of ${T.household.toLowerCase()}`) : `${p.relationship || T.family}${p.isActive === false ? ' · paused' : ''}`}</div>
                     </div>
                     <ChevronRight size={14} className="text-slate-300" />
                   </Link>

@@ -7,6 +7,7 @@ import Marketplace from './pages/Marketplace';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
+import { SiteProvider } from './context/SiteContext';
 import AppLayout from './components/layout/AppLayout';
 import PlanGate from './components/ui/PlanGate';
 import SubscriptionWall from './components/ui/SubscriptionWall';
@@ -41,6 +42,9 @@ import Guards from './pages/Guards';
 import GuardDetail from './pages/GuardDetail';
 import ResidentDetail from './pages/ResidentDetail';
 import Courtroom from './pages/Courtroom';
+import RoomBoard from './pages/RoomBoard';
+import GateLog from './pages/GateLog';
+import SiteMap from './pages/SiteMap';
 
 function RequireManager({ children, allowWhenBlocked = false }) {
   const { user, loading } = useAuth();
@@ -107,6 +111,9 @@ function AppRoutes() {
       <Route path="/residents" element={<RequireManager key="residents-page"><PlanGate feature="residentManagement" featureName="Resident Management"><Residents key="residents" /></PlanGate></RequireManager>} />
       <Route path="/family-members" element={<RequireManager key="family-page"><PlanGate feature="residentManagement" featureName="Resident Management"><Residents key="family" mode="family" /></PlanGate></RequireManager>} />
       <Route path="/residents/:id" element={<RequireManager><PlanGate feature="residentManagement" featureName="Resident Management"><ResidentDetail /></PlanGate></RequireManager>} />
+      <Route path="/rooms" element={<RequireManager><RoomBoard /></RequireManager>} />
+      <Route path="/gate-log" element={<RequireManager><GateLog /></RequireManager>} />
+      <Route path="/map" element={<RequireManager><SiteMap /></RequireManager>} />
       <Route path="/units" element={<RequireManager><PlanGate feature="unitManagement" featureName="Unit Management"><Units /></PlanGate></RequireManager>} />
       <Route path="/announcements" element={<RequireManager><PlanGate feature="announcements" featureName="Announcements"><Announcements /></PlanGate></RequireManager>} />
       <Route path="/announcements/live" element={<RequireManager><PlanGate feature="announcements" featureName="Announcements"><AnnouncementBroadcast /></PlanGate></RequireManager>} />
@@ -138,6 +145,7 @@ export default function App() {
       <SeoTracker />
       <AuthProvider>
         <SocketProvider>
+          <SiteProvider>
           <CallProvider>
           <CallOverlay />
           <UpdateBanner />
@@ -148,6 +156,7 @@ export default function App() {
             error:   { iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' } },
           }} />
           </CallProvider>
+          </SiteProvider>
         </SocketProvider>
       </AuthProvider>
     </BrowserRouter>

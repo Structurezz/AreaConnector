@@ -6,23 +6,31 @@ import {
   LayoutDashboard, UserCheck, Users, Home, Megaphone,
   MessageSquare, Bell, Settings, LogOut, CreditCard,
   Zap, Crown, Music, Lock, Shield, Scale, Radio, Gift, PhoneCall, ShoppingBag, UsersRound, Building2, HeartHandshake,
+  BedDouble, Truck, Map as MapIcon,
 } from 'lucide-react';
+import { useSite } from '../../context/SiteContext';
+import { TYPE_INFO, moduleVisible } from '../../utils/siteTypes';
 import { usePlan } from '../../hooks/usePlan';
 import { canOpen, isTeamMember } from '../../utils/teamAccess';
 import NotificationBell from '../ui/NotificationBell';
 import EstateSwitcher from '../ui/EstateSwitcher';
 
+// label: string, or (terms) => string for words that change with the site type.
+// module: hidden when that site module is off; `when`: only shown when it's on.
 const NAV = [
   {
     section: 'Management',
     links: [
       { to: '/dashboard',     icon: LayoutDashboard, label: 'Dashboard' },
       { to: '/visitors',      icon: UserCheck,       label: 'Visitors',        feature: 'visitorManagement' },
-      { to: '/residents',     icon: Users,           label: 'Residents',       feature: 'residentManagement' },
-      { to: '/family-members', icon: HeartHandshake, label: 'Family Members',  feature: 'residentManagement', badge: 'family' },
-      { to: '/units',         icon: Home,            label: 'Units',           feature: 'unitManagement' },
+      { to: '/residents',     icon: Users,           label: (t) => t.members,  feature: 'residentManagement' },
+      { to: '/family-members', icon: HeartHandshake, label: (t) => t.familyPlural, feature: 'residentManagement', badge: 'family', module: 'household' },
+      { to: '/rooms',         icon: BedDouble,       label: 'Room board',      feature: 'residentManagement', module: 'stays' },
+      { to: '/units',         icon: Home,            label: (t) => t.units,    feature: 'unitManagement' },
+      { to: '/map',           icon: MapIcon,         label: (t) => `${t.site} map` },
+      { to: '/gate-log',      icon: Truck,           label: 'Gate log',        module: 'gatelog' },
       { to: '/announcements', icon: Megaphone,       label: 'Announcements',   feature: 'announcements' },
-      { to: '/payments',      icon: CreditCard,      label: 'Payments',        feature: 'paymentSystem' },
+      { to: '/payments',      icon: CreditCard,      label: 'Payments',        feature: 'paymentSystem', module: 'payments' },
       { to: '/guards',        icon: Shield,          label: 'Guards' },
       { to: '/calls',         icon: PhoneCall,       label: 'Calls' },
     ],
@@ -30,12 +38,12 @@ const NAV = [
   {
     section: 'Community',
     links: [
-      { to: '/lounge',     icon: Music,         label: 'Lounge & Events', feature: 'residentLounge' },
-      { to: '/marketplace', icon: ShoppingBag,  label: 'Marketplace',     feature: 'marketplace' },
-      { to: '/podcasts',   icon: Radio,         label: 'Podcast',         feature: 'residentLounge' },
+      { to: '/lounge',     icon: Music,         label: (t, on) => (on('events') && !on('community') ? 'Events' : on('community') && !on('events') ? 'Lounge' : 'Lounge & Events'), feature: 'residentLounge', module: ['community', 'events'] },
+      { to: '/marketplace', icon: ShoppingBag,  label: 'Marketplace',     feature: 'marketplace', module: 'marketplace' },
+      { to: '/podcasts',   icon: Radio,         label: 'Podcast',         feature: 'residentLounge', module: 'community' },
       { to: '/chat',       icon: MessageSquare, label: 'Community Chat',  feature: 'communityChat' },
       { to: '/alerts',     icon: Bell,          label: 'Alerts',          feature: 'securityPortal' },
-      { to: '/courtroom',  icon: Scale,         label: 'Courtroom' },
+      { to: '/courtroom',  icon: Scale,         label: 'Courtroom', module: 'community' },
     ],
   },
   {
@@ -51,10 +59,12 @@ export default function Sidebar({ mobile = false, onClose }) {
   const { user, estate, logout } = useAuth();
   const navigate = useNavigate();
   const { planName, planColor, status, isComp, can } = usePlan();
+  const site = useSite();
+  const TypeIcon = TYPE_INFO[site.type]?.Icon || Building2;
   // Family members waiting for approval → badge on the Family Members link
   const location = useLocation();
   const [familyRequests, setFamilyRequests] = useState(0);
-  const showFamily = canOpen(user, '/family-members') && can('residentManagement');
+  const showFamily = canOpen(user, '/family-members') && can('residentManagement') && site.on('household');
   useEffect(() => {
     if (!showFamily) return;
     residentAPI.familyRequests().then(({ data }) => setFamilyRequests(data.data.length)).catch(() => {});
@@ -96,7 +106,7 @@ export default function Sidebar({ mobile = false, onClose }) {
               <div className="text-[15px] font-semibold truncate leading-tight" style={{ color: '#0F172A', letterSpacing: '-0.03em' }}>
                 Area<span style={{ color: '#10B981' }}>Connect</span>
               </div>
-              <div className="text-[11px] truncate" style={{ color: '#94A3B8' }}>Estate manager</div>
+              <div className="text-[11px] truncate" style={{ color: '#94A3B8' }}>{site.terms.manager}</div>
             </div>
           </Link>
           <NavLink to="/calls" aria-label="Calls" onClick={onClose}
@@ -111,8 +121,8 @@ export default function Sidebar({ mobile = false, onClose }) {
         <div className="mt-3.5">
           {isTeamMember(user) || user?.role !== 'estate_manager' ? (
             <div className="flex items-center gap-2.5 rounded-xl px-2.5 py-2" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-              <span className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#ECFDF5', color: '#059669' }}><Building2 size={15} /></span>
-              <span className="text-[13px] font-semibold truncate" style={{ color: '#0F172A' }}>{typeof estate === 'object' ? estate?.name : 'My Estate'}</span>
+              <span className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#ECFDF5', color: '#059669' }}><TypeIcon size={15} /></span>
+              <span className="text-[13px] font-semibold truncate" style={{ color: '#0F172A' }}>{typeof estate === 'object' ? estate?.name : `My ${site.terms.site}`}</span>
             </div>
           ) : <EstateSwitcher variant="card" />}
         </div>
@@ -141,7 +151,7 @@ export default function Sidebar({ mobile = false, onClose }) {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-5">
-        {NAV.map(({ section, links }) => ({ section, links: links.filter(l => canOpen(user, l.to)) }))
+        {NAV.map(({ section, links }) => ({ section, links: links.filter(l => canOpen(user, l.to) && moduleVisible(l.module, site.on)) }))
           .filter(({ links }) => links.length)
           .map(({ section, links }) => (
           <div key={section}>
@@ -150,7 +160,8 @@ export default function Sidebar({ mobile = false, onClose }) {
               {section}
             </p>
             <div className="space-y-0.5">
-              {links.map(({ to, icon: Icon, label, feature, badge }) => {
+              {links.map(({ to, icon: Icon, label: rawLabel, feature, badge }) => {
+                const label = typeof rawLabel === 'function' ? rawLabel(site.terms, site.on) : rawLabel;
                 const locked = feature ? !can(feature) : false;
                 return (
                   <NavLink

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSite } from '../context/SiteContext';
 import api from '../api/axios';
 import Spinner, { PageLoader } from '../components/ui/Spinner';
 import InvoiceModal from '../components/ui/InvoiceModal';
@@ -121,6 +122,8 @@ function EmptyState({ icon: Icon, title, body, action }) {
 }
 
 export default function ManagerPayments() {
+  const { terms: T } = useSite();
+  const mL = T.member.toLowerCase(), msL = T.members.toLowerCase();
   const [stats, setStats] = useState(null);
   const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -244,7 +247,7 @@ export default function ManagerPayments() {
 
   const submitAttach = async () => {
     if (!attachForm.residentId || !attachForm.scheduleId) {
-      toast.error('Pick a resident and a schedule');
+      toast.error(`Pick a ${mL} and a schedule`);
       return;
     }
     setAttaching(true);
@@ -280,7 +283,7 @@ export default function ManagerPayments() {
     setSaving(true);
     try {
       const { data } = await api.post('/payments/schedules', { ...form, amount: parseFloat(form.amount) });
-      toast.success(`Schedule created! ${data.count} residents notified.`);
+      toast.success(`Schedule created! ${data.count} ${msL} notified.`);
       setShowCreate(false);
       setForm({ title: '', description: '', type: 'security_dues', amount: '', frequency: 'monthly', dueDate: '' });
       loadData();
@@ -429,7 +432,7 @@ export default function ManagerPayments() {
           )}
           {wallet?.collectedOffline > 0 && (
             <p className="mt-2 text-[11px] leading-snug text-emerald-50/70">
-              {shown(wallet.collectedOffline)} was paid outside the app (cash or bank transfer). It counts as paid for the resident, but it isn't in your wallet, so it can't be withdrawn.
+              {shown(wallet.collectedOffline)} was paid outside the app (cash or bank transfer). It counts as paid for the {mL}, but it isn't in your wallet, so it can't be withdrawn.
             </p>
           )}
 
@@ -502,7 +505,7 @@ export default function ManagerPayments() {
       {tab === 'bills' && !selectedSchedule && (
         schedules.length === 0 ? (
           <EmptyState icon={FileText} title="No bills yet"
-            body="Create a bill (dues, levy or contribution) and every resident gets an invoice to pay."
+            body={`Create a bill (dues, levy or contribution) and every ${mL} gets an invoice to pay.`}
             action={<button onClick={() => setShowCreate(true)} className="btn-primary gap-2"><Plus size={15} /> Create bill</button>} />
         ) : (
           <div className="grid md:grid-cols-2 2xl:grid-cols-3 gap-3">
@@ -562,7 +565,7 @@ export default function ManagerPayments() {
           {collectionLoading ? (
             <PageLoader variant="section" />
           ) : collectionPayments.length === 0 ? (
-            <EmptyState icon={FileText} title="No residents on this bill" />
+            <EmptyState icon={FileText} title={`No ${msL} on this bill`} />
           ) : (
             <div className="glass-card divide-y divide-slate-100 overflow-hidden">
               {collectionPayments.map((p) => {
@@ -574,7 +577,7 @@ export default function ManagerPayments() {
                         {p.residentId?.name?.[0] || '?'}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-slate-900 font-medium text-sm truncate">{p.residentId?.name || 'Resident'}</div>
+                        <div className="text-slate-900 font-medium text-sm truncate">{p.residentId?.name || T.member}</div>
                         <div className="text-slate-400 text-xs truncate">
                           {p.paidAt ? `Paid ${format(new Date(p.paidAt), 'MMM d, yyyy')}${p.method ? ` · ${p.method.replace('_', ' ')}` : ''}` : p.residentId?.email}
                         </div>
@@ -682,7 +685,7 @@ export default function ManagerPayments() {
             <div className="flex-1 min-w-0">
               <div className="text-sm font-bold text-amber-900">Live Paystack payments</div>
               <div className="text-xs mt-1 text-amber-800 leading-relaxed">
-                Every successful charge appears here. Tap <strong>Attach</strong> on a <strong>Not linked</strong> payment to match it to a resident and bill — it's then recorded and added to your wallet.
+                Every successful charge appears here. Tap <strong>Attach</strong> on a <strong>Not linked</strong> payment to match it to a {mL} and bill — it's then recorded and added to your wallet.
               </div>
             </div>
           </div>

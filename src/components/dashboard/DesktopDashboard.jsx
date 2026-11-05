@@ -3,8 +3,11 @@ import { Link } from 'react-router-dom';
 import {
   UserCheck, Bell, Home, Megaphone, ArrowRight, ArrowUpRight, ShieldCheck, ShieldAlert,
   Plus, UsersRound, LogIn, UserPlus, Users, MapPin, Activity, Zap,
-  Wallet, Shield, CalendarDays, BarChart3, Clock, AlertTriangle,
+  Wallet, Shield, CalendarDays, BarChart3, Clock, AlertTriangle, BedDouble, Truck, LogOut,
 } from 'lucide-react';
+import { useSite } from '../../context/SiteContext';
+import useSitePlaces from '../site/useSitePlaces';
+import { siteAPI, gateLogAPI } from '../../api';
 import { format, subDays, formatDistanceToNow, isAfter, startOfDay } from 'date-fns';
 import { visitorAPI, paymentAPI, guardAPI, eventAPI, pollAPI } from '../../api';
 import { VISITOR_STATUS, purposeIcon } from '../visitors/MobileVisitors';
@@ -215,6 +218,7 @@ function SecurityCard({ alerts }) {
 const VTONE = { active: '#10B981', 'checked-in': '#2563EB', 'checked-out': '#64748B', expired: '#D97706', blacklisted: '#DC2626', cancelled: '#94A3B8', pending: '#6366F1' };
 
 function RecentVisitors({ visitors }) {
+  const site = useSite();
   return (
     <div className={`${CARD} overflow-hidden`} style={delay(8)}>
       <CardHead title="Recent visitors" Icon={UserCheck} color="#0EA5E9" right={<HeadLink to="/visitors">Visitor log</HeadLink>} />
@@ -244,7 +248,7 @@ function RecentVisitors({ visitors }) {
                 </span>
                 <span className="flex-1 min-w-0">
                   <span className="block text-[13px] font-semibold text-slate-900 truncate">{v.visitorName}</span>
-                  <span className="block text-[11px] text-slate-400 truncate capitalize">{v.purpose} · {v.hostResidentId?.name || 'Estate manager'}{unit && ` · ${unit}`}</span>
+                  <span className="block text-[11px] text-slate-400 truncate capitalize">{v.purpose} · {v.hostResidentId?.name || site.terms.manager}{unit && ` · ${unit}`}</span>
                 </span>
                 <span className="text-[11.5px] text-slate-500 whitespace-nowrap tabular-nums">{v.expectedDate ? format(new Date(v.expectedDate), 'MMM d, h:mm a') : '—'}</span>
                 <span className="w-[104px] flex justify-end">
@@ -292,17 +296,23 @@ function Notices({ items }) {
 
 const ACTIONS = [
   { to: '/visitors/new',  icon: UserPlus,  label: 'New visitor', color: '#10B981' },
-  { to: '/residents',     icon: Users,     label: 'Residents',   color: '#6366F1' },
-  { to: '/units',         icon: Home,      label: 'Units',       color: '#8B5CF6' },
+  { to: '/residents',     icon: Users,     label: (t) => t.members, color: '#6366F1' },
+  { to: '/units',         icon: Home,      label: (t) => t.units,   color: '#8B5CF6' },
   { to: '/announcements', icon: Megaphone, label: 'Post notice', color: '#F59E0B' },
 ];
 
 function QuickActions() {
+  const site = useSite();
+  const actions = ACTIONS.map(a => {
+    // Hotels get the room board instead of the plain units list
+    if (a.to === '/units' && site.modules?.stays) return { to: '/rooms', icon: BedDouble, label: `${site.terms.unit} board`, color: '#8B5CF6' };
+    return { ...a, label: typeof a.label === 'function' ? a.label(site.terms) : a.label };
+  });
   return (
     <div className={CARD} style={delay(10)}>
       <CardHead title="Shortcuts" Icon={Zap} color="#8B5CF6" />
       <div className="grid grid-cols-2 gap-2 p-3">
-        {ACTIONS.map(({ to, icon: Icon, label, color }) => (
+        {actions.map(({ to, icon: Icon, label, color }) => (
           <Link key={to} to={to}
             className="group flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-all hover:-translate-y-0.5 hover:shadow-md"
             style={{ textDecoration: 'none', background: `linear-gradient(135deg, ${color}12, #fff 70%)`, borderColor: `${color}26` }}>
@@ -342,10 +352,11 @@ function useExtras() {
 const naira = (n) => `₦${Math.round(n || 0).toLocaleString()}`;
 
 function FinanceCard({ pay, wallet, loading }) {
+  const site = useSite();
   if (!loading && !pay && !wallet) return null;
   return (
     <div className={`${CARD} h-full flex flex-col`} style={delay(7)}>
-      <CardHead title="Estate money" Icon={Wallet} color="#0EA5E9" right={<HeadLink to="/payments">Payments</HeadLink>} />
+      <CardHead title={`${site.terms.site} money`} Icon={Wallet} color="#0EA5E9" right={<HeadLink to="/payments">Payments</HeadLink>} />
       <div className="p-5 flex-1 flex flex-col">
         <p className="text-[12px] text-slate-500">Available to withdraw</p>
         <p className="mt-1 text-[28px] font-semibold text-slate-900 tabular-nums leading-none" style={{ letterSpacing: '-0.03em' }}>
@@ -409,7 +420,11 @@ function GuardsCard({ guards, total }) {
   );
 }
 
-function CommunityCard({ events, polls }) {
+function CommunityCard({ events: ev, polls: pl }) {
+  const site = useSite();
+  // Hide the halves whose modules are off for this site
+  const events = site.on('events') ? ev : null;
+  const polls = site.on('community') ? pl : null;
   if (!events && !polls) return null;
   const upcoming = (events || []).filter((e) => e.isActive !== false && isAfter(new Date(e.date), startOfDay(new Date()))).sort((a, b) => new Date(a.date) - new Date(b.date)).slice(0, 3);
   const live = (polls || []).filter((p) => p.isActive !== false && (!p.endsAt || isAfter(new Date(p.endsAt), new Date()))).slice(0, 2);
@@ -418,7 +433,7 @@ function CommunityCard({ events, polls }) {
       <div className={CARD} style={delay(12)}>
         <CardHead title="Upcoming events" Icon={CalendarDays} color="#EC4899" right={<HeadLink to="/announcements">Community</HeadLink>} />
         <div className="p-3">
-          {!upcoming.length && <p className="px-2 py-4 text-[12.5px] text-slate-400">No upcoming events. Residents love a Friday hangout.</p>}
+          {!upcoming.length && <p className="px-2 py-4 text-[12.5px] text-slate-400">{site.isEstate ? 'No upcoming events. Residents love a Friday hangout.' : 'No upcoming events.'}</p>}
           {upcoming.map((e) => (
             <div key={e._id} className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-slate-50">
               <span className="w-11 text-center rounded-xl border border-pink-100 bg-pink-50/60 py-1 leading-none flex-shrink-0">
@@ -644,16 +659,17 @@ function SecurityTile({ alerts, count }) {
 }
 
 function OccupancyTile({ s }) {
+  const { terms: T, isEstate } = useSite();
   const units = s.totalUnits || 0, res = s.totalResidents || 0;
   const pct = units ? Math.min(100, Math.round((res / units) * 100)) : 0;
   const R = 22, C = 2 * Math.PI * R;
   return (
     <Link to="/residents" className={`${TILE} col-span-3 p-5 flex flex-col`} style={{ ...delay(4), textDecoration: 'none' }}>
-      <TileLabel Icon={UsersRound} color="#6366F1">Residents</TileLabel>
+      <TileLabel Icon={UsersRound} color="#6366F1">{T.members}</TileLabel>
       <div className="mt-4 flex items-center justify-between gap-3">
         <div>
           <Big value={res} className="text-[26px]" />
-          <div className="text-[11.5px] text-slate-400 mt-1">across {units} unit{units === 1 ? '' : 's'}</div>
+          <div className="text-[11.5px] text-slate-400 mt-1">across {units} {units === 1 ? T.unit.toLowerCase() : T.units.toLowerCase()}</div>
         </div>
         <span className="relative w-14 h-14 flex-shrink-0">
           <svg width="56" height="56" viewBox="0 0 56 56" className="-rotate-90">
@@ -665,7 +681,51 @@ function OccupancyTile({ s }) {
           <span className="absolute inset-0 flex items-center justify-center text-[11px] font-semibold text-slate-700 tabular-nums">{pct}%</span>
         </span>
       </div>
-      <div className="mt-auto pt-3 text-[11.5px] text-slate-500">Occupancy across the estate</div>
+      <div className="mt-auto pt-3 text-[11.5px] text-slate-500">{isEstate ? 'Occupancy across the estate' : `Occupancy across the ${T.site.toLowerCase()}`}</div>
+    </Link>
+  );
+}
+
+// Hotels: rooms occupied, arrivals and departures in the next 24h
+function RoomsTile() {
+  const { terms: T } = useSite();
+  const [sum, setSum] = useState(null);
+  useEffect(() => { siteAPI.rooms().then(({ data }) => setSum(data.summary || {})).catch(() => setSum({})); }, []);
+  const pct = sum?.total ? Math.round((sum.occupied / sum.total) * 100) : 0;
+  return (
+    <Link to="/rooms" className={`${TILE} col-span-3 p-5 flex flex-col`} style={{ ...delay(2), textDecoration: 'none' }}>
+      <TileLabel Icon={BedDouble} color="#14B8A6">{T.unit} board</TileLabel>
+      <div className="mt-4 flex items-baseline gap-1.5">
+        {sum ? <Big value={sum.occupied || 0} className="text-[26px]" /> : <span className="skeleton inline-block w-16 h-7 rounded" />}
+        <span className="text-[13px] text-slate-400">/ {sum?.total ?? 0}</span>
+      </div>
+      <div className="text-[11.5px] text-slate-400 mt-1">{pct}% occupied</div>
+      <div className="mt-auto pt-3 flex items-center gap-2 text-[11.5px]">
+        <span className="inline-flex items-center gap-1 font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700"><LogIn size={11} /> {sum?.arriving ?? 0} in</span>
+        <span className="inline-flex items-center gap-1 font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600"><LogOut size={11} /> {sum?.departing ?? 0} out</span>
+        <span className="text-slate-400">next 24h</span>
+      </div>
+    </Link>
+  );
+}
+
+// Deliveries & vehicles still on site
+function GateLogTile() {
+  const [d, setD] = useState(null);
+  useEffect(() => {
+    gateLogAPI.list({ date: format(new Date(), 'yyyy-MM-dd'), limit: 200 })
+      .then(({ data }) => setD({ open: data.openCount || 0, today: (data.data || []).length }))
+      .catch(() => setD({ open: 0, today: 0 }));
+  }, []);
+  return (
+    <Link to="/gate-log" className={`${TILE} col-span-3 p-5 flex flex-col`} style={{ ...delay(2), textDecoration: 'none' }}>
+      <TileLabel Icon={Truck} color="#F97316">Deliveries & vehicles</TileLabel>
+      <div className="mt-4 flex items-center gap-2">
+        {d ? <Big value={d.open} className="text-[26px]" /> : <span className="skeleton inline-block w-16 h-7 rounded" />}
+        {d?.open > 0 && <span className="relative flex w-2 h-2"><span className="absolute inset-0 rounded-full bg-amber-500 animate-ping opacity-70" /><span className="relative w-2 h-2 rounded-full bg-amber-500" /></span>}
+      </div>
+      <div className="text-[11.5px] text-slate-400 mt-1">on site now</div>
+      <div className="mt-auto pt-3 text-[11.5px] text-slate-500">{d?.today ?? 0} logged at the gate today</div>
     </Link>
   );
 }
@@ -707,6 +767,12 @@ export default function DesktopDashboard({ stats, recentVisitors, openAlerts, an
   const s = stats || {};
   const alertsOpen = s.openAlerts || 0;
   const x = useExtras();
+  const site = useSite();
+  const places = useSitePlaces();
+  // Sites without payments get a sector tile in the money slot
+  const moneySlot = site.on('payments')
+    ? <MoneyTile pay={x.pay} wallet={x.wallet} loading={x.loading} />
+    : site.modules?.stays ? <RoomsTile /> : site.modules?.gatelog ? <GateLogTile /> : null;
 
   return (
     <div className="max-w-[1400px] mx-auto space-y-5">
@@ -747,9 +813,9 @@ export default function DesktopDashboard({ stats, recentVisitors, openAlerts, an
       <div className="grid grid-cols-12 auto-rows-[minmax(168px,auto)] gap-4">
         <GateTile s={s} week={week} />
         <div className="dash-rise col-span-5 row-span-2 min-w-0" style={delay(2)}>
-          <EstateMap name={estate?.name || estateName} address={estate?.address} location={estate?.location} height={352} variant="card" />
+          <EstateMap name={estate?.name || estateName} address={estate?.address} location={estate?.location} height={352} variant="card" places={places} />
         </div>
-        <MoneyTile pay={x.pay} wallet={x.wallet} loading={x.loading} />
+        {moneySlot}
         <SecurityTile alerts={openAlerts} count={alertsOpen} />
         <OccupancyTile s={s} />
         <GuardsTile guards={x.guards} total={x.guardTotal} />

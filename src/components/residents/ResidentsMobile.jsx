@@ -5,6 +5,8 @@ import {
 } from 'lucide-react';
 import useCountUp from '../../hooks/useCountUp';
 import Pagination from '../ui/Pagination';
+import { useSite } from '../../context/SiteContext';
+import { StayChip } from '../site/MemberFields';
 
 const initials = (n = '') => n.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
 const hue = (n = '?') => (n.charCodeAt(0) * 37) % 360;
@@ -51,7 +53,8 @@ const MenuItem = ({ Icon, label, onClick, tone = 'text-slate-700', href }) => {
 
 function ResidentCard({ r, i, onOpen, onToggle }) {
   const [menu, setMenu] = useState(false);
-  const unit = r.unitId ? `${r.unitId.block ? `${r.unitId.block} · ` : ''}Apt ${r.unitId.unitNumber}` : null;
+  const site = useSite();
+  const unit = r.unitId ? `${r.unitId.block ? `${r.unitId.block} · ` : ''}${site.isEstate ? 'Apt' : site.terms.unit} ${r.unitId.unitNumber}` : null;
   const h = hue(r.name);
   return (
     <div onClick={() => onOpen(r)} role="button" tabIndex={0}
@@ -78,7 +81,8 @@ function ResidentCard({ r, i, onOpen, onToggle }) {
             )}
             {unit
               ? <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700"><Home size={11} /> {unit}</span>
-              : <span className="text-[11px] italic text-slate-400">No apartment</span>}
+              : <span className="text-[11px] italic text-slate-400">No {site.isEstate ? 'apartment' : site.terms.unit.toLowerCase()}</span>}
+            {site.modules?.stays && r.householdRole !== 'member' && <StayChip stay={r.stay} />}
             {r.createdAt && <span className="text-[11px] text-slate-400">· Joined {format(new Date(r.createdAt), 'MMM yyyy')}</span>}
           </div>
         </div>
@@ -92,7 +96,7 @@ function ResidentCard({ r, i, onOpen, onToggle }) {
             <MenuItem Icon={Mail} label="Send email" href={`mailto:${r.email}`} onClick={() => setMenu(false)} />
             <MenuItem Icon={ChevronRight} label="View details" onClick={() => { setMenu(false); onOpen(r); }} />
             <div className="my-1 border-t border-slate-100" />
-            <MenuItem Icon={r.isActive ? UserX : UserCheck} label={r.isActive ? 'Suspend resident' : 'Activate resident'}
+            <MenuItem Icon={r.isActive ? UserX : UserCheck} label={`${r.isActive ? 'Suspend' : 'Activate'} ${site.terms.member.toLowerCase()}`}
               tone={r.isActive ? 'text-red-600' : 'text-emerald-600'} onClick={() => { setMenu(false); onToggle(r); }} />
           </Menu>
         </div>
@@ -112,12 +116,16 @@ export default function ResidentsMobile({
 }) {
   const [filter, setFilter] = useState('');
   const [more, setMore] = useState(false);
+  const site = useSite();
+  const T = site.terms;
+  const E = site.isEstate;
+  const stays = site.modules?.stays === true;
 
   const FILTERS = [
     ['', 'All', residents.length],
     ['active', 'Active', residents.filter(r => r.isActive).length],
     ['suspended', 'Suspended', residents.filter(r => !r.isActive).length],
-    ['unassigned', 'No apartment', residents.filter(r => !r.unitId).length],
+    ['unassigned', E ? 'No apartment' : `No ${T.unit.toLowerCase()}`, residents.filter(r => !r.unitId).length],
   ];
   const shown = residents.filter(r =>
     !filter ? true : filter === 'active' ? r.isActive : filter === 'suspended' ? !r.isActive : !r.unitId);
@@ -128,7 +136,7 @@ export default function ResidentsMobile({
       <header className="dash-rise flex items-end justify-between gap-3">
         <div className="min-w-0">
           <div className="text-[12px] font-medium text-slate-400">Community</div>
-          <h1 className="text-[22px] font-semibold text-slate-900 leading-tight" style={{ letterSpacing: '-0.03em' }}>{family ? 'Family members' : 'Residents'}</h1>
+          <h1 className="text-[22px] font-semibold text-slate-900 leading-tight" style={{ letterSpacing: '-0.03em' }}>{family ? T.familyPlural : T.members}</h1>
         </div>
         {family ? (
           <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -140,7 +148,7 @@ export default function ResidentsMobile({
             <button onClick={onAddFamily}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[13px] font-semibold text-white active:scale-95 transition-transform"
               style={{ background: 'linear-gradient(135deg, #A855F7, #7C3AED)', boxShadow: '0 10px 20px -12px rgba(124,58,237,0.9)' }}>
-              <UserPlus size={15} /> Add family
+              <UserPlus size={15} /> {E ? 'Add family' : 'Add'}
             </button>
           </div>
         ) : (
@@ -148,7 +156,7 @@ export default function ResidentsMobile({
           <button onClick={onInvite}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[13px] font-semibold text-white active:scale-95 transition-transform"
             style={{ background: 'linear-gradient(135deg, #10B981, #059669)', boxShadow: '0 10px 20px -12px rgba(5,150,105,0.9)' }}>
-            <MailPlus size={15} /> Invite resident
+            <MailPlus size={15} /> {stays ? 'Check in' : `Invite ${T.member.toLowerCase()}`}
           </button>
           <button onClick={() => setMore(m => !m)} aria-label="More ways to add"
             className="w-9 h-9 rounded-xl border border-slate-200 bg-white flex items-center justify-center text-slate-500 active:bg-slate-50">
@@ -165,13 +173,13 @@ export default function ResidentsMobile({
       {/* Stats */}
       {family ? (
       <div className="grid grid-cols-2 gap-2.5">
-        <Tile i={0} label="Family members"    value={familyTotal}  Icon={Users} color="#A855F7" />
+        <Tile i={0} label={T.familyPlural}    value={familyTotal}  Icon={Users} color="#A855F7" />
         <Tile i={1} label="Awaiting approval" value={requestCount} Icon={Clock} color="#F59E0B" />
       </div>
       ) : (
       <div className="grid grid-cols-2 gap-2.5">
-        <Tile i={0} label="Residents"   value={totalAll}           Icon={Users}     color="#10B981" />
-        <Tile i={1} label="Apartments"  value={unitStats.total}    Icon={Building2} color="#6366F1" />
+        <Tile i={0} label={T.members}   value={totalAll}           Icon={Users}     color="#10B981" />
+        <Tile i={1} label={E ? 'Apartments' : T.units} value={unitStats.total} Icon={Building2} color="#6366F1" />
         <Tile i={2} label="Occupied"    value={unitStats.occupied} Icon={Home}      color="#0EA5E9" />
         <Tile i={3} label="Open spaces" value={unitStats.open}     Icon={DoorOpen}  color="#F59E0B" />
       </div>
@@ -222,10 +230,10 @@ export default function ResidentsMobile({
             <Users size={24} className="relative text-emerald-600" />
           </span>
           <div className="mt-4 text-[15px] font-semibold text-slate-900">
-            {search ? `No ${family ? 'family members' : 'residents'} match “${search}”` : filter ? 'Nobody in this group' : family ? 'No family members yet' : 'No residents yet'}
+            {search ? `No ${family ? T.familyPlural.toLowerCase() : T.members.toLowerCase()} match “${search}”` : filter ? 'Nobody in this group' : family ? `No ${T.familyPlural.toLowerCase()} yet` : `No ${T.members.toLowerCase()} yet`}
           </div>
           <div className="text-[13px] text-slate-500 mt-1">
-            {search || filter ? 'Try a different search or filter.' : family ? 'Residents add their family from AreaMates.' : 'Invite residents and they will appear here.'}
+            {search || filter ? 'Try a different search or filter.' : family ? (E ? 'Residents add their family from AreaMates.' : `${T.members} add ${T.familyPlural.toLowerCase()} from AreaMates.`) : `Invite ${T.members.toLowerCase()} and they will appear here.`}
           </div>
           {!search && !filter && !family && (
             <button onClick={onInvite} className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-semibold text-white"

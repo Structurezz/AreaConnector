@@ -319,3 +319,29 @@ export const householdAPI = {
   resendInvite: (id) => api.post(`/household/${id}/resend-invite`),
   remove:       (id) => api.delete(`/household/${id}`),
 };
+
+// Site type (estate / school / hotel / industrial / hospital), modules and sector features
+export const siteAPI = {
+  get:          ()         => api.get('/site'),
+  update:       (data)     => api.patch('/site', data),
+  rooms:        ()         => api.get('/site/rooms'),
+  updateMember: (id, data) => api.patch(`/site/members/${id}`, data),
+  checkOut:     (id)       => api.post(`/site/stays/${id}/checkout`),
+  staffCheck:   (q)        => api.get('/site/staff-check', { params: { q } }),
+};
+
+// Deliveries & vehicles logged at the gate (module gatelog)
+export const gateLogAPI = {
+  list:    (params)     => api.get('/gatelog', { params }),
+  create:  (data)       => api.post('/gatelog', data),
+  markOut: (id, data)   => api.patch(`/gatelog/${id}/out`, data || {}),
+};
+
+// Places on Google Maps (halls / hostels, buildings, gates…)
+export const placeAPI = {
+  list:      ()         => api.get('/site/places'),
+  create:    (data)     => api.post('/site/places', data),
+  update:    (id, data) => api.patch(`/site/places/${id}`, data),
+  remove:    (id)       => api.delete(`/site/places/${id}`),
+  linkUnits: (id, data) => api.patch(`/site/places/${id}/units`, data),
+};

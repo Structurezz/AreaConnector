@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { blockWord, blockName } from '../utils/siteTypes';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FamilyRequestsBanner, FamilyRequestsPanel, AddFamilyPanel, MyHouseholdCard } from '../components/residents/FamilyPanels';
 import { residentAPI, unitAPI } from '../api';
@@ -16,6 +17,10 @@ import { format } from 'date-fns';
 import TablePager from '../components/dashboard/TablePager';
 import ResidentsMobile from '../components/residents/ResidentsMobile';
 import { parseBulkText, parseBulkFile, downloadTemplate, isValidEmail, emptyRow } from '../utils/bulkImport';
+import { useSite } from '../context/SiteContext';
+import InviteResidentModal, { unitOptionLabel } from '../components/residents/InviteResidentModal';
+import UnitPicker from '../components/residents/UnitPicker';
+import { MemberSectorFields, emptySector, sectorPayload, sectorError, useSectorConfig, StayChip, StayCard, StaffCard } from '../components/site/MemberFields';
 
 function unitLabel(u) {
   const base = u.block ? `Block ${u.block} · Apt ${u.unitNumber}` : `Apt ${u.unitNumber}`;
@@ -27,7 +32,8 @@ function unitLabel(u) {
 
 const hueOf = (name = '?') => (name.charCodeAt(0) * 37) % 360;
 const initialsOf = (name = '?') => name.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
-const aptOf = (u) => (u ? `${u.block ? `${u.block} · ` : ''}Apt ${u.unitNumber}` : '');
+// Estates say "Apt 4"; other site types use their own word ("Room 101", "Ward A")
+const aptOf = (u, site) => (u ? `${u.block ? `${u.block} · ` : ''}${site && !site.isEstate ? site.terms.unit : 'Apt'} ${u.unitNumber}` : '');
 
 function ResidentAvatar({ r, size = 44, ring = true }) {
   const h = hueOf(r.name);
@@ -72,6 +78,8 @@ const HOUSEHOLD_PERMS = { visitors: 'Visitors', payments: 'Bills', chat: 'Chat',
 // The household this resident heads or belongs to (loaded on open)
 function HouseholdSection({ r }) {
   const navigate = useNavigate();
+  const site = useSite();
+  const T = site.terms;
   const [data, setData] = useState(null);
   const [adding, setAdding] = useState(false);
   const reload = () => residentAPI.getOne(r._id).then(({ data }) => setData(data.data)).catch(() => setData({ household: [] }));
@@ -91,7 +99,7 @@ function HouseholdSection({ r }) {
           {p.name}{crown && <Crown size={11} className="text-amber-500" />}{p.isActive === false && <span className="text-[10px] font-semibold text-slate-400">· paused</span>}
         </div>
         <div className="text-[11px] text-slate-400 truncate">
-          {crown ? 'Head of household' : `${p.relationship || 'Family member'} · ${(p.householdPermissions || []).map(k => HOUSEHOLD_PERMS[k]).filter(Boolean).join(', ') || 'Basics only'}`}
+          {crown ? (site.isEstate ? 'Head of household' : `Head of ${T.household.toLowerCase()}`) : `${p.relationship || T.family} · ${(p.householdPermissions || []).map(k => HOUSEHOLD_PERMS[k]).filter(Boolean).join(', ') || 'Basics only'}`}
         </div>
       </div>
       <ChevronRight size={14} className="text-slate-300" />
@@ -104,7 +112,7 @@ function HouseholdSection({ r }) {
         <span className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #D946EF, #A855F7)', boxShadow: '0 4px 10px -4px #A855F7' }}>
           <Users size={13} className="text-white" />
         </span>
-        <span className="text-[13px] font-semibold text-slate-900 flex-1">Household</span>
+        <span className="text-[13px] font-semibold text-slate-900 flex-1">{T.household}</span>
         {headForAdd?._id && r.isActive !== false && (
           <button onClick={() => setAdding(true)}
             className="inline-flex items-center gap-1 text-[11.5px] font-semibold px-2 py-1 rounded-lg text-fuchsia-700 bg-fuchsia-50 hover:bg-fuchsia-100">
@@ -113,14 +121,18 @@ function HouseholdSection({ r }) {
         )}
       </div>
       {!isMember && !family.length && (
-        <p className="px-4 py-3 text-[12px] text-slate-500">No family members yet. {r.name.split(' ')[0]} can add them from AreaMates, or you can add them here.</p>
+        <p className="px-4 py-3 text-[12px] text-slate-500">No {T.familyPlural.toLowerCase()} yet. {r.name.split(' ')[0]} can add them from AreaMates, or you can add them here.</p>
       )}
       <div className="divide-y divide-slate-100">
         {head && <Row p={head} crown />}
         {family.map(m => <Row key={m._id} p={m} />)}
       </div>
       <p className="px-4 py-2.5 text-[11px] text-slate-400 bg-slate-50/60">
-        {isMember
+        {!site.isEstate
+          ? (isMember
+            ? `${T.familyPlural} aren't billed and follow the head's ${T.unit.toLowerCase()} and suspension.`
+            : `Suspending or moving this ${T.member.toLowerCase()} also applies to their ${T.household.toLowerCase()}. ${T.familyPlural} are never billed.`)
+          : isMember
           ? 'Family members aren\'t billed and follow the head\'s unit, dues status and suspension.'
           : 'Suspending or moving this resident also applies to their family. Family members are never billed.'}
       </p>
@@ -129,7 +141,11 @@ function HouseholdSection({ r }) {
   );
 }
 
-function ResidentDrawer({ resident, units, onToggle, onAssignUnit, onClose, onOpenProfile }) {
+function ResidentDrawer({ resident, units, onToggle, onAssignUnit, onClose, onOpenProfile, onChanged }) {
+  const site = useSite();
+  const T = site.terms;
+  const unitWord = site.isEstate ? 'apartment' : T.unit.toLowerCase();
+  const UnitWord = site.isEstate ? 'Apartment' : T.unit;
   const [assignUnitId, setAssignUnitId] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -156,7 +172,9 @@ function ResidentDrawer({ resident, units, onToggle, onAssignUnit, onClose, onOp
   const dirty = (assignUnitId || '') !== (currentId || '');
 
   const handleAssign = async () => {
-    if (!assignUnitId && !window.confirm(`Remove ${resident.name} from their apartment? Residents need a unit to use AreaMates, so they'll be signed out until you assign one again.`)) return;
+    if (!assignUnitId && !window.confirm(site.isEstate
+      ? `Remove ${resident.name} from their apartment? Residents need a unit to use AreaMates, so they'll be signed out until you assign one again.`
+      : `Remove ${resident.name} from their ${unitWord}? ${T.members} need a ${unitWord} to use AreaMates, so they'll be signed out until you assign one again.`)) return;
     setSaving(true);
     try {
       await onAssignUnit(r._id, assignUnitId || null);
@@ -169,14 +187,14 @@ function ResidentDrawer({ resident, units, onToggle, onAssignUnit, onClose, onOp
     r.email && { icon: Mail, label: 'Email', value: r.email, href: `mailto:${r.email}`, color: '#8B5CF6' },
     r.phone && { icon: Phone, label: 'Phone', value: r.phone, href: `tel:${r.phone}`, color: '#0EA5E9' },
     r.createdAt && { icon: Calendar, label: 'Member since', value: format(new Date(r.createdAt), 'd MMM yyyy'), color: '#10B981' },
-    { icon: Home, label: 'Apartment', value: currentUnit ? aptOf(currentUnit) : 'Not assigned', color: '#6366F1' },
+    { icon: Home, label: UnitWord, value: currentUnit ? aptOf(currentUnit, site) : 'Not assigned', color: '#6366F1' },
   ].filter(Boolean);
 
   return (
     <Portal>
       <div className={`fixed inset-0 ${Z.drawer} flex justify-end`} onClick={onClose}>
         <div className="overlay-backdrop" aria-hidden="true" />
-        <aside role="dialog" aria-modal="true" aria-label={`Resident ${r.name}`}
+        <aside role="dialog" aria-modal="true" aria-label={`${T.member} ${r.name}`}
           className="animate-slide-in-right relative h-full w-full sm:w-[420px] bg-white flex flex-col"
           style={{ boxShadow: '-8px 0 40px rgba(15,23,42,0.18)' }}
           onClick={e => e.stopPropagation()}>
@@ -187,7 +205,7 @@ function ResidentDrawer({ resident, units, onToggle, onAssignUnit, onClose, onOp
             <div className="pointer-events-none absolute -top-20 -right-16 w-56 h-56 rounded-full opacity-30"
               style={{ background: `radial-gradient(circle, ${r.isActive ? `hsl(${h} 70% 60%)` : '#F87171'}, transparent 70%)`, animation: 'dashFloat 14s ease-in-out infinite' }} />
             <div className="relative flex items-center justify-between mb-4">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Resident</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{T.member}</span>
               <button onClick={onClose} aria-label="Close"
                 className="w-8 h-8 -mr-1 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-white/80 transition-colors">
                 <X size={17} />
@@ -200,9 +218,10 @@ function ResidentDrawer({ resident, units, onToggle, onAssignUnit, onClose, onOp
                 <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                   <ResidentStatus r={r} />
                   <FamilyTag r={r} />
+                  {site.modules?.stays && <StayChip stay={r.stay} />}
                   {currentUnit && (
                     <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white/80 text-indigo-700 border border-indigo-100">
-                      <Home size={10} /> {aptOf(currentUnit)}
+                      <Home size={10} /> {aptOf(currentUnit, site)}
                     </span>
                   )}
                 </div>
@@ -229,7 +248,10 @@ function ResidentDrawer({ resident, units, onToggle, onAssignUnit, onClose, onOp
               })}
             </div>
 
-            <HouseholdSection r={r} />
+            <StayCard member={r} onChanged={onChanged} />
+            <StaffCard member={r} onChanged={onChanged} />
+
+            {site.on('household') && <HouseholdSection r={r} />}
 
             {/* Apartment assignment */}
             <div className="rounded-2xl border border-slate-200 overflow-hidden">
@@ -237,18 +259,18 @@ function ResidentDrawer({ resident, units, onToggle, onAssignUnit, onClose, onOp
                 <span className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #6366F1, #4F46E5)', boxShadow: '0 4px 10px -4px #6366F1' }}>
                   <Building2 size={13} className="text-white" />
                 </span>
-                <span className="text-[13px] font-semibold text-slate-900">Apartment</span>
+                <span className="text-[13px] font-semibold text-slate-900">{UnitWord}</span>
               </div>
               <div className="p-4 space-y-3">
                 <select className="input-field text-sm" value={assignUnitId} onChange={e => setAssignUnitId(e.target.value)}>
-                  <option value="">— No apartment —</option>
+                  <option value="">— No {unitWord} —</option>
                   {units.map(u => {
                     const cnt = (u.residentIds || []).length;
                     const mx = u.maxOccupants || 7;
                     const full = cnt >= mx && u._id !== currentId;
                     return (
                       <option key={u._id} value={u._id} disabled={full}>
-                        {u.block ? `Block ${u.block} · Apt ${u.unitNumber}` : `Apt ${u.unitNumber}`} — {cnt}/{mx}{full ? ' (full)' : ''}
+                        {unitOptionLabel(u, site).replace(/ — .*$/, '')} — {cnt}/{mx}{full ? ' (full)' : ''}
                       </option>
                     );
                   })}
@@ -266,7 +288,7 @@ function ResidentDrawer({ resident, units, onToggle, onAssignUnit, onClose, onOp
                 )}
                 <button onClick={handleAssign} disabled={saving || !dirty}
                   className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all bg-indigo-50 text-indigo-700 border border-indigo-100 hover:bg-indigo-100 disabled:opacity-50 disabled:hover:bg-indigo-50">
-                  {saving ? 'Saving…' : !dirty ? 'Current apartment' : assignUnitId ? 'Save assignment' : 'Remove from apartment'}
+                  {saving ? 'Saving…' : !dirty ? `Current ${unitWord}` : assignUnitId ? 'Save assignment' : `Remove from ${unitWord}`}
                 </button>
               </div>
             </div>
@@ -291,6 +313,8 @@ function ResidentDrawer({ resident, units, onToggle, onAssignUnit, onClose, onOp
 }
 
 function OccupancyRail({ units, unitStats, totalAll, onInvite, onBulk }) {
+  const site = useSite();
+  const T = site.terms;
   const blocks = useMemo(() => {
     const m = new Map();
     for (const u of units) {
@@ -322,18 +346,18 @@ function OccupancyRail({ units, unitStats, totalAll, onInvite, onBulk }) {
             </span>
           </span>
           <div className="space-y-1.5 text-[12px] text-slate-600">
-            <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-indigo-500" /><b className="font-semibold text-slate-900 tabular-nums">{unitStats.occupied}</b> of {unitStats.total} units</div>
-            <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-500" /><b className="font-semibold text-slate-900 tabular-nums">{totalAll}</b> residents</div>
+            <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-indigo-500" /><b className="font-semibold text-slate-900 tabular-nums">{unitStats.occupied}</b> of {unitStats.total} {T.units.toLowerCase()}</div>
+            <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-500" /><b className="font-semibold text-slate-900 tabular-nums">{totalAll}</b> {T.members.toLowerCase()}</div>
             <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-amber-500" /><b className="font-semibold text-slate-900 tabular-nums">{unitStats.open}</b> open spaces</div>
           </div>
         </div>
         {blocks.length > 1 && (
           <div className="mt-4 pt-4 border-t border-slate-100 space-y-2.5">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">By block</div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">By {blockWord(T).toLowerCase()}</div>
             {blocks.slice(0, 8).map((b, i) => (
               <div key={b.name}>
                 <div className="flex justify-between text-[11.5px] mb-1">
-                  <span className="font-medium text-slate-700">{b.name === '—' ? 'No block' : `Block ${b.name}`}</span>
+                  <span className="font-medium text-slate-700">{b.name === '—' ? `No ${blockWord(T).toLowerCase()}` : blockName(b.name, T)}</span>
                   <span className="text-slate-400 tabular-nums">{b.occupied}/{b.total}</span>
                 </div>
                 <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
@@ -347,7 +371,9 @@ function OccupancyRail({ units, unitStats, totalAll, onInvite, onBulk }) {
 
       <div className="dash-rise rounded-2xl p-4 border border-indigo-100" style={{ background: 'linear-gradient(135deg, #EEF2FF, #F5F3FF 60%, #FFFFFF)', animationDelay: '440ms' }}>
         <div className="text-[13px] font-semibold text-slate-900">Grow your community</div>
-        <p className="text-[12px] text-slate-500 mt-1 leading-relaxed">Invite residents by email — they get login details instantly. Moving a whole estate? Upload a CSV.</p>
+        <p className="text-[12px] text-slate-500 mt-1 leading-relaxed">{site.isEstate
+          ? 'Invite residents by email — they get login details instantly. Moving a whole estate? Upload a CSV.'
+          : `Invite ${T.members.toLowerCase()} by email — they get login details instantly. Moving a whole ${T.site.toLowerCase()}? Upload a CSV.`}</p>
         <div className="mt-3 flex gap-2">
           <button onClick={onInvite} className="flex-1 inline-flex items-center justify-center gap-1.5 text-[12px] font-semibold px-3 py-2 rounded-lg text-white" style={{ background: 'linear-gradient(135deg, #6366F1, #4F46E5)' }}>
             <MailPlus size={13} /> Invite
@@ -362,13 +388,14 @@ function OccupancyRail({ units, unitStats, totalAll, onInvite, onBulk }) {
 }
 
 function ResidentCard({ r, i, selected, onOpen, onToggle }) {
+  const site = useSite();
   const h = hueOf(r.name);
   return (
     <div onClick={() => onOpen(r)}
       className="dash-rise group cursor-pointer rounded-2xl bg-white border overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-card-md"
       style={{ animationDelay: `${480 + i * 30}ms`, borderColor: selected ? '#6366F1' : '#E2E8F0', boxShadow: selected ? '0 0 0 3px #6366F122' : undefined }}>
       <div className="h-10 relative" style={{ background: r.isActive ? `linear-gradient(120deg, hsl(${h} 80% 92%), hsl(${(h + 40) % 360} 80% 95%))` : 'linear-gradient(120deg, #FEE2E2, #FFF1F2)' }}>
-        <span className="absolute top-2.5 right-2.5"><ResidentStatus r={r} /></span>
+        <span className="absolute top-2.5 right-2.5 flex gap-1">{site.modules?.stays && <StayChip stay={r.stay} />}<ResidentStatus r={r} /></span>
       </div>
       <div className="px-4 pb-4 -mt-4">
         <ResidentAvatar r={r} size={40} />
@@ -381,8 +408,8 @@ function ResidentCard({ r, i, selected, onOpen, onToggle }) {
         </div>
         <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
           {r.unitId ? (
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-1 rounded-lg bg-indigo-50 text-indigo-700"><Home size={11} />{aptOf(r.unitId)}</span>
-          ) : <span className="text-[11px] italic text-slate-400">No apartment</span>}
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-1 rounded-lg bg-indigo-50 text-indigo-700"><Home size={11} />{aptOf(r.unitId, site)}</span>
+          ) : <span className="text-[11px] italic text-slate-400">No {site.isEstate ? 'apartment' : site.terms.unit.toLowerCase()}</span>}
           <button onClick={e => { e.stopPropagation(); onToggle(r); }} title={r.isActive ? 'Suspend' : 'Activate'}
             className={`p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all ${r.isActive ? 'text-slate-400 hover:text-red-600 hover:bg-red-50' : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'}`}>
             {r.isActive ? <UserX size={14} /> : <UserCheck size={14} />}
@@ -397,6 +424,12 @@ const PAGE_SIZE = 20;
 
 export default function ManagerResidents({ mode = 'residents' }) {
   const tab = mode; // 'family' = the Family members page (own nav item)
+  const site = useSite();
+  const T = site.terms;
+  const E = site.isEstate;
+  const unitWordL = E ? 'apartment' : T.unit.toLowerCase();
+  const sectorCfg = useSectorConfig();
+  const [addSector, setAddSector] = useState(emptySector);
   const [residents, setResidents]   = useState([]);
   const [units, setUnits]           = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -430,7 +463,6 @@ export default function ManagerResidents({ mode = 'residents' }) {
 
   // forms
   const [form, setForm]             = useState({ name: '', email: '', phone: '', unitId: '' });
-  const [inviteForm, setInviteForm] = useState({ email: '', name: '', phone: '', unitId: '' });
   const [bulkRows, setBulkRows]     = useState(() => [emptyRow(), emptyRow(), emptyRow()]);
   const [bulkResult, setBulkResult] = useState(null);
   const [bulkFile, setBulkFile]     = useState('');
@@ -457,7 +489,7 @@ export default function ManagerResidents({ mode = 'residents' }) {
       setNoUnitCount(r.data.noUnitCount || 0);
       setUnits(u.data.data);
     } catch {
-      toast.error('Failed to load residents');
+      toast.error(`Failed to load ${T.members.toLowerCase()}`);
     } finally {
       setLoading(false);
     }
@@ -470,23 +502,6 @@ export default function ManagerResidents({ mode = 'residents' }) {
   // Residents and Family members share this page component: reload when switching between them
   useEffect(() => { setPage(1); setSearch(''); setSelected(null); load(1, '', limit, noUnitOnly, mode); }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
   const toggleNoUnit = (on) => { setNoUnitOnly(on); setPage(1); load(1, search, limit, on); };
-
-  // ── Single invite ────────────────────────────────────────────────
-  const handleInvite = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      const { data } = await residentAPI.invite(inviteForm);
-      toast.success(data.message || 'Invitation sent!');
-      setShowInvite(false);
-      setInviteForm({ email: '', name: '', phone: '', unitId: '' });
-      load();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to send invitation');
-    } finally {
-      setSaving(false);
-    }
-  };
 
   // ── Bulk invite ──────────────────────────────────────────────────
   const handleBulkInvite = async () => {
@@ -533,12 +548,15 @@ export default function ManagerResidents({ mode = 'residents' }) {
   // ── Direct add ───────────────────────────────────────────────────
   const handleAdd = async (e) => {
     e.preventDefault();
+    const sErr = sectorError(addSector, sectorCfg);
+    if (sErr) { toast.error(sErr); return; }
     setSaving(true);
     try {
-      await residentAPI.add(form);
-      toast.success('Resident added!');
+      await residentAPI.add({ ...form, ...sectorPayload(addSector, sectorCfg) });
+      toast.success(`${T.member} added!`);
       setShowAdd(false);
       setForm({ name: '', email: '', phone: '', unitId: '' });
+      setAddSector(emptySector());
       load();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed');
@@ -551,10 +569,10 @@ export default function ManagerResidents({ mode = 'residents' }) {
     try {
       if (r.isActive) {
         await residentAPI.suspend(r._id);
-        toast.success('Resident suspended');
+        toast.success(`${T.member} suspended`);
       } else {
         await residentAPI.activate(r._id);
-        toast.success('Resident activated');
+        toast.success(`${T.member} activated`);
       }
       load(page, search);
     } catch {
@@ -565,7 +583,7 @@ export default function ManagerResidents({ mode = 'residents' }) {
   const handleAssignUnit = async (residentId, unitId) => {
     try {
       await residentAPI.assignUnit(residentId, unitId);
-      toast.success(unitId ? 'Apartment assigned' : 'Removed from apartment');
+      toast.success(unitId ? (E ? 'Apartment assigned' : `${T.unit} assigned`) : `Removed from ${unitWordL}`);
       setSelected(null);
       load(page, search);
     } catch (err) {
@@ -623,37 +641,38 @@ export default function ManagerResidents({ mode = 'residents' }) {
       <div className="hidden lg:block space-y-5 max-w-[1400px] mx-auto">
         {tab === 'family' ? (
         <PageHeader
-          title="Family members"
-          subtitle="People residents have added to their homes"
+          title={T.familyPlural}
+          subtitle={E ? 'People residents have added to their homes' : `People ${T.members.toLowerCase()} have added to their ${T.household.toLowerCase()}`}
           actions={<>
             <button onClick={() => setShowRequests(true)} className={HEADER_BTN_GHOST}>
               <Clock size={14} /> Requests{familyCount ? ` (${familyCount})` : ''}
             </button>
             <button onClick={() => setAddingFamily(true)} className={HEADER_BTN_PRIMARY}>
-              <UserPlus size={15} /> Add family member
+              <UserPlus size={15} /> Add {T.family.toLowerCase()}
             </button>
           </>}
           stats={[
-            { label: 'Family members',    value: familyTotal, Icon: Users,     color: '#A855F7', hint: 'Added by households' },
+            { label: T.familyPlural,      value: familyTotal, Icon: Users,     color: '#A855F7', hint: E ? 'Added by households' : `Added by ${T.members.toLowerCase()}` },
             { label: 'Awaiting approval', value: familyCount, Icon: Clock,     color: '#F59E0B', hint: 'Requests to review' },
-            { label: 'Residents',         value: totalAll,    Icon: Home,      color: '#6366F1', hint: 'Household heads' },
-            { label: 'Apartments',        value: unitStats.total, Icon: Building2, color: '#10B981', hint: 'Units in the estate' },
+            { label: T.members,           value: totalAll,    Icon: Home,      color: '#6366F1', hint: E ? 'Household heads' : `${T.household} heads` },
+            { label: E ? 'Apartments' : T.units, value: unitStats.total, Icon: Building2, color: '#10B981', hint: `${T.units} in the ${T.site.toLowerCase()}` },
           ]}
         />
         ) : (
         <PageHeader
-          title="Residents"
-          subtitle="Everyone who calls the estate home"
+          title={T.members}
+          subtitle={E ? 'Everyone who calls the estate home' : `Everyone registered at your ${T.site.toLowerCase()}`}
           actions={<>
             <button onClick={() => setShowBulk(true)} className={HEADER_BTN_GHOST}><Upload size={14} /> Bulk invite</button>
-            <button onClick={() => setShowInvite(true)} className={HEADER_BTN_GHOST}><MailPlus size={14} /> Invite</button>
-            <button onClick={() => setShowAdd(true)} className={HEADER_BTN_PRIMARY}><Plus size={15} /> Add resident</button>
+            <button onClick={() => setShowInvite(true)} className={sectorCfg.stays ? HEADER_BTN_PRIMARY : HEADER_BTN_GHOST}><MailPlus size={14} /> {sectorCfg.stays ? `Check in ${T.member.toLowerCase()}` : 'Invite'}</button>
+            {!sectorCfg.stays && <button onClick={() => setShowAdd(true)} className={HEADER_BTN_PRIMARY}><Plus size={15} /> Add {T.member.toLowerCase()}</button>}
+            {sectorCfg.stays && <button onClick={() => setShowAdd(true)} className={HEADER_BTN_GHOST}><Plus size={14} /> Add without email</button>}
           </>}
           stats={[
-            { label: 'Residents',   value: totalAll,           Icon: Users,     color: '#6366F1', hint: 'Registered members' },
-            { label: 'Apartments',  value: unitStats.total,    Icon: Building2, color: '#8B5CF6', hint: 'Units in the estate' },
-            { label: 'Occupied',    value: unitStats.occupied, Icon: Home,      color: '#10B981', hint: 'Units with residents' },
-            { label: 'Open spaces', value: unitStats.open,     Icon: DoorOpen,  color: '#F59E0B', hint: 'Room left across units' },
+            { label: T.members,     value: totalAll,           Icon: Users,     color: '#6366F1', hint: 'Registered members' },
+            { label: E ? 'Apartments' : T.units, value: unitStats.total, Icon: Building2, color: '#8B5CF6', hint: `${T.units} in the ${T.site.toLowerCase()}` },
+            { label: 'Occupied',    value: unitStats.occupied, Icon: Home,      color: '#10B981', hint: `${T.units} with ${T.members.toLowerCase()}` },
+            { label: 'Open spaces', value: unitStats.open,     Icon: DoorOpen,  color: '#F59E0B', hint: E ? 'Room left across units' : `Space left across ${T.units.toLowerCase()}` },
           ]}
         />
         )}
@@ -663,8 +682,8 @@ export default function ManagerResidents({ mode = 'residents' }) {
           <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white px-4 py-3 flex flex-wrap items-center gap-3">
             <span className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0"><AlertCircle size={17} /></span>
             <div className="flex-1 min-w-[200px]">
-              <p className="text-[13.5px] font-semibold text-amber-900">{noUnitCount} resident{noUnitCount !== 1 ? 's' : ''} can't sign in — no unit assigned</p>
-              <p className="text-[12px] text-amber-800/80">Residents must belong to a unit to use AreaMates. Open each one and assign their apartment.</p>
+              <p className="text-[13.5px] font-semibold text-amber-900">{E ? `${noUnitCount} resident${noUnitCount !== 1 ? 's' : ''} can't sign in — no unit assigned` : `${noUnitCount} ${noUnitCount !== 1 ? T.members.toLowerCase() : T.member.toLowerCase()} can't sign in — no ${unitWordL} assigned`}</p>
+              <p className="text-[12px] text-amber-800/80">{E ? 'Residents must belong to a unit to use AreaMates. Open each one and assign their apartment.' : `${T.members} must belong to a ${unitWordL} to use AreaMates. Open each one and assign their ${unitWordL}.`}</p>
             </div>
             <button onClick={() => toggleNoUnit(!noUnitOnly)}
               className="h-9 px-3.5 rounded-xl text-[12.5px] font-semibold bg-amber-500 text-white hover:bg-amber-600">
@@ -680,7 +699,7 @@ export default function ManagerResidents({ mode = 'residents' }) {
               <div className="relative flex-1">
                 <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input className="w-full rounded-xl bg-white border border-slate-200 pl-10 pr-9 py-2.5 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
-                  placeholder="Search by name or email…"
+                  placeholder={sectorCfg.shifts ? `Search by name, email or ${(T.idLabel || 'staff ID').toLowerCase()}…` : 'Search by name or email…'}
                   value={search} onChange={e => handleSearch(e.target.value)} />
                 {search && (
                   <button onClick={() => handleSearch('')} aria-label="Clear search" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
@@ -717,15 +736,15 @@ export default function ManagerResidents({ mode = 'residents' }) {
                       <Users size={28} className="text-white" />
                     </div>
                   </div>
-                  <p className="font-semibold text-slate-800 mt-2">{search ? `No ${tab === 'family' ? 'family members' : 'residents'} match “${search}”` : tab === 'family' ? 'No family members yet' : 'No residents yet'}</p>
+                  <p className="font-semibold text-slate-800 mt-2">{search ? `No ${tab === 'family' ? T.familyPlural.toLowerCase() : T.members.toLowerCase()} match “${search}”` : tab === 'family' ? `No ${T.familyPlural.toLowerCase()} yet` : `No ${T.members.toLowerCase()} yet`}</p>
                   <p className="text-sm text-slate-400">{tab === 'family'
-                    ? 'Residents add their family from AreaMates, or you can add them here.'
-                    : "Invite residents and they'll appear here."}</p>
+                    ? (E ? 'Residents add their family from AreaMates, or you can add them here.' : `${T.members} add ${T.familyPlural.toLowerCase()} from AreaMates, or you can add them here.`)
+                    : `Invite ${T.members.toLowerCase()} and they'll appear here.`}</p>
                   {!search && tab === 'family' && (
-                    <button onClick={() => setAddingFamily(true)} className="btn-primary gap-2 mt-2"><UserPlus size={14} /> Add family member</button>
+                    <button onClick={() => setAddingFamily(true)} className="btn-primary gap-2 mt-2"><UserPlus size={14} /> Add {T.family.toLowerCase()}</button>
                   )}
                   {!search && tab === 'residents' && (
-                    <button onClick={() => setShowInvite(true)} className="btn-primary gap-2 mt-2"><MailPlus size={14} /> Send an invite</button>
+                    <button onClick={() => setShowInvite(true)} className="btn-primary gap-2 mt-2"><MailPlus size={14} /> {sectorCfg.stays ? `Check in ${T.member.toLowerCase()}` : 'Send an invite'}</button>
                   )}
                 </div>
               ) : view === 'cards' ? (
@@ -737,7 +756,7 @@ export default function ManagerResidents({ mode = 'residents' }) {
               ) : (
                 <>
                   <div className="grid grid-cols-[2fr_1.6fr_1.1fr_0.9fr_auto] gap-4 px-5 py-3 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    <span>Resident</span><span>Contact</span><span>Apartment</span><span>Status</span><span className="w-[72px]" />
+                    <span>{T.member}</span><span>Contact</span><span>{E ? 'Apartment' : T.unit}</span><span>Status</span><span className="w-[72px]" />
                   </div>
                   {residents.map((r, i) => {
                     const sel = selected?._id === r._id;
@@ -751,6 +770,8 @@ export default function ManagerResidents({ mode = 'residents' }) {
                             <div className="font-semibold text-[13px] text-slate-900 truncate">{r.name}</div>
                             {r.householdRole === 'member'
                               ? <FamilyTag r={r} />
+                              : r.memberProfile?.title || r.memberProfile?.className
+                              ? <div className="text-[11px] text-slate-400 truncate">{[r.memberProfile.title, r.memberProfile.className, r.memberProfile.idNumber].filter(Boolean).join(' · ')}</div>
                               : r.createdAt && <div className="text-[11px] text-slate-400">Joined {format(new Date(r.createdAt), 'MMM yyyy')}</div>}
                           </div>
                         </div>
@@ -761,13 +782,13 @@ export default function ManagerResidents({ mode = 'residents' }) {
                         <div>
                           {r.unitId ? (
                             <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-1 rounded-lg bg-indigo-50 text-indigo-700">
-                              <Home size={11} />{aptOf(r.unitId)}
+                              <Home size={11} />{aptOf(r.unitId, site)}
                             </span>
                           ) : (
-                            <span className="text-xs italic text-slate-400">No apartment</span>
+                            <span className="text-xs italic text-slate-400">No {unitWordL}</span>
                           )}
                         </div>
-                        <div><ResidentStatus r={r} /></div>
+                        <div className="flex flex-wrap gap-1">{sectorCfg.stays && r.householdRole !== 'member' && <StayChip stay={r.stay} />}<ResidentStatus r={r} /></div>
                         <div className="w-[72px] flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
                           <button onClick={() => handleToggle(r)} title={r.isActive ? 'Suspend' : 'Activate'} aria-label={r.isActive ? 'Suspend' : 'Activate'}
                             className={`p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-all ${r.isActive ? 'text-slate-400 hover:text-red-600 hover:bg-red-50' : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'}`}>
@@ -795,12 +816,12 @@ export default function ManagerResidents({ mode = 'residents' }) {
               <div className="rounded-2xl bg-white border border-slate-200/70 p-5">
                 <div className="flex items-center gap-2.5">
                   <span className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #D946EF, #A855F7)' }}><Users size={14} className="text-white" /></span>
-                  <span className="text-[13.5px] font-semibold text-slate-900">How families work</span>
+                  <span className="text-[13.5px] font-semibold text-slate-900">{E ? 'How families work' : `How ${T.familyPlural.toLowerCase()} work`}</span>
                 </div>
                 <ul className="mt-3.5 space-y-2.5 text-[12.5px] text-slate-600 leading-relaxed">
-                  <li className="flex gap-2"><Crown size={13} className="text-amber-500 mt-0.5 flex-shrink-0" />Each family belongs to a resident you onboarded, who decides what they can use.</li>
-                  <li className="flex gap-2"><CheckCircle size={13} className="text-emerald-500 mt-0.5 flex-shrink-0" />Family members are never billed and follow their head's unit, dues and suspension.</li>
-                  <li className="flex gap-2"><UserPlus size={13} className="text-fuchsia-500 mt-0.5 flex-shrink-0" />Add family to any resident, or to your own household if you live here.</li>
+                  <li className="flex gap-2"><Crown size={13} className="text-amber-500 mt-0.5 flex-shrink-0" />{E ? 'Each family belongs to a resident you onboarded, who decides what they can use.' : `Each ${T.household.toLowerCase()} belongs to a ${T.member.toLowerCase()} you onboarded, who decides what they can use.`}</li>
+                  <li className="flex gap-2"><CheckCircle size={13} className="text-emerald-500 mt-0.5 flex-shrink-0" />{E ? "Family members are never billed and follow their head's unit, dues and suspension." : `${T.familyPlural} are never billed and follow their head's ${T.unit.toLowerCase()} and suspension.`}</li>
+                  <li className="flex gap-2"><UserPlus size={13} className="text-fuchsia-500 mt-0.5 flex-shrink-0" />{E ? 'Add family to any resident, or to your own household if you live here.' : `Add ${T.familyPlural.toLowerCase()} to any ${T.member.toLowerCase()}.`}</li>
                 </ul>
                 <button onClick={() => navigate('/settings#preferences')}
                   className="mt-4 w-full py-2 rounded-xl text-[12.5px] font-semibold text-fuchsia-700 bg-fuchsia-50 hover:bg-fuchsia-100">
@@ -822,8 +843,8 @@ export default function ManagerResidents({ mode = 'residents' }) {
           <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white px-4 py-3 flex flex-wrap items-center gap-3">
             <span className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0"><AlertCircle size={17} /></span>
             <div className="flex-1 min-w-[200px]">
-              <p className="text-[13.5px] font-semibold text-amber-900">{noUnitCount} resident{noUnitCount !== 1 ? 's' : ''} can't sign in — no unit assigned</p>
-              <p className="text-[12px] text-amber-800/80">Residents must belong to a unit to use AreaMates. Open each one and assign their apartment.</p>
+              <p className="text-[13.5px] font-semibold text-amber-900">{E ? `${noUnitCount} resident${noUnitCount !== 1 ? 's' : ''} can't sign in — no unit assigned` : `${noUnitCount} ${noUnitCount !== 1 ? T.members.toLowerCase() : T.member.toLowerCase()} can't sign in — no ${unitWordL} assigned`}</p>
+              <p className="text-[12px] text-amber-800/80">{E ? 'Residents must belong to a unit to use AreaMates. Open each one and assign their apartment.' : `${T.members} must belong to a ${unitWordL} to use AreaMates. Open each one and assign their ${unitWordL}.`}</p>
             </div>
             <button onClick={() => toggleNoUnit(!noUnitOnly)}
               className="h-9 px-3.5 rounded-xl text-[12.5px] font-semibold bg-amber-500 text-white hover:bg-amber-600">
@@ -843,61 +864,10 @@ export default function ManagerResidents({ mode = 'residents' }) {
       </div>
 
       {/* ── Single Invite Modal ─────────────────────────────────── */}
-      <Modal open={showInvite} onClose={() => setShowInvite(false)} title="Send Invitation">
-        <div className="space-y-3 mb-4 p-3 rounded-xl text-sm"
-          style={{ background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.18)', color: '#34D399' }}>
-          <p className="font-medium">📧 What happens when you invite:</p>
-          <ul className="space-y-1 text-xs" style={{ color: 'rgba(52,211,153,0.8)' }}>
-            <li>• An account is created instantly for the resident</li>
-            <li>• A login credentials email is sent via Resend</li>
-            <li>• They can log in immediately with their temp password</li>
-          </ul>
-        </div>
-        <form onSubmit={handleInvite} className="space-y-4">
-          <div>
-            <label className="text-xs font-semibold mb-1.5 block" style={{ color: 'var(--text-sub)' }}>Full Name *</label>
-            <input className="input-field" placeholder="e.g. Amaka Johnson"
-              value={inviteForm.name}
-              onChange={e => setInviteForm({ ...inviteForm, name: e.target.value })} required />
-          </div>
-          <div>
-            <label className="text-xs font-semibold mb-1.5 block" style={{ color: 'var(--text-sub)' }}>Email Address *</label>
-            <input type="email" className="input-field" placeholder="resident@email.com"
-              value={inviteForm.email}
-              onChange={e => setInviteForm({ ...inviteForm, email: e.target.value })} required />
-          </div>
-          <div>
-            <label className="text-xs font-semibold mb-1.5 block" style={{ color: 'var(--text-sub)' }}>Phone (optional)</label>
-            <input className="input-field" placeholder="+234 …"
-              value={inviteForm.phone}
-              onChange={e => setInviteForm({ ...inviteForm, phone: e.target.value })} />
-          </div>
-          <div>
-            <label className="text-xs font-semibold mb-1.5 block" style={{ color: 'var(--text-sub)' }}>Apartment *</label>
-            <select className="input-field" value={inviteForm.unitId} required
-              onChange={e => setInviteForm({ ...inviteForm, unitId: e.target.value })}>
-              <option value="">— Choose their apartment —</option>
-              {units.map(u => (
-                <option key={u._id} value={u._id} disabled={(u.residentIds || []).length >= (u.maxOccupants || 7)}>
-                  {unitLabel(u)}
-                </option>
-              ))}
-            </select>
-            {units.length === 0 && (
-              <p className="text-xs mt-1" style={{ color: 'var(--text-dim)' }}>No apartments created yet — add them in the Units page first.</p>
-            )}
-          </div>
-          <div className="flex gap-3 pt-1">
-            <button type="button" onClick={() => setShowInvite(false)} className="btn-outline flex-1">Cancel</button>
-            <button type="submit" disabled={saving} className="btn-primary flex-1">
-              {saving ? 'Sending…' : '📨 Send Invitation'}
-            </button>
-          </div>
-        </form>
-      </Modal>
+      <InviteResidentModal open={showInvite} onClose={() => setShowInvite(false)} units={units} onSaved={() => load()} onUnitCreated={(u) => setUnits(list => [...list, u])} />
 
       {/* ── Bulk Invite Modal ───────────────────────────────────── */}
-      <Modal open={showBulk} onClose={closeBulk} title="Bulk Invite Residents" size="lg">
+      <Modal open={showBulk} onClose={closeBulk} title={`Bulk Invite ${T.members}`} size="lg">
         {!bulkResult ? (
           <div className="space-y-4">
             <div className="p-3 rounded-xl text-sm"
@@ -1064,10 +1034,11 @@ export default function ManagerResidents({ mode = 'residents' }) {
         onAssignUnit={handleAssignUnit}
         onClose={() => setSelected(null)}
         onOpenProfile={(r) => { setSelected(null); navigate(`/residents/${r._id}`, { state: { resident: r, units } }); }}
+        onChanged={() => load(page, search)}
       />
 
       {/* ── Direct Add Modal ────────────────────────────────────── */}
-      <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Add Resident Directly">
+      <Modal open={showAdd} onClose={() => setShowAdd(false)} title={`Add ${T.member} Directly`}>
         <p className="text-xs mb-4" style={{ color: 'var(--text-dim)' }}>
           Creates an account without sending an email. Default password: <code className="text-gold">Estate@123</code>
         </p>
@@ -1086,22 +1057,13 @@ export default function ManagerResidents({ mode = 'residents' }) {
                 required={req} />
             </div>
           ))}
-          <div>
-            <label className="text-xs font-semibold mb-1.5 block" style={{ color: 'var(--text-sub)' }}>Unit *</label>
-            <select className="input-field" value={form.unitId} required
-              onChange={e => setForm({ ...form, unitId: e.target.value })}>
-              <option value="">— Choose their unit —</option>
-              {units.map(u => (
-                <option key={u._id} value={u._id} disabled={(u.residentIds || []).length >= (u.maxOccupants || 7)}>
-                  {unitLabel(u)}
-                </option>
-              ))}
-            </select>
-          </div>
+          <UnitPicker label={E ? 'Apartment' : T.unit} value={form.unitId} units={units}
+            onChange={(unitId) => setForm(f => ({ ...f, unitId }))} onCreated={(u) => setUnits(list => [...list, u])} />
+          <MemberSectorFields value={addSector} onChange={setAddSector} />
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={() => setShowAdd(false)} className="btn-outline flex-1">Cancel</button>
             <button type="submit" disabled={saving} className="btn-primary flex-1">
-              {saving ? 'Adding…' : 'Add Resident'}
+              {saving ? 'Adding…' : `Add ${T.member}`}
             </button>
           </div>
         </form>

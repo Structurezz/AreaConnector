@@ -1,13 +1,38 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { unitAPI, residentAPI } from '../api';
+import { unitAPI, residentAPI, siteAPI } from '../api';
+import { useSite } from '../context/SiteContext';
+import SiteTypePicker from '../components/site/SiteTypePicker';
+import { TERMS } from '../utils/siteTypes';
 import { Home, Users, CheckCircle, Plus, Trash2, ArrowRight, ArrowLeft, Building2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const STEPS = ['welcome', 'units', 'residents', 'done'];
 
 function WelcomeStep({ estate, onNext }) {
+  const site = useSite();
+  const [type, setType] = useState(site.type);
+  const [saving, setSaving] = useState(false);
+  // Keep the picker in step once /api/site answers
+  const [touched, setTouched] = useState(false);
+  const shown = touched ? type : site.type;
+  const terms = TERMS[shown] || site.terms;
+  const next = async () => {
+    if (touched && type !== site.type) {
+      setSaving(true);
+      try {
+        const { data } = await siteAPI.update({ type });
+        site.setSite(prev => ({ ...prev, ...data.data }));
+      } catch (err) {
+        toast.error(err.response?.data?.message || 'Could not save the site type');
+        setSaving(false);
+        return;
+      }
+      setSaving(false);
+    }
+    onNext();
+  };
   return (
     <div className="text-center space-y-6">
       <div className="w-20 h-20 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto">
@@ -16,14 +41,18 @@ function WelcomeStep({ estate, onNext }) {
       <div>
         <h2 className="text-3xl font-display font-bold text-slate-900 mb-2">Welcome!</h2>
         <p className="text-slate-500">
-          You're managing <span className="text-emerald-600 font-semibold">{estate?.name || 'your estate'}</span>.
+          You're managing <span className="text-emerald-600 font-semibold">{estate?.name || `your ${terms.site.toLowerCase()}`}</span>.
           Let's get it set up in just a few steps.
         </p>
       </div>
+      <div className="text-left">
+        <p className="text-xs font-semibold uppercase tracking-widest mb-2 text-slate-400 text-center">What are you managing?</p>
+        <SiteTypePicker variant="compact" value={shown} disabled={saving} onChange={(v) => { setTouched(true); setType(v); }} />
+      </div>
       <div className="grid grid-cols-2 gap-4 text-left max-w-xs mx-auto">
         {[
-          { icon: Home, label: 'Add estate units' },
-          { icon: Users, label: 'Register residents' },
+          { icon: Home, label: shown === 'estate' ? 'Add estate units' : `Add ${TERMS[shown].units.toLowerCase()}` },
+          { icon: Users, label: `Register ${TERMS[shown].members.toLowerCase()}` },
         ].map(({ icon: Icon, label }) => (
           <div key={label} className="glass-card p-4 flex flex-col items-center gap-2 text-center">
             <Icon size={20} className="text-emerald-600" />
@@ -31,14 +60,15 @@ function WelcomeStep({ estate, onNext }) {
           </div>
         ))}
       </div>
-      <button onClick={onNext} className="btn-primary gap-2 mx-auto">
-        Get Started <ArrowRight size={16} />
+      <button onClick={next} disabled={saving} className="btn-primary gap-2 mx-auto">
+        {saving ? 'Saving…' : 'Get Started'} <ArrowRight size={16} />
       </button>
     </div>
   );
 }
 
 function UnitsStep({ onNext, onBack, onSkip }) {
+  const { terms, isEstate } = useSite();
   const [units, setUnits] = useState([{ unitNumber: '', block: '', type: 'apartment' }]);
   const [saving, setSaving] = useState(false);
 
@@ -64,8 +94,8 @@ function UnitsStep({ onNext, onBack, onSkip }) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-display font-bold text-slate-900 mb-1">Add Units</h2>
-        <p className="text-slate-500 text-sm">Add apartments or houses in your estate. You can add more later.</p>
+        <h2 className="text-2xl font-display font-bold text-slate-900 mb-1">Add {terms.units}</h2>
+        <p className="text-slate-500 text-sm">{isEstate ? 'Add apartments or houses in your estate. You can add more later.' : `Add the ${terms.units.toLowerCase()} in your ${terms.site.toLowerCase()}. You can add more later.`}</p>
       </div>
 
       <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
@@ -121,6 +151,7 @@ function UnitsStep({ onNext, onBack, onSkip }) {
 }
 
 function ResidentsStep({ onNext, onBack, onSkip }) {
+  const { terms } = useSite();
   const [residents, setResidents] = useState([{ name: '', email: '', phone: '' }]);
   const [saving, setSaving] = useState(false);
 
@@ -147,8 +178,8 @@ function ResidentsStep({ onNext, onBack, onSkip }) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-display font-bold text-slate-900 mb-1">Add Residents</h2>
-        <p className="text-slate-500 text-sm">Register your first residents. Name and email are required.</p>
+        <h2 className="text-2xl font-display font-bold text-slate-900 mb-1">Add {terms.members}</h2>
+        <p className="text-slate-500 text-sm">Register your first {terms.members.toLowerCase()}. Name and email are required.</p>
       </div>
 
       <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
@@ -201,6 +232,7 @@ function ResidentsStep({ onNext, onBack, onSkip }) {
 }
 
 function DoneStep({ counts, onFinish }) {
+  const { terms } = useSite();
   return (
     <div className="text-center space-y-6">
       <div className="w-20 h-20 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto">
@@ -208,20 +240,20 @@ function DoneStep({ counts, onFinish }) {
       </div>
       <div>
         <h2 className="text-3xl font-display font-bold text-slate-900 mb-2">You're all set!</h2>
-        <p className="text-slate-500">Your estate is ready to go.</p>
+        <p className="text-slate-500">Your {terms.site.toLowerCase()} is ready to go.</p>
       </div>
       {(counts.units > 0 || counts.residents > 0) && (
         <div className="flex justify-center gap-6">
           {counts.units > 0 && (
             <div className="glass-card px-6 py-4 text-center">
               <div className="text-2xl font-bold text-emerald-600">{counts.units}</div>
-              <div className="text-slate-500 text-sm">Units added</div>
+              <div className="text-slate-500 text-sm">{terms.units} added</div>
             </div>
           )}
           {counts.residents > 0 && (
             <div className="glass-card px-6 py-4 text-center">
               <div className="text-2xl font-bold text-emerald-600">{counts.residents}</div>
-              <div className="text-slate-500 text-sm">Residents added</div>
+              <div className="text-slate-500 text-sm">{terms.members} added</div>
             </div>
           )}
         </div>
@@ -235,6 +267,7 @@ function DoneStep({ counts, onFinish }) {
 
 export default function Onboarding() {
   const { user, estate } = useAuth();
+  const site = useSite();
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [counts, setCounts] = useState({ units: 0, residents: 0 });
@@ -244,7 +277,7 @@ export default function Onboarding() {
     navigate('/dashboard', { replace: true });
   };
 
-  const stepLabels = ['Welcome', 'Units', 'Residents', 'Done'];
+  const stepLabels = ['Welcome', site.terms.units, site.terms.members, 'Done'];
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
@@ -296,7 +329,7 @@ export default function Onboarding() {
         </div>
 
         <p className="text-center text-slate-400 text-xs mt-4">
-          You can always add more units and residents from the dashboard later.
+          You can always add more {site.terms.units.toLowerCase()} and {site.terms.members.toLowerCase()} from the dashboard later.
         </p>
       </div>
     </div>

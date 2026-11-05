@@ -7,6 +7,7 @@ import {
 import Sidebar from './Sidebar';
 import { useAuth } from '../../context/AuthContext';
 import { canOpen } from '../../utils/teamAccess';
+import { useSite } from '../../context/SiteContext';
 import NotificationBell from '../ui/NotificationBell';
 import useFocusItem from '../../hooks/useFocusItem';
 import AlertModal from '../ui/AlertModal';
@@ -20,7 +21,7 @@ import CallAlertsPrompt from '../calls/CallAlertsPrompt';
 const BOTTOM_NAV = [
   { to: '/dashboard',   icon: LayoutDashboard, label: 'Home' },
   { to: '/visitors',    icon: UserCheck,        label: 'Visitors' },
-  { to: '/residents',   icon: Users,            label: 'Residents' },
+  { to: '/residents',   icon: Users,            label: (t) => t.members },
   { to: '/alerts',      icon: Bell,             label: 'Alerts' },
   { to: '/settings',    icon: Settings,         label: 'Settings' },
 ];
@@ -29,7 +30,9 @@ export default function AppLayout({ children }) {
   useFocusItem();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user } = useAuth();
-  const bottomNav = BOTTOM_NAV.filter(l => canOpen(user, l.to));
+  const { terms } = useSite();
+  const bottomNav = BOTTOM_NAV.filter(l => canOpen(user, l.to))
+    .map(l => (typeof l.label === 'function' ? { ...l, label: l.label(terms) } : l));
 
   return (
     <NotificationProvider>

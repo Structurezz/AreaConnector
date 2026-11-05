@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 import Portal, { Z } from '../ui/Portal';
 import { residentAPI, householdAPI, unitAPI } from '../../api';
 import { useAuth } from '../../context/AuthContext';
+import { useSite } from '../../context/SiteContext';
 
 // Mirrors server utils/householdAccess
 export const FAMILY_PERMS = {
@@ -304,6 +305,12 @@ function HouseholdPicker({ value, onChange }) {
 
 export function AddFamilyPanel({ head: fixedHead, member, onClose, onSaved }) {
   const editing = !!member; // editing one of the manager's own family members
+  const site = useSite();
+  const T = site.terms;
+  // Site types have their own relationship lists (school: Parent, Guardian…)
+  const relationships = site.relationships?.length ? site.relationships : RELATIONSHIPS;
+  // Only offer access to modules that are on for this site
+  const shownPerms = ALL.filter(k => ['visitors', 'chat'].includes(k) || site.on(k));
   const [head, setHead] = useState(fixedHead || null);
   const [form, setForm] = useState({
     name: member?.name || '', email: member?.email || '', phone: member?.phone || '',
@@ -325,7 +332,7 @@ export function AddFamilyPanel({ head: fixedHead, member, onClose, onSaved }) {
 
   const save = async (e) => {
     e.preventDefault();
-    if (!editing && !head) { toast.error('Choose the resident whose household they\'re joining'); return; }
+    if (!editing && !head) { toast.error(`Choose the ${T.member.toLowerCase()} whose ${T.household.toLowerCase()} they're joining`); return; }
     if (!editing && head.self && !homeUnitId) { toast.error('Choose the unit you live in'); return; }
     setSaving(true);
     try {
@@ -343,18 +350,18 @@ export function AddFamilyPanel({ head: fixedHead, member, onClose, onSaved }) {
       onSaved?.();
       onClose();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Could not add family member');
+      toast.error(err.response?.data?.message || `Could not add ${T.family.toLowerCase()}`);
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <SideBar eyebrow={editing || head?.self ? 'My household' : head ? `${head.name.split(' ')[0]}'s household` : 'Households'}
-      title={editing ? member.name : 'Add family member'} onClose={onClose}
+    <SideBar eyebrow={editing || head?.self ? `My ${T.household.toLowerCase()}` : head ? `${head.name.split(' ')[0]}'s ${T.household.toLowerCase()}` : site.isEstate ? 'Households' : T.household}
+      title={editing ? member.name : `Add ${T.family.toLowerCase()}`} onClose={onClose}
       subtitle={editing ? 'Choose what they can use in AreaMates.' : head?.self
         ? 'They get their own AreaMates login as part of your household. You decide what they can use.'
-        : 'They get their own AreaMates login. Not billed. The resident can change their access later.'}
+        : `They get their own AreaMates login. Not billed. The ${T.member.toLowerCase()} can change their access later.`}
       footer={
         <div className="flex gap-2">
           <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-[9px] text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200">Cancel</button>
@@ -368,7 +375,7 @@ export function AddFamilyPanel({ head: fixedHead, member, onClose, onSaved }) {
       <form id="add-family-form" onSubmit={save} className="p-5 space-y-5">
         {!fixedHead && (
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Household</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">{T.household}</p>
             <HouseholdPicker value={head} onChange={setHead} />
           </div>
         )}
@@ -392,7 +399,7 @@ export function AddFamilyPanel({ head: fixedHead, member, onClose, onSaved }) {
         <div>
           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Relationship{head && !head.self ? ` to ${head.name.split(' ')[0]}` : ''}</p>
           <div className="flex flex-wrap gap-1.5">
-            {RELATIONSHIPS.map(r => {
+            {relationships.map(r => {
               const on = form.relationship === r;
               return (
                 <button type="button" key={r}
@@ -409,7 +416,7 @@ export function AddFamilyPanel({ head: fixedHead, member, onClose, onSaved }) {
         <div>
           <div className="flex items-center justify-between mb-2">
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">What they can use</p>
-            <span className="text-[11px] text-slate-400">{form.permissions.length}/{ALL.length}</span>
+            <span className="text-[11px] text-slate-400">{form.permissions.filter(k => shownPerms.includes(k)).length}/{shownPerms.length}</span>
           </div>
           <div className="flex flex-wrap gap-1 mb-2.5">
             {Object.entries(PRESETS).map(([k, p]) => (
@@ -421,8 +428,9 @@ export function AddFamilyPanel({ head: fixedHead, member, onClose, onSaved }) {
             ))}
           </div>
           <div className="rounded-xl border border-slate-200 divide-y divide-slate-100 overflow-hidden">
-            {ALL.map(k => {
-              const { label, desc, Icon, color } = FAMILY_PERMS[k];
+            {shownPerms.map(k => {
+              const { desc, Icon, color } = FAMILY_PERMS[k];
+              const label = k === 'payments' ? T.dues : FAMILY_PERMS[k].label;
               const on = form.permissions.includes(k);
               return (
                 <button type="button" key={k} onClick={() => toggle(k)} className="w-full flex items-center gap-3 px-3.5 py-2.5 text-left hover:bg-slate-50">

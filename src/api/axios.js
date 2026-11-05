@@ -17,6 +17,11 @@ api.interceptors.response.use(
   (res) => res,
   async (err) => {
     const original = err.config;
+    // A site module (payments, marketplace, …) is switched off for this site:
+    // let SiteContext refetch the config and tell the user once.
+    if (err.response?.status === 403 && err.response?.data?.code === 'MODULE_OFF') {
+      window.dispatchEvent(new CustomEvent('site:module-off', { detail: { module: err.response.data.module } }));
+    }
     if (err.response?.status === 401 && !original._retry) {
       original._retry = true;
       try {

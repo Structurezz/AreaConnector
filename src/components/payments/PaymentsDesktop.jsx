@@ -7,6 +7,7 @@ import {
 import { format, isToday, isYesterday } from 'date-fns';
 import Spinner from '../ui/Spinner';
 import DuesEnforcement from './DuesEnforcement';
+import { useSite } from '../../context/SiteContext';
 
 const TYPE_META = {
   security_dues: { label: 'Security dues', icon: ShieldCheck,     color: '#2563EB' },
@@ -67,6 +68,8 @@ function Empty({ icon: Icon, title, body, action }) {
 }
 
 export default function PaymentsDesktop(p) {
+  const { terms: T } = useSite();
+  const mL = T.member.toLowerCase(), msL = T.members.toLowerCase();
   const {
     stats, schedules, wallet, walletLoading, hideBalance, toggleHide, refreshAll,
     tab, setTab, selectedSchedule, setSelectedSchedule, collectionPayments, collectionLoading, openCollection,
@@ -98,7 +101,7 @@ export default function PaymentsDesktop(p) {
     { id: 'bills', label: 'Bills', hint: `${schedules.length} bill${schedules.length === 1 ? '' : 's'}` },
     { id: 'withdrawals', label: 'Withdrawals', hint: `${withdrawals.length} payout${withdrawals.length === 1 ? '' : 's'}` },
     { id: 'paystack', label: 'Paystack', hint: unlinkedCount ? `${unlinkedCount} not linked` : 'Online payments', alert: unlinkedCount > 0 },
-    { id: 'enforcement', label: 'Enforcement', hint: 'Overdue residents' },
+    { id: 'enforcement', label: 'Enforcement', hint: `Overdue ${msL}` },
   ];
 
   return (
@@ -111,7 +114,7 @@ export default function PaymentsDesktop(p) {
           <div className="absolute -right-2 -top-2 w-40 h-40 rounded-full border border-white/10 pointer-events-none" />
           <div className="relative flex items-start justify-between gap-4">
             <div>
-              <p className="text-[12px] text-white/60 flex items-center gap-1.5"><Wallet size={13} /> Estate wallet · NGN</p>
+              <p className="text-[12px] text-white/60 flex items-center gap-1.5"><Wallet size={13} /> {T.site} wallet · NGN</p>
               <p className="mt-4 text-[12.5px] text-white/70">Available to withdraw</p>
               <div className="mt-1.5 flex items-center gap-3">
                 <span className="text-[42px] leading-none font-semibold tracking-tight tabular-nums" style={{ color: '#fff' }}>
@@ -140,7 +143,7 @@ export default function PaymentsDesktop(p) {
             ))}
           </div>
           {wallet?.collectedOffline > 0 && (
-            <p className="relative mt-2.5 text-[11px] text-white/45 max-w-2xl">Offline payments (cash or bank transfer) count as paid for the resident but never reach your wallet, so they can’t be withdrawn.</p>
+            <p className="relative mt-2.5 text-[11px] text-white/45 max-w-2xl">Offline payments (cash or bank transfer) count as paid for the {mL} but never reach your wallet, so they can’t be withdrawn.</p>
           )}
 
           <div className="relative mt-5 flex items-center gap-3">
@@ -180,7 +183,7 @@ export default function PaymentsDesktop(p) {
           <p className="text-[11.5px] text-slate-400">{shown(stats?.totalCollected)} all time</p>
 
           <div className="mt-4">
-            <div className="flex justify-between text-[12px]"><span className="text-slate-500">Residents paid · active bills</span><span className="font-semibold text-slate-900 tabular-nums">{rate}%</span></div>
+            <div className="flex justify-between text-[12px]"><span className="text-slate-500">{T.members} paid · active bills</span><span className="font-semibold text-slate-900 tabular-nums">{rate}%</span></div>
             <div className="mt-1.5 h-2 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${rate}%` }} /></div>
             <p className="mt-1.5 text-[11px] text-slate-400 tabular-nums">{totals.paid} of {totals.total} invoices · {shown(totals.expected - totals.collected)} still to collect</p>
           </div>
@@ -224,7 +227,7 @@ export default function PaymentsDesktop(p) {
         {/* Bills table */}
         {tab === 'bills' && !selectedSchedule && (
           !schedules.length ? (
-            <Empty icon={FileText} title="No bills yet" body="Create a bill — dues, a levy or a contribution — and every resident gets an invoice they can pay in the app."
+            <Empty icon={FileText} title="No bills yet" body={`Create a bill — dues, a levy or a contribution — and every ${mL} gets an invoice they can pay in the app.`}
               action={<button onClick={openCreate} className="btn-primary gap-2"><Plus size={15} /> Create bill</button>} />
           ) : (
             <div className="overflow-x-auto">
@@ -305,12 +308,12 @@ export default function PaymentsDesktop(p) {
                 <span className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${m.color}14`, color: m.color }}><m.icon size={18} /></span>
                 <div className="min-w-0 flex-1">
                   <p className="text-[15px] font-semibold text-slate-900 truncate">{selectedSchedule.title}</p>
-                  <p className="text-[12px] text-slate-500">{m.label} · {naira(selectedSchedule.amount)} per resident · due {format(new Date(selectedSchedule.dueDate), 'd MMM yyyy')}</p>
+                  <p className="text-[12px] text-slate-500">{m.label} · {naira(selectedSchedule.amount)} per {mL} · due {format(new Date(selectedSchedule.dueDate), 'd MMM yyyy')}</p>
                 </div>
                 <div className="flex gap-6 text-right">
                   <div><p className="text-[11px] text-slate-500">Collected</p><p className="text-[16px] font-semibold text-emerald-700 tabular-nums">{shown(billCollected)}</p></div>
                   <div><p className="text-[11px] text-slate-500">Outstanding</p><p className="text-[16px] font-semibold text-slate-900 tabular-nums">{shown(billOutstanding)}</p></div>
-                  <div><p className="text-[11px] text-slate-500">Residents</p><p className="text-[16px] font-semibold text-slate-900 tabular-nums">{collectionPayments.length}</p></div>
+                  <div><p className="text-[11px] text-slate-500">{T.members}</p><p className="text-[16px] font-semibold text-slate-900 tabular-nums">{collectionPayments.length}</p></div>
                 </div>
               </div>
               <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-3">
@@ -324,16 +327,16 @@ export default function PaymentsDesktop(p) {
                 </div>
                 <div className="ml-auto flex items-center gap-2 h-9 px-3 rounded-lg border border-slate-200 w-64">
                   <Search size={14} className="text-slate-400" />
-                  <input value={payQ} onChange={(e) => setPayQ(e.target.value)} placeholder="Resident or reference" className="flex-1 min-w-0 bg-transparent outline-none text-[13px]" />
+                  <input value={payQ} onChange={(e) => setPayQ(e.target.value)} placeholder={`${T.member} or reference`} className="flex-1 min-w-0 bg-transparent outline-none text-[13px]" />
                 </div>
               </div>
               {collectionLoading ? <div className="flex justify-center py-14"><Spinner /></div> : !payShown.length ? (
-                <Empty icon={Users} title={collectionPayments.length ? 'No residents match' : 'No residents on this bill'} />
+                <Empty icon={Users} title={collectionPayments.length ? `No ${msL} match` : `No ${msL} on this bill`} />
               ) : (
                 <table className="w-full text-[13px]">
                   <thead>
                     <tr className="text-left text-[11.5px] text-slate-500 bg-slate-50/70 border-b border-slate-100">
-                      <th className="font-medium px-5 py-2.5">Resident</th>
+                      <th className="font-medium px-5 py-2.5">{T.member}</th>
                       <th className="font-medium px-3 py-2.5">Status</th>
                       <th className="font-medium px-3 py-2.5">Paid</th>
                       <th className="font-medium px-3 py-2.5 text-right">Amount</th>
@@ -349,7 +352,7 @@ export default function PaymentsDesktop(p) {
                             <div className="flex items-center gap-3">
                               <span className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-700 text-[12px] font-semibold flex items-center justify-center flex-shrink-0">{x.residentId?.name?.[0] || '?'}</span>
                               <div className="min-w-0">
-                                <p className="font-medium text-slate-900 truncate">{x.residentId?.name || 'Resident'}</p>
+                                <p className="font-medium text-slate-900 truncate">{x.residentId?.name || T.member}</p>
                                 <p className="text-[11.5px] text-slate-400 truncate">{x.residentId?.email}</p>
                               </div>
                             </div>
@@ -399,7 +402,7 @@ export default function PaymentsDesktop(p) {
         {tab === 'withdrawals' && (
           walletLoading && !wallet ? <div className="flex justify-center py-16"><Spinner size={26} /></div>
             : !withdrawals.length ? (
-              <Empty icon={ArrowUpRight} title="No withdrawals yet" body="Money you move from the estate wallet to your bank shows up here."
+              <Empty icon={ArrowUpRight} title="No withdrawals yet" body={`Money you move from the ${T.site.toLowerCase()} wallet to your bank shows up here.`}
                 action={<button onClick={startWithdraw} className="btn-primary gap-2"><ArrowUpRight size={15} /> Make a withdrawal</button>} />
             ) : (
               <div className="max-h-[70vh] overflow-y-auto">
@@ -436,10 +439,10 @@ export default function PaymentsDesktop(p) {
           <div>
             <div className="px-5 py-3 border-b border-slate-100 flex items-start gap-2 text-[12.5px] text-slate-600">
               <AlertCircle size={14} className="text-amber-600 mt-0.5 flex-shrink-0" />
-              Every successful Paystack charge for your estate. <b className="font-semibold text-slate-800">Not linked</b> payments aren’t tied to a resident yet — Attach them to a resident and bill so they’re recorded and added to your wallet.
+              Every successful Paystack charge for your {T.site.toLowerCase()}. <b className="font-semibold text-slate-800">Not linked</b> payments aren’t tied to a {mL} yet — Attach them to a {mL} and bill so they’re recorded and added to your wallet.
             </div>
             {ledgerLoading ? <div className="flex justify-center py-16"><Spinner size={26} /></div> : !ledger.length ? (
-              <Empty icon={CreditCard} title="No Paystack payments yet" body="Online payments from residents will appear here as they come in." />
+              <Empty icon={CreditCard} title="No Paystack payments yet" body={`Online payments from ${msL} will appear here as they come in.`} />
             ) : (
               <div className="max-h-[70vh] overflow-y-auto">
                 {groupByDay(ledger, (tx) => tx.paidAt || tx.createdAt).map((g) => (

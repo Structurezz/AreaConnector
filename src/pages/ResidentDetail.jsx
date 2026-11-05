@@ -11,8 +11,15 @@ import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import useIsDesktop from '../hooks/useIsDesktop';
 import ResidentProfileDesktop from '../components/residents/ResidentProfileDesktop';
+import { useSite } from '../context/SiteContext';
+import { StayCard, StaffCard, StayChip } from '../components/site/MemberFields';
 
 export default function ResidentDetail() {
+  const site = useSite();
+  const T = site.terms;
+  const E = site.isEstate;
+  const unitWord = E ? 'Apartment' : T.unit;
+  const aptWord = E ? 'Apt' : T.unit;
   const { id } = useParams();
   const { state } = useLocation();
   const navigate = useNavigate();
@@ -33,7 +40,7 @@ export default function ResidentDetail() {
     fetches.push(
       residentAPI.getOne(id)
         .then(({ data }) => setResident(data.data))
-        .catch(() => { toast.error('Resident not found'); navigate('/residents'); })
+        .catch(() => { toast.error(`${T.member} not found`); navigate('/residents'); })
     );
     if (!units.length) {
       fetches.push(
@@ -59,11 +66,11 @@ export default function ResidentDetail() {
     try {
       if (resident.isActive) {
         await residentAPI.suspend(resident._id);
-        toast.success('Resident suspended');
+        toast.success(`${T.member} suspended`);
         setResident(r => ({ ...r, isActive: false }));
       } else {
         await residentAPI.activate(resident._id);
-        toast.success('Resident activated');
+        toast.success(`${T.member} activated`);
         setResident(r => ({ ...r, isActive: true }));
       }
     } catch {
@@ -77,7 +84,7 @@ export default function ResidentDetail() {
     setSavingUnit(true);
     try {
       await residentAPI.assignUnit(resident._id, assignUnitId || null);
-      toast.success(assignUnitId ? 'Apartment assigned' : 'Removed from apartment');
+      toast.success(assignUnitId ? `${unitWord} assigned` : `Removed from ${unitWord.toLowerCase()}`);
       // refresh unit display
       const newUnit = units.find(u => u._id === assignUnitId) || null;
       setResident(r => ({ ...r, unitId: newUnit }));
@@ -119,7 +126,7 @@ export default function ResidentDetail() {
 
   const r = resident;
   const unitDisplay = r.unitId
-    ? (r.unitId.block ? `Block ${r.unitId.block} · Apt ${r.unitId.unitNumber}` : `Apt ${r.unitId.unitNumber}`)
+    ? (r.unitId.block ? `${E ? 'Block ' : ''}${r.unitId.block} · ${aptWord} ${r.unitId.unitNumber}` : `${aptWord} ${r.unitId.unitNumber}`)
     : null;
   const curUnit = units.find(u => u._id === (r.unitId?._id || r.unitId));
   const housemates = curUnit ? Math.max(0, (curUnit.residentIds || []).length - 1) : 0;
@@ -133,7 +140,7 @@ export default function ResidentDetail() {
     <div className="max-w-lg mx-auto space-y-5 pb-4">
       <button onClick={() => navigate('/residents')}
         className="dash-rise inline-flex items-center gap-1 text-[13px] font-medium text-slate-500">
-        <ChevronLeft size={16} /> Residents
+        <ChevronLeft size={16} /> {T.members}
       </button>
 
       {/* Profile */}
@@ -151,7 +158,8 @@ export default function ResidentDetail() {
         <div className="mt-1.5 flex items-center gap-1.5 flex-wrap justify-center">
           {unitDisplay
             ? <span className="inline-flex items-center gap-1 text-[12px] font-semibold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700"><Home size={12} /> {unitDisplay}</span>
-            : <span className="text-[12px] italic text-slate-400">No apartment</span>}
+            : <span className="text-[12px] italic text-slate-400">No {unitWord.toLowerCase()}</span>}
+          {site.modules?.stays && r.householdRole !== 'member' && <StayChip stay={r.stay} />}
           <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full ${r.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${r.isActive ? 'bg-emerald-500' : 'bg-red-500'}`} />{r.isActive ? 'Active' : 'Suspended'}
           </span>
@@ -197,7 +205,7 @@ export default function ResidentDetail() {
         {[
           { label: 'Email', value: r.email, Icon: Mail, href: `mailto:${r.email}` },
           r.phone && { label: 'Phone', value: r.phone, Icon: Phone, href: `tel:${r.phone}` },
-          { label: 'Role', value: 'Resident', Icon: Users },
+          { label: 'Role', value: r.memberProfile?.title || T.member, Icon: Users },
           r.createdAt && { label: 'Member since', value: format(new Date(r.createdAt), 'MMMM d, yyyy'), Icon: Calendar },
         ].filter(Boolean).map((row) => {
           const body = (
@@ -217,29 +225,32 @@ export default function ResidentDetail() {
         <div className="h-1.5" />
       </section>
 
+      <StayCard member={r} onChanged={() => residentAPI.getOne(id).then(({ data }) => setResident(data.data)).catch(() => {})} />
+      <StaffCard member={r} />
+
       {/* Apartment */}
       {units.length > 0 && (
         <section className="dash-rise rounded-[22px] bg-white border border-slate-200/70 p-4" style={{ animationDelay: '320ms' }}>
           <div className="flex items-center justify-between">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Apartment</div>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{unitWord}</div>
             {curUnit && <span className="text-[11px] text-slate-400">{(curUnit.residentIds || []).length}/{curUnit.maxOccupants || 7} living here</span>}
           </div>
           <div className="mt-2 text-[15px] font-semibold text-slate-900">{unitDisplay || 'Not assigned yet'}</div>
           <select className="input-field text-sm mt-3" value={assignUnitId} onChange={e => setAssignUnitId(e.target.value)}>
-            <option value="">— No apartment —</option>
+            <option value="">— No {unitWord.toLowerCase()} —</option>
             {units.map(u => {
               const cnt = (u.residentIds || []).length;
               const mx = u.maxOccupants || 7;
               const isCurrent = (r.unitId?._id || r.unitId) === u._id;
               const full = cnt >= mx && !isCurrent;
-              const label = u.block ? `Block ${u.block} · Apt ${u.unitNumber}` : `Apt ${u.unitNumber}`;
+              const label = u.block ? `${E ? 'Block ' : ''}${u.block} · ${aptWord} ${u.unitNumber}` : `${aptWord} ${u.unitNumber}`;
               return <option key={u._id} value={u._id} disabled={full}>{label} — {cnt}/{mx}{full ? ' (full)' : ''}</option>;
             })}
           </select>
           <button onClick={handleAssign} disabled={savingUnit || !changed}
             className="mt-3 w-full py-3 rounded-xl text-[14px] font-semibold text-white transition-all disabled:opacity-50"
             style={{ background: 'linear-gradient(135deg, #10B981, #059669)', boxShadow: changed ? '0 10px 20px -12px rgba(5,150,105,0.9)' : 'none' }}>
-            {savingUnit ? 'Saving…' : !changed ? 'No changes' : assignUnitId ? 'Save apartment' : 'Remove from apartment'}
+            {savingUnit ? 'Saving…' : !changed ? 'No changes' : assignUnitId ? `Save ${unitWord.toLowerCase()}` : `Remove from ${unitWord.toLowerCase()}`}
           </button>
         </section>
       )}
@@ -252,10 +263,10 @@ export default function ResidentDetail() {
             ? { background: '#FEF2F2', color: '#DC2626', borderColor: '#FECACA' }
             : { background: '#ECFDF5', color: '#059669', borderColor: '#A7F3D0' }}>
           {r.isActive ? <UserX size={16} /> : <UserCheck size={16} />}
-          {acting ? 'Saving…' : r.isActive ? 'Suspend resident' : 'Activate resident'}
+          {acting ? 'Saving…' : `${r.isActive ? 'Suspend' : 'Activate'} ${T.member.toLowerCase()}`}
         </button>
         <p className="mt-2 text-center text-[11px] text-slate-400">
-          {r.isActive ? 'Suspended residents can’t sign in until you activate them again.' : 'Activating lets them sign in to AreaMates again.'}
+          {r.isActive ? `Suspended ${T.members.toLowerCase()} can’t sign in until you activate them again.` : 'Activating lets them sign in to AreaMates again.'}
         </p>
       </section>
     </div>

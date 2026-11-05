@@ -4,6 +4,10 @@ import QRCode from 'qrcode';
 import { visitorAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
+import { useSite } from '../context/SiteContext';
+import VisitorSiteDetails from '../components/visitors/VisitorSiteDetails';
+import PlaceCard from '../components/visitors/PlaceCard';
+import { CATEGORY_INFO } from '../utils/siteTypes';
 import Badge, { visitorStatusBadge } from '../components/ui/Badge';
 import Spinner, { PageLoader } from '../components/ui/Spinner';
 import {
@@ -186,7 +190,7 @@ const generatePassCanvas = async (v, estate) => {
 const shareVisitorPass = async (v, estate) => {
   const date = format(new Date(v.expectedDate), 'MMM d, yyyy · h:mm a');
   const estateLine = estate?.name ? `\n*Estate:* ${estate.name}` : '';
-  const waText = `🏠 *Visitor Pass — ${v.visitorName}*${estateLine}\n\n*Code:* ${v.visitorCode}\n*Purpose:* ${v.purpose}\n*Expected:* ${date}\n\n_Powered by Area Connector Technologies · RC 9607864_\n${BRAND_URL}`;
+  const waText = `🏠 *Visitor Pass — ${v.visitorName}*${estateLine}\n\n*Code:* ${v.visitorCode}\n*Purpose:* ${v.purpose}\n*Expected:* ${date}${v._place?.directionsUrl ? `\n*Where:* ${v._place.name} — ${v._place.directionsUrl}` : ''}\n\n_Powered by Area Connector Technologies · RC 9607864_\n${BRAND_URL}`;
 
   let file = null;
   try {
@@ -314,6 +318,7 @@ function PassTimer({ visitor }) {
 export default function VisitorDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const site = useSite();
   const { user } = useAuth();
   const { subscribe } = useSocket() || {};
   const [visitor, setVisitor] = useState(null);
@@ -321,7 +326,7 @@ export default function VisitorDetailPage() {
 
   const load = () => {
     visitorAPI.getOne(id)
-      .then(({ data }) => setVisitor(data.data))
+      .then(({ data }) => setVisitor({ ...data.data, _place: data.place || null }))
       .catch(() => { toast.error('Visitor not found'); navigate('/visitors'); })
       .finally(() => setLoading(false));
   };
@@ -393,8 +398,8 @@ export default function VisitorDetailPage() {
       : { label: 'Arrived at the gate', at: visitor.entryTime, done: !!visitor.entryTime, color: '#10B981' },
     ...(visitor.status === 'cancelled' ? [] : [{ label: 'Left the estate', at: visitor.exitTime, done: !!visitor.exitTime, color: '#3B82F6' }]),
   ];
-  const host = visitor.hostResidentId?.name || 'Estate manager';
-  const unit = visitor.hostUnitId ? `${visitor.hostUnitId.block ? `Block ${visitor.hostUnitId.block} · ` : ''}Unit ${visitor.hostUnitId.unitNumber}` : '';
+  const host = visitor.hostResidentId?.name || site.terms.manager;
+  const unit = visitor.hostUnitId ? `${visitor.hostUnitId.block ? `Block ${visitor.hostUnitId.block} · ` : ''}${site.terms.unit} ${visitor.hostUnitId.unitNumber}` : '';
   const rows = [
     { Icon: Home, color: '#10B981', label: 'Visiting', value: unit ? `${host} · ${unit}` : host },
     { Icon: Calendar, color: '#6366F1', label: 'Date', value: format(expectedAt, 'EEEE, d MMMM yyyy') },
@@ -429,6 +434,7 @@ export default function VisitorDetailPage() {
             <h1 className="text-[22px] font-extrabold tracking-tight truncate" style={{ color: '#fff' }}>{visitor.visitorName}</h1>
             <p className="text-[13px] text-white/80 truncate">{visitor.purpose} · {format(expectedAt, 'EEE d MMM, h:mm a')}</p>
             {visitor.instant && <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-300 text-amber-950"><Zap size={10} /> Instant pass</span>}
+            {visitor.category && visitor.category !== 'guest' && <span className="inline-flex items-center gap-1 mt-1 ml-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/20 text-white">{CATEGORY_INFO[visitor.category]?.label || visitor.category}</span>}
           </div>
         </div>
       </div>
@@ -459,6 +465,10 @@ export default function VisitorDetailPage() {
         </div>
 
         <PassTimer visitor={visitor} />
+
+        <PlaceCard place={visitor._place} />
+
+        <VisitorSiteDetails visitor={visitor} />
 
         {/* Timeline */}
         <div className="rounded-2xl bg-white border border-slate-200 p-4">

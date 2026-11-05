@@ -1,9 +1,8 @@
 import { useMemo, useState, useEffect } from 'react';
-import { GoogleMap, useJsApiLoader, OverlayView } from '@react-google-maps/api';
+import { GoogleMap, OverlayView } from '@react-google-maps/api';
 import { MapPin, Navigation, Layers, ExternalLink } from 'lucide-react';
-
-const GOOGLE_MAPS_LIBRARIES = ['places'];
-const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+import { useGoogleMaps, GOOGLE_MAPS_API_KEY as API_KEY } from '../utils/googleMaps';
+import { KIND_INFO } from './site/placeKinds';
 
 // Custom map styling — pink accents on a clean neutral base to match Tribely
 const MAP_STYLE = [
@@ -77,13 +76,9 @@ function CustomMarker({ position, label }) {
  */
 export default function EstateMap({
   location, address, name, height = 280, variant = 'card',
-  onPinChange, showControls = true,
+  onPinChange, showControls = true, places = [],
 }) {
-  const { isLoaded, loadError } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: API_KEY || '',
-    libraries: GOOGLE_MAPS_LIBRARIES,
-  });
+  const { isLoaded, loadError } = useGoogleMaps();
 
   const [mapType, setMapType] = useState('roadmap');
   const [pin, setPin] = useState(location?.lat ? { lat: location.lat, lng: location.lng } : null);
@@ -133,6 +128,18 @@ export default function EstateMap({
         onClick={onPinChange ? (e) => { const p = { lat: e.latLng.lat(), lng: e.latLng.lng() }; setPin(p); onPinChange(p); } : undefined}
       >
         <CustomMarker position={pin} label={name} />
+        {/* Site places (halls, buildings, gates…) as small coloured dots */}
+        {places.filter(p => p.lat != null && p.lng != null).map(p => {
+          const k = KIND_INFO[p.kind] || KIND_INFO.other;
+          return (
+            <OverlayView key={p._id} position={{ lat: p.lat, lng: p.lng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+              getPixelPositionOffset={(w, h) => ({ x: -(w / 2), y: -(h / 2) })}>
+              <div title={p.name} style={{ width: 20, height: 20, borderRadius: '50%', background: k.color, border: '2.5px solid #fff', boxShadow: `0 3px 8px ${k.color}66`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <k.Icon size={10} color="#fff" strokeWidth={2.6} />
+              </div>
+            </OverlayView>
+          );
+        })}
       </GoogleMap>
 
       {/* Overlay controls */}

@@ -8,6 +8,10 @@ import EstateMap from '../EstateMap';
 import useCountUp from '../../hooks/useCountUp';
 import { canOpen, hasArea } from '../../utils/teamAccess';
 import { CampaignBanner } from '../campaigns/CampaignSlots';
+import { useSite } from '../../context/SiteContext';
+import useSitePlaces from '../site/useSitePlaces';
+import { moduleVisible } from '../../utils/siteTypes';
+import { BedDouble, Truck } from 'lucide-react';
 
 const greeting = () => {
   const h = new Date().getHours();
@@ -55,12 +59,14 @@ function Metric({ label, value, tone = 'text-white', delay }) {
 
 const ACTIONS = [
   { to: '/visitors/new',       label: 'Invite',    Icon: UserPlus,   color: '#10B981' },
-  { to: '/residents',          label: 'Residents', Icon: Users,      color: '#6366F1' },
+  { to: '/residents',          label: (t) => t.members.split(' ')[0], Icon: Users, color: '#6366F1' },
+  { to: '/rooms',              label: (t) => `${t.units}`, Icon: BedDouble, color: '#14B8A6', module: 'stays' },
+  { to: '/gate-log',           label: 'Gate log',  Icon: Truck,      color: '#F97316', module: 'gatelog' },
   { to: '/announcements',      label: 'Notice',    Icon: Megaphone,  color: '#F59E0B' },
   { to: '/announcements/live', label: 'Go live',   Icon: Radio,      color: '#EF4444' },
-  { to: '/payments',           label: 'Payments',  Icon: CreditCard, color: '#0EA5E9' },
+  { to: '/payments',           label: 'Payments',  Icon: CreditCard, color: '#0EA5E9', module: 'payments' },
   { to: '/guards',             label: 'Guards',    Icon: Shield,     color: '#64748B' },
-  { to: '/lounge',             label: 'Lounge',    Icon: Music,      color: '#EC4899' },
+  { to: '/lounge',             label: 'Lounge',    Icon: Music,      color: '#EC4899', module: ['community', 'events'] },
   { to: '/alerts',             label: 'Alerts',    Icon: Bell,       color: '#DC2626' },
 ];
 
@@ -76,19 +82,24 @@ export default function MobileDashboard({ user, stats, recentVisitors, openAlert
   const today = stats?.todaysVisitors || 0;
   const seeSecurity = hasArea(user, 'security');
   const seeNotices = hasArea(user, 'communications');
-  const actions = ACTIONS.filter(a => canOpen(user, a.to)).slice(0, 8);
+  const site = useSite();
+  const T = site.terms;
+  const places = useSitePlaces();
+  const actions = ACTIONS.filter(a => canOpen(user, a.to) && moduleVisible(a.module, site.on))
+    .map(a => ({ ...a, label: typeof a.label === 'function' ? a.label(T) : a.label }))
+    .slice(0, 8);
 
   // One stream of what's happening: alerts, visitors, notices — newest first
   const feed = [
     ...(seeSecurity ? openAlerts.map(a => ({
       id: `a${a._id}`, at: a.createdAt, to: '/alerts', Icon: ShieldAlert, color: '#EF4444', urgent: true,
-      title: `${a.type ? a.type[0].toUpperCase() + a.type.slice(1) : 'Alert'} alert`, sub: a.residentId?.name || 'Resident',
+      title: `${a.type ? a.type[0].toUpperCase() + a.type.slice(1) : 'Alert'} alert`, sub: a.residentId?.name || T.member,
     })) : []),
     ...(seeSecurity ? recentVisitors.map(v => {
       const m = VISIT[v.status] || VISIT.active;
       return {
         id: `v${v._id}`, at: v.checkedInAt || v.updatedAt || v.expectedDate, to: `/visitors/${v._id}`, Icon: m.Icon, color: m.color,
-        title: `${v.visitorName || 'A visitor'} ${m.verb}`, sub: `${v.purpose || 'Visit'} · for ${v.hostResidentId?.name || 'Estate manager'}`,
+        title: `${v.visitorName || 'A visitor'} ${m.verb}`, sub: `${v.purpose || 'Visit'} · for ${v.hostResidentId?.name || T.manager}`,
       };
     }) : []),
     ...(seeNotices ? announcements.map(a => ({
@@ -135,14 +146,14 @@ export default function MobileDashboard({ user, stats, recentVisitors, openAlert
           <OnSiteRing inside={inside} today={today} />
           <div className="flex-1 min-w-0">
             <div className="text-[15px] font-semibold leading-snug dash-grad-text">
-              {inside ? `${inside} visitor${inside !== 1 ? 's' : ''} inside the estate` : 'No visitors inside right now'}
+              {inside ? `${inside} visitor${inside !== 1 ? 's' : ''} inside the ${T.site.toLowerCase()}` : 'No visitors inside right now'}
             </div>
             <div className="text-[12px] text-white/60 mt-1">{today} expected or arrived today</div>
           </div>
         </div>
 
         <div className="relative mt-5 pt-4 border-t border-white/10 grid grid-cols-3 gap-3">
-          <Metric label="Residents" value={stats?.totalResidents} delay={160} />
+          <Metric label={T.members} value={stats?.totalResidents} delay={160} />
           <Metric label="Visitors today" value={today} delay={210} />
           <Metric label="Open alerts" value={alertCount} tone={alertCount ? 'text-red-300' : 'text-white'} delay={260} />
         </div>
@@ -156,7 +167,7 @@ export default function MobileDashboard({ user, stats, recentVisitors, openAlert
               </span>
               <span className="flex-1 min-w-0">
                 <span className="block text-[13px] font-semibold text-white">{alertCount} alert{alertCount !== 1 ? 's' : ''} need{alertCount === 1 ? 's' : ''} attention</span>
-                <span className="block text-[11px] text-red-100/70 truncate">{openAlerts[0] ? `${openAlerts[0].residentId?.name || 'Resident'} · ${ago(openAlerts[0].createdAt)}` : 'Tap to respond'}</span>
+                <span className="block text-[11px] text-red-100/70 truncate">{openAlerts[0] ? `${openAlerts[0].residentId?.name || T.member} · ${ago(openAlerts[0].createdAt)}` : 'Tap to respond'}</span>
               </span>
               <ChevronRight size={16} className="text-red-200/70" />
             </Link>
@@ -232,11 +243,11 @@ export default function MobileDashboard({ user, stats, recentVisitors, openAlert
       {/* Map */}
       <section className="dash-rise" style={{ animationDelay: '520ms' }}>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-[16px] font-semibold text-slate-900" style={{ letterSpacing: '-0.02em' }}>Your estate</h2>
+          <h2 className="text-[16px] font-semibold text-slate-900" style={{ letterSpacing: '-0.02em' }}>Your {T.site.toLowerCase()}</h2>
           {estate?.address && <span className="text-[12px] text-slate-400 truncate max-w-[60%]">{estate.address}</span>}
         </div>
         <div className="rounded-[22px] overflow-hidden">
-          <EstateMap name={estate?.name || estateName} address={estate?.address} location={estate?.location} height={200} variant="card" />
+          <EstateMap name={estate?.name || estateName} address={estate?.address} location={estate?.location} height={200} variant="card" places={places} />
         </div>
       </section>
     </div>

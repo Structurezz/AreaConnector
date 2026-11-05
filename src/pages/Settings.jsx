@@ -1,3 +1,4 @@
+import AddressAutocomplete from '../components/ui/AddressAutocomplete';
 import { useEffect, useRef, useState } from 'react';
 import openConstitution from '../utils/openConstitution';
 import { estateAPI, authAPI } from '../api';
@@ -13,6 +14,9 @@ import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { Link, useNavigate } from 'react-router-dom';
 import { hasArea } from '../utils/teamAccess';
+import { useSite } from '../context/SiteContext';
+import SiteFeaturesSection from '../components/site/SiteFeaturesSection';
+import { Layers } from 'lucide-react';
 
 function formatBytes(bytes) {
   if (!bytes) return '';
@@ -109,6 +113,9 @@ export default function ManagerSettings() {
   const mustReset = user?.mustChangePassword;
   // Invited team members without Settings access only see their profile + password
   const canManage = hasArea(user, 'settings');
+  const site = useSite();
+  const T = site.terms;
+  const siteWord = T.site.toLowerCase();
 
   const submitPw = async () => {
     if (!pw.next || pw.next.length < 6) { toast.error('New password must be at least 6 characters'); return; }
@@ -128,6 +135,8 @@ export default function ManagerSettings() {
 
   // Editable estate info (name + address)
   const [infoDraft, setInfoDraft] = useState({ name: '', address: '' });
+  // Google suggestion picked for the address (exact pin, no re-geocoding)
+  const [pickedPlace, setPickedPlace] = useState(null);
   const [infoSaving, setInfoSaving] = useState(false);
   const [constitution, setConstitution] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -225,7 +234,12 @@ export default function ManagerSettings() {
     setInfoSaving(true);
     try {
       const addressChanged = address !== (estate?.address || '').trim();
-      const { data } = await estateAPI.update(estate._id, { name, address });
+      const exact = pickedPlace && pickedPlace.lat != null && pickedPlace.address === address;
+      const { data } = await estateAPI.update(estate._id, {
+        name, address,
+        ...(exact && addressChanged && { location: { lat: pickedPlace.lat, lng: pickedPlace.lng, formattedAddress: pickedPlace.address, placeId: pickedPlace.placeId } }),
+      });
+      setPickedPlace(null);
       setEstate(data.data);
       setInfoDraft({ name: data.data.name || '', address: data.data.address || '' });
       // Backend reports what happened with Google geocoding
@@ -266,16 +280,17 @@ export default function ManagerSettings() {
 
   const toggles = [
     { key: 'requireVisitorApproval', icon: UserCheck,      color: '#0EA5E9', label: 'Require visitor approval', desc: 'All visitor pre-registrations require manager approval before the code is sent.' },
-    { key: 'marketplaceApproval',    icon: Store,          color: '#F59E0B', label: 'Marketplace approval',     desc: 'All marketplace listings require manager approval before going live.' },
-    { key: 'householdApproval',      icon: Users,          color: '#A855F7', label: 'Approve family members',   desc: 'When residents add family to their home, you approve each person before their invite is sent. Off: invites go out automatically.' },
-    { key: 'allowGuestChat',         icon: MessagesSquare, color: '#8B5CF6', label: 'Allow community chat',     desc: 'Residents can message each other in the estate group chat.' },
-  ];
+    site.on('marketplace') && { key: 'marketplaceApproval',    icon: Store,          color: '#F59E0B', label: 'Marketplace approval',     desc: 'All marketplace listings require manager approval before going live.' },
+    site.on('household') && { key: 'householdApproval',      icon: Users,          color: '#A855F7', label: `Approve ${T.familyPlural.toLowerCase()}`,   desc: site.isEstate ? 'When residents add family to their home, you approve each person before their invite is sent. Off: invites go out automatically.' : `When ${T.members.toLowerCase()} add ${T.familyPlural.toLowerCase()}, you approve each person before their invite is sent. Off: invites go out automatically.` },
+    { key: 'allowGuestChat',         icon: MessagesSquare, color: '#8B5CF6', label: 'Allow community chat',     desc: `${T.members} can message each other in the ${siteWord} group chat.` },
+  ].filter(Boolean);
 
   const nav = [
     { id: 'profile',      label: 'My profile',     icon: UserIcon,   color: '#10B981' },
-    canManage && { id: 'estate',       label: 'Estate info',    icon: Building2,  color: '#0D9488' },
+    canManage && { id: 'estate',       label: `${T.site} info`,    icon: Building2,  color: '#0D9488' },
+    canManage && { id: 'site',         label: 'Site type & features', icon: Layers, color: '#14B8A6' },
     canManage && { id: 'preferences',  label: 'Preferences',    icon: Settings2,  color: '#0EA5E9' },
-    canManage && { id: 'constitution', label: 'Constitution',   icon: ScrollText, color: '#EC4899' },
+    canManage && site.on('community') && { id: 'constitution', label: 'Constitution',   icon: ScrollText, color: '#EC4899' },
     { id: 'security',     label: 'Password',       icon: KeyRound,   color: '#6366F1' },
     canManage && { id: 'access',       label: 'Team & access',  icon: UsersRound, color: '#F59E0B' },
   ].filter(Boolean);
@@ -291,7 +306,7 @@ export default function ManagerSettings() {
       <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
         <div>
           <h1 className="text-[22px] font-semibold text-slate-900" style={{ letterSpacing: '-0.02em' }}>Settings</h1>
-          <p className="text-[13px] text-slate-500 mt-0.5">Manage your profile, estate details and how AreaConnect behaves for your residents.</p>
+          <p className="text-[13px] text-slate-500 mt-0.5">Manage your profile, {siteWord} details and how AreaConnect behaves for your {T.members.toLowerCase()}.</p>
         </div>
       </div>
 
@@ -368,18 +383,18 @@ export default function ManagerSettings() {
           {canManage && (<>
           {/* Estate info — editable */}
           <Section id="estate" icon={Building2} color="#0D9488" delay={80}
-            title="Estate information"
-            desc="Keep your estate name and address up to date. The map pin is re-generated automatically from the address."
+            title={`${T.site} information`}
+            desc={`Keep your ${siteWord} name and address up to date. The map pin is re-generated automatically from the address.`}
             badge={geocoded && <Badge icon={CheckCircle2} color="#059669" title="This address has a verified Google Maps pin.">Geocoded</Badge>}>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className="text-xs font-semibold mb-1.5 block text-slate-600">Estate name</label>
+                <label className="text-xs font-semibold mb-1.5 block text-slate-600">{T.site} name</label>
                 <input className={inputCls} value={infoDraft.name}
                        onChange={e => setInfoDraft({ ...infoDraft, name: e.target.value })}
                        placeholder="e.g. Sunrise Estate" />
               </div>
               <div>
-                <label className="text-xs font-semibold mb-1.5 block text-slate-600">Estate manager</label>
+                <label className="text-xs font-semibold mb-1.5 block text-slate-600">{T.manager}</label>
                 <div className={`${inputCls} flex items-center gap-2 cursor-default text-slate-500 focus:ring-0`}>
                   <UserIcon size={14} className="text-slate-400" /> {user?.name || '—'}
                 </div>
@@ -388,12 +403,13 @@ export default function ManagerSettings() {
                 <label className="text-xs font-semibold mb-1.5 flex items-center gap-1.5 text-slate-600">
                   <MapPin size={12} className="text-emerald-600" /> Street address
                 </label>
-                <textarea rows={2} className={`${inputCls} resize-none`} style={{ fontFamily: 'inherit' }}
+                <AddressAutocomplete as="textarea" rows={2} className={`${inputCls} resize-none`} style={{ fontFamily: 'inherit' }}
                           value={infoDraft.address}
-                          onChange={e => setInfoDraft({ ...infoDraft, address: e.target.value })}
-                          placeholder="e.g. 24 Admiralty Way, Lekki Phase 1, Lagos" />
+                          onChange={(address) => setInfoDraft(d => ({ ...d, address }))}
+                          onSelect={(p) => setPickedPlace(p)}
+                          placeholder="Start typing — e.g. University of Lagos, Akoka" />
                 <p className="text-[11px] mt-1.5 flex items-center gap-1 text-slate-400">
-                  <MapPin size={10} /> We re-geocode via Google Maps as soon as you save.
+                  <MapPin size={10} /> Pick a Google suggestion for an exact map pin, or we geocode the address when you save.
                   {geocoded && <span className="ml-1 font-mono">({estate.location.lat.toFixed(4)}, {estate.location.lng.toFixed(4)})</span>}
                 </p>
               </div>
@@ -413,10 +429,12 @@ export default function ManagerSettings() {
             </div>
           </Section>
 
+          <SiteFeaturesSection Section={Section} />
+
           {/* Preferences */}
           <Section id="preferences" icon={Settings2} color="#0EA5E9" delay={120}
-            title="Estate preferences"
-            desc="Control what needs your approval and how residents interact.">
+            title={`${T.site} preferences`}
+            desc={`Control what needs your approval and how ${T.members.toLowerCase()} interact.`}>
             <div className="grid gap-3 md:grid-cols-2">
               {toggles.map(({ key, icon: I, color, label, desc }) => {
                 const on = !!settings[key];
@@ -462,7 +480,7 @@ export default function ManagerSettings() {
           </Section>
 
           {/* ─── Estate Constitution ─── */}
-          <Section id="constitution" icon={ScrollText} color="#EC4899" delay={160}
+          {site.on('community') && <Section id="constitution" icon={ScrollText} color="#EC4899" delay={160}
             title="Estate constitution"
             desc="Upload your estate's constitution as a PDF. The AI Judge and AI lawyers in the Courtroom will be grounded on these rules for every case in this estate."
             badge={<Badge icon={Sparkles} color="#EC4899">AI-grounded</Badge>}>
@@ -532,7 +550,7 @@ export default function ManagerSettings() {
                      if (f) handleUpload(f);
                      e.target.value = '';
                    }} />
-          </Section>
+          </Section>}
           </>)}
 
           {/* ── Change Password ─────────────────────────────────────── */}
