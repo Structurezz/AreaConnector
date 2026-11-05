@@ -57,7 +57,7 @@ export function MemberWizard({ open, onClose, units = [], onUnitCreated, onSaved
 
   const blank = () => ({
     name: '', email: '', phone: '', unitId: '', noLogin: false, idNumber: '', group: '', assignedTo: [],
-    stay: showStay ? defaultStay() : { checkIn: '', checkOut: '' },
+    stay: showStay ? defaultStay(sector.type) : { checkIn: '', checkOut: '' },
   });
   const [v, setV] = useState(blank);
   const [kin, setKin] = useState({ name: '', email: '', phone: '', relationship: '' });
@@ -72,8 +72,9 @@ export function MemberWizard({ open, onClose, units = [], onUnitCreated, onSaved
     if (!v.noLogin && !isValidEmail(v.email.trim())) return f.emailOptional ? `Add their email, or switch on "Add without app access"` : 'Add a valid email address';
     if (!v.unitId) return `Choose their ${(f.unit || T.unit).toLowerCase()}`;
     if (showStay) {
-      if (!v.stay.checkIn || !v.stay.checkOut) return `Add the ${sector.stayIn.toLowerCase()} and ${sector.stayOut.toLowerCase()} dates`;
-      if (new Date(v.stay.checkOut) <= new Date(v.stay.checkIn)) return `${sector.stayOut} must be after ${sector.stayIn.toLowerCase()}`;
+      if (!v.stay.checkIn) return `Add the ${sector.stayIn.toLowerCase()} date`;
+      if (sector.endRequired && !v.stay.checkOut) return `Add the ${sector.stayOut.toLowerCase()} date`;
+      if (v.stay.checkOut && new Date(v.stay.checkOut) <= new Date(v.stay.checkIn)) return `${sector.stayOut} must be after ${sector.stayIn.toLowerCase()}`;
     }
     return null;
   };
@@ -178,9 +179,9 @@ export function MemberWizard({ open, onClose, units = [], onUnitCreated, onSaved
             <div className="rounded-xl p-3 border border-teal-100" style={{ background: 'linear-gradient(135deg, #F0FDFA, #FFFFFF 70%)' }}>
               <div className="grid grid-cols-2 gap-2.5">
                 <div><L req>{sector.stayIn}</L><input type="datetime-local" className="input-field text-sm" value={v.stay.checkIn} onChange={e => set('stay', { ...v.stay, checkIn: e.target.value })} /></div>
-                <div><L req>{sector.stayOut}</L><input type="datetime-local" className="input-field text-sm" value={v.stay.checkOut} min={v.stay.checkIn || undefined} onChange={e => set('stay', { ...v.stay, checkOut: e.target.value })} /></div>
+                <div><L req={sector.endRequired}>{sector.stayOut}{sector.endRequired ? '' : ' (optional)'}</L><input type="datetime-local" className="input-field text-sm" value={v.stay.checkOut} min={v.stay.checkIn || undefined} onChange={e => set('stay', { ...v.stay, checkOut: e.target.value })} /></div>
               </div>
-              <p className="text-[11px] text-teal-700/70 mt-1.5">Access ends automatically at {sector.stayOut.toLowerCase()}.</p>
+              <p className="text-[11px] text-teal-700/70 mt-1.5">{sector.endRequired ? `Access ends automatically at ${sector.stayOut.toLowerCase()}.` : `Leave ${sector.stayOut.toLowerCase()} blank if it isn't known yet — set it later from their profile. Access ends automatically at ${sector.stayOut.toLowerCase()}.`}</p>
             </div>
           )}
           {(f.id || f.group) && (

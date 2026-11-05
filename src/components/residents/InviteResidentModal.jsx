@@ -40,7 +40,7 @@ export default function InviteResidentModal({ open, onClose, units = [], onSaved
     setForm(f => ({ ...f, unitId: initial?.unitId ?? f.unitId }));
     if (initial?.stay) setSector(s => ({ ...s, stay: { ...initial.stay } }));
     // Hotels: start from today 14:00 → tomorrow 12:00
-    else if (cfg.stays) setSector(s => (s.stay.checkIn ? s : { ...s, stay: defaultStay() }));
+    else if (cfg.stays) setSector(s => (s.stay.checkIn ? s : { ...s, stay: defaultStay(cfg.type) }));
   }, [open, initial, cfg.stays]);
 
   // Non-estate sites: the member role's own unit label ('Room', 'Ward & bed'…)

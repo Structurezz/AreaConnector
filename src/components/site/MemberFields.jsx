@@ -14,14 +14,19 @@ import { DAY_LABELS, STAY_STATE, stayStateOf } from '../../utils/siteTypes';
 export const toLocalInput = (d) => (d ? format(new Date(d), "yyyy-MM-dd'T'HH:mm") : '');
 export const fromLocalInput = (v) => (v ? new Date(v).toISOString() : null);
 
-// Default stay for a new guest: today 14:00 → tomorrow 12:00 (or now if later)
-export function defaultStay() {
+// Default stay. Hotels: today 14:00 → tomorrow 12:00 (or now if later).
+// Everyone else (hospital admission, a session…) starts now with no end yet —
+// a discharge date usually isn't known on admission.
+export function defaultStay(type = 'hotel') {
   const now = new Date();
+  if (type !== 'hotel') return { checkIn: toLocalInput(now), checkOut: '' };
   const inAt = new Date(now); inAt.setHours(14, 0, 0, 0);
   if (inAt < now) inAt.setTime(now.getTime());
   const outAt = new Date(now); outAt.setDate(outAt.getDate() + 1); outAt.setHours(12, 0, 0, 0);
   return { checkIn: toLocalInput(inAt), checkOut: toLocalInput(outAt) };
 }
+// Only hotels must know the leave date up front
+export const endRequired = (type) => type === 'hotel';
 
 export const emptySector = () => ({
   stay: { checkIn: '', checkOut: '' },
@@ -41,6 +46,8 @@ export function useSectorConfig() {
     // Stay date labels: "Check-in" / "Check-out", hospitals "Admission" / "Discharge"
     stayIn: site.terms.stayIn || 'Check-in',
     stayOut: site.terms.stayOut || 'Check-out',
+    type: site.type,
+    endRequired: endRequired(site.type),
     idLabel: site.terms.idLabel || 'Staff ID',
     classLabel: site.terms.classLabel || 'Class',
   };
@@ -65,7 +72,8 @@ export function sectorPayload(v, cfg) {
 // Returns an error message or null
 export function sectorError(v, cfg, { requireStay = false } = {}) {
   if (cfg.stays) {
-    if (requireStay && (!v.stay.checkIn || !v.stay.checkOut)) return `Add the ${cfg.stayIn.toLowerCase()} and ${cfg.stayOut.toLowerCase()} dates`;
+    if (requireStay && !v.stay.checkIn) return `Add the ${cfg.stayIn.toLowerCase()} date`;
+    if (requireStay && cfg.endRequired && !v.stay.checkOut) return `Add the ${cfg.stayOut.toLowerCase()} date`;
     if (v.stay.checkIn && v.stay.checkOut && new Date(v.stay.checkOut) <= new Date(v.stay.checkIn)) return `${cfg.stayOut} must be after ${cfg.stayIn.toLowerCase()}`;
   }
   if (cfg.shifts && (v.shift.start || v.shift.end) && !(v.shift.start && v.shift.end)) return 'Add both shift start and end times';
@@ -112,12 +120,12 @@ export function MemberSectorFields({ value, onChange, requireStay = false, hideS
             </div>
             <div>
               <label className={label} style={labelStyle}>{cfg.stayOut}</label>
-              <input type="datetime-local" className="input-field text-sm" value={value.stay.checkOut} required={requireStay}
+              <input type="datetime-local" className="input-field text-sm" value={value.stay.checkOut} required={requireStay && cfg.endRequired}
                 min={value.stay.checkIn || undefined}
                 onChange={e => set('stay', 'checkOut', e.target.value)} />
             </div>
           </div>
-          <p className="text-[11px] text-teal-700/70 mt-1.5">They can sign in from {cfg.stayIn.toLowerCase()} and are signed out automatically at {cfg.stayOut.toLowerCase()}.</p>
+          <p className="text-[11px] text-teal-700/70 mt-1.5">They can sign in from {cfg.stayIn.toLowerCase()} and are signed out automatically at {cfg.stayOut.toLowerCase()}.{cfg.endRequired ? '' : ` Leave ${cfg.stayOut.toLowerCase()} blank if it isn't known yet — add it later.`}</p>
         </div>
       )}
       {cfg.school && (
@@ -180,12 +188,12 @@ export function StayCard({ member, onChanged }) {
   const has = state !== 'none';
 
   const startEdit = () => {
-    setDraft({ checkIn: toLocalInput(stay.checkIn) || defaultStay().checkIn, checkOut: toLocalInput(stay.checkOut) || defaultStay().checkOut });
+    setDraft({ checkIn: toLocalInput(stay.checkIn) || defaultStay(cfg.type).checkIn, checkOut: toLocalInput(stay.checkOut) || defaultStay(cfg.type).checkOut });
     setEditing(true);
   };
   const saveStay = async () => {
-    if (!draft.checkIn || !draft.checkOut) { toast.error('Add both dates'); return; }
-    if (new Date(draft.checkOut) <= new Date(draft.checkIn)) { toast.error(`${cfg.stayOut} must be after ${cfg.stayIn.toLowerCase()}`); return; }
+    if (!draft.checkIn || (cfg.endRequired && !draft.checkOut)) { toast.error(cfg.endRequired ? 'Add both dates' : `Add the ${cfg.stayIn.toLowerCase()} date`); return; }
+    if (draft.checkOut && new Date(draft.checkOut) <= new Date(draft.checkIn)) { toast.error(`${cfg.stayOut} must be after ${cfg.stayIn.toLowerCase()}`); return; }
     setBusy(true);
     try {
       const { data } = await siteAPI.updateMember(member._id, { stay: { checkIn: fromLocalInput(draft.checkIn), checkOut: fromLocalInput(draft.checkOut) } });
