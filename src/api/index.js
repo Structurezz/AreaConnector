@@ -339,6 +339,7 @@ export const requestAPI = {
   list:   (params)   => api.get('/requests', { params }),
   create: (data)     => api.post('/requests', data),
   update: (id, data) => api.patch(`/requests/${id}`, data),
+  reply:  (id, text) => api.post(`/requests/${id}/messages`, { text }),
 };
 
 // Emergency roll-call (module rollcall)
