@@ -1,12 +1,22 @@
-import { useState } from 'react';
+import AddressAutocomplete from '../components/ui/AddressAutocomplete';
+import { createContext, useContext, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   Building2, Eye, EyeOff, AlertCircle, ArrowRight, ArrowLeft,
-  CheckCircle, MapPin, Check, Shield,
+  CheckCircle, MapPin, Check, Shield, Hash, Copy,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import AuthLayout from '../components/auth/AuthLayout';
+import { MobileAuthShell, DesktopAuthShell } from '../components/auth/AuthShell';
+import SiteTypePicker from '../components/site/SiteTypePicker';
+import { TERMS, SITE_TYPES } from '../utils/siteTypes';
+
+const TYPE_EXAMPLE = { school: 'Kings College', university: 'University of Lagos', hotel: 'Harbour View Hotel', industrial: 'Apapa Industrial Park', hospital: 'St. Mary’s Hospital' };
+
+// Same frame as the login page (components/auth/AuthShell). The steps render
+// on both the dark phone card and the light desktop panel, so they use the
+// theme-aware `ax-*` classes and pick their input style from this context.
+const Ui = createContext({ input: 'dl-input', dark: false });
 
 const STEPS = ['Account', 'Estate', 'Plan', 'Done'];
 
@@ -40,203 +50,208 @@ const TRIAL_PLAN = {
   features: ['All Growth plan features', 'Up to 200 residents & unlimited gates', 'No credit card required', 'Cancel or upgrade any time'],
 };
 
-/* ── Step indicator ── */
+const fmt = n => '₦' + n.toLocaleString('en-NG');
+
+const Spinner = () => (
+  <svg className="animate-spin" width={15} height={15} viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" strokeOpacity=".3"/>
+    <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round"/>
+  </svg>
+);
+
+// A <label> wrapping the input links them (tap the label → focus the field).
+// `group` = a set of buttons (e.g. the site-type picker), which must not be
+// inside a label.
+function Field({ label, children, group = false }) {
+  if (group) return <div role="group" aria-label={label}><span className="ax-label block">{label}</span>{children}</div>;
+  return <label className="block"><span className="ax-label block">{label}</span>{children}</label>;
+}
+
+function ErrorBox({ error }) {
+  if (!error) return null;
+  return (
+    <div className="ax-error flex items-start gap-2 rounded-lg px-3.5 py-3 text-[13px]">
+      <AlertCircle size={15} className="shrink-0 mt-0.5"/> {error}
+    </div>
+  );
+}
+
+function Heading({ title, sub }) {
+  return (
+    <div className="mb-6">
+      <div className="ax-title">{title}</div>
+      <p className="ax-sub mt-1.5">{sub}</p>
+    </div>
+  );
+}
+
+/* ── Step indicator: progress bar + labels ── */
 function StepIndicator({ current }) {
   return (
-    <div className="flex items-center justify-center gap-2 mb-8">
-      {STEPS.map((label, i) => (
-        <div key={i} className="flex items-center gap-2">
-          <div className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
-            i === current ? 'text-emerald-600' : i < current ? 'text-emerald-600' : 'text-slate-300'
-          }`}>
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border transition-all ${
-              i === current ? 'border-emerald-500 bg-emerald-50 text-emerald-600' :
-              i < current  ? 'border-emerald-500 bg-emerald-50 text-emerald-600' :
-              'border-slate-200 text-slate-400'
-            }`}>
-              {i < current ? '✓' : i + 1}
-            </div>
-            <span className="hidden sm:block">{label}</span>
-          </div>
-          {i < STEPS.length - 1 && (
-            <div className={`w-8 h-px transition-colors ${i < current ? 'bg-emerald-300' : 'bg-slate-200'}`}/>
-          )}
-        </div>
-      ))}
+    <div className="mb-7">
+      <div className="flex gap-1.5">
+        {STEPS.slice(0, 3).map((_, i) => (
+          <span key={i} className="ax-line flex-1 h-1.5 rounded-full overflow-hidden">
+            <span className="block h-full rounded-full transition-all duration-500"
+              style={{ width: i < current ? '100%' : i === current ? '50%' : '0%', background: 'linear-gradient(90deg,#10B981,#059669)' }}/>
+          </span>
+        ))}
+      </div>
+      <div className="mt-2 flex justify-between text-[11.5px] font-medium">
+        {STEPS.slice(0, 3).map((label, i) => (
+          <span key={label} className={i <= current ? 'ax-link' : 'ax-faint'}>
+            {i < current ? '✓ ' : `${i + 1}. `}{label}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PasswordInput({ value, onChange, placeholder, autoComplete }) {
+  const { input, dark } = useContext(Ui);
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <input type={show ? 'text' : 'password'} className={input} style={{ paddingRight: 44 }}
+        placeholder={placeholder} value={value} onChange={onChange} autoComplete={autoComplete}/>
+      <button type="button" onClick={() => setShow(!show)} aria-label={show ? 'Hide password' : 'Show password'}
+        className="absolute right-3 top-1/2 -translate-y-1/2 p-1"
+        style={{ color: dark ? 'rgba(255,255,255,0.4)' : '#98A2B3' }}>
+        {show ? <EyeOff size={16}/> : <Eye size={16}/>}
+      </button>
     </div>
   );
 }
 
 /* ── Step 0: Account ── */
 function AccountStep({ form, onChange, onNext, error }) {
-  const [showPw, setShowPw]         = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
+  const { input } = useContext(Ui);
   const canNext = form.name.trim() && form.email.trim() &&
     form.password.length >= 6 && form.password === form.confirm;
 
   return (
-    <div className="space-y-4">
-      <div className="mb-5">
-        <h2 className="text-2xl font-bold text-slate-900 mb-1 tracking-tight">Create your account</h2>
-        <p className="text-sm text-slate-500">
-          You'll use these credentials to log in to the manager portal.
-        </p>
-      </div>
+    <form onSubmit={(e) => { e.preventDefault(); if (canNext) onNext(); }} className="space-y-4">
+      <Heading title="Create your account" sub="You'll use these details to sign in to the manager portal."/>
+      <ErrorBox error={error}/>
 
-      {error && (
-        <div className="flex items-center gap-2 rounded-xl p-3 text-sm bg-red-50 border border-red-200 text-red-600">
-          <AlertCircle size={15} className="shrink-0"/> {error}
-        </div>
+      <Field label="Full name">
+        <input className={input} placeholder="John Doe" value={form.name} autoComplete="name"
+          onChange={e => onChange('name', e.target.value)}/>
+      </Field>
+      <Field label="Email">
+        <input type="email" className={input} placeholder="you@estate.com" value={form.email} autoComplete="email"
+          onChange={e => onChange('email', e.target.value)}/>
+      </Field>
+      <Field label="Phone (optional)">
+        <input className={input} type="tel" inputMode="tel" placeholder="+234…" value={form.phone} autoComplete="tel"
+          onChange={e => onChange('phone', e.target.value)}/>
+      </Field>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field label="Password">
+          <PasswordInput placeholder="Min. 6 characters" value={form.password} autoComplete="new-password"
+            onChange={e => onChange('password', e.target.value)}/>
+        </Field>
+        <Field label="Confirm password">
+          <PasswordInput placeholder="Repeat password" value={form.confirm} autoComplete="new-password"
+            onChange={e => onChange('confirm', e.target.value)}/>
+        </Field>
+      </div>
+      {form.confirm && form.password !== form.confirm && (
+        <p className="text-[12px] -mt-2" style={{ color: '#F04438' }}>Passwords do not match</p>
       )}
 
-      <div>
-        <label className="block text-xs font-semibold uppercase tracking-widest mb-1.5 text-slate-400">Full Name</label>
-        <input className="input-field" placeholder="John Doe" value={form.name}
-          onChange={e => onChange('name', e.target.value)}/>
-      </div>
-      <div>
-        <label className="block text-xs font-semibold uppercase tracking-widest mb-1.5 text-slate-400">Email Address</label>
-        <input type="email" className="input-field" placeholder="you@example.com" value={form.email}
-          onChange={e => onChange('email', e.target.value)}/>
-      </div>
-      <div>
-        <label className="block text-xs font-semibold uppercase tracking-widest mb-1.5 text-slate-400">Phone (optional)</label>
-        <input className="input-field" placeholder="+234…" value={form.phone}
-          onChange={e => onChange('phone', e.target.value)}/>
-      </div>
-      <div>
-        <label className="block text-xs font-semibold uppercase tracking-widest mb-1.5 text-slate-400">Password</label>
-        <div className="relative">
-          <input type={showPw ? 'text' : 'password'} className="input-field pr-11"
-            placeholder="Min. 6 characters" value={form.password}
-            onChange={e => onChange('password', e.target.value)}/>
-          <button type="button" onClick={() => setShowPw(!showPw)}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
-            {showPw ? <EyeOff size={15}/> : <Eye size={15}/>}
-          </button>
-        </div>
-      </div>
-      <div>
-        <label className="block text-xs font-semibold uppercase tracking-widest mb-1.5 text-slate-400">Confirm Password</label>
-        <div className="relative">
-          <input type={showConfirm ? 'text' : 'password'} className="input-field pr-11"
-            placeholder="Repeat password" value={form.confirm}
-            onChange={e => onChange('confirm', e.target.value)}/>
-          <button type="button" onClick={() => setShowConfirm(!showConfirm)}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
-            {showConfirm ? <EyeOff size={15}/> : <Eye size={15}/>}
-          </button>
-        </div>
-        {form.confirm && form.password !== form.confirm && (
-          <p className="text-red-500 text-xs mt-1.5">Passwords do not match</p>
-        )}
-      </div>
-
-      <button onClick={onNext} disabled={!canNext}
-        className="w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 mt-2 transition-all disabled:opacity-40"
-        style={{ background: 'linear-gradient(135deg,#10B981,#059669)', color: 'white',
-          boxShadow: canNext ? '0 0 24px rgba(16,185,129,0.3)' : 'none' }}>
-        Continue <ArrowRight size={15}/>
+      <button type="submit" disabled={!canNext} className="ax-btn mt-2">
+        Continue <ArrowRight size={16}/>
       </button>
-
-      <p className="text-center text-sm text-slate-400">
-        Already have an account?{' '}
-        <Link to="/login" className="font-medium text-emerald-600">Sign in</Link>
-      </p>
-    </div>
+    </form>
   );
 }
 
-/* ── Step 1: Estate ── */
+/* ── Step 1: Estate (or campus / property / site / hospital) ── */
 function EstateStep({ form, onChange, onNext, onBack }) {
+  const { input, dark } = useContext(Ui);
   const canNext = form.estateName.trim() && form.estateAddress.trim();
+  const type = form.siteType || 'estate';
+  const isEstate = type === 'estate';
+  const word = TERMS[type].site; // Estate / Campus / Property / Site / Hospital
+  const members = TERMS[type].members.toLowerCase();
+  const iconColor = dark ? 'rgba(255,255,255,0.35)' : '#98A2B3';
 
   return (
-    <div className="space-y-4">
-      <div className="mb-5">
-        <h2 className="text-2xl font-bold text-slate-900 mb-1 tracking-tight">Set up your estate</h2>
-        <p className="text-sm text-slate-500">
-          We'll create a unique estate code residents use to join.
-        </p>
-      </div>
+    <form onSubmit={(e) => { e.preventDefault(); if (canNext) onNext(); }} className="space-y-4">
+      <Heading title={`Set up your ${word.toLowerCase()}`}
+        sub={isEstate ? "We'll create a unique estate code residents use to join." : `We'll create a unique code your ${members} use to join.`}/>
 
-      <div>
-        <label className="block text-xs font-semibold uppercase tracking-widest mb-1.5 text-slate-400">Estate Name</label>
+      <Field label="What are you managing?" group>
+        <SiteTypePicker variant="compact" dark={dark} value={type} onChange={v => onChange('siteType', v)} />
+      </Field>
+      <Field label={`${word} name`}>
         <div className="relative">
-          <Building2 size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"/>
-          <input className="input-field pl-9" placeholder="e.g. Greenfield Estate"
+          <Building2 size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: iconColor }}/>
+          <input className={input} style={{ paddingLeft: 38 }} placeholder={isEstate ? 'e.g. Greenfield Estate' : `e.g. ${TYPE_EXAMPLE[type]}`}
             value={form.estateName} onChange={e => onChange('estateName', e.target.value)}/>
         </div>
-      </div>
-      <div>
-        <label className="block text-xs font-semibold uppercase tracking-widest mb-1.5 text-slate-400">Estate Address</label>
+      </Field>
+      <Field label={`${word} address`}>
         <div className="relative">
-          <MapPin size={15} className="absolute left-3.5 top-3.5 text-slate-400"/>
-          <textarea className="input-field pl-9 resize-none" rows={3}
-            placeholder="Full street address, city, state"
-            value={form.estateAddress} onChange={e => onChange('estateAddress', e.target.value)}/>
+          <MapPin size={15} className="absolute left-3.5 top-3.5" style={{ color: iconColor }}/>
+          <AddressAutocomplete as="textarea" className={`${input} resize-none`} rows={3} style={{ paddingLeft: 38, paddingTop: 11, height: 'auto' }}
+            placeholder="Start typing the address — pick a suggestion"
+            value={form.estateAddress} onChange={(v) => onChange('estateAddress', v)}
+            onSelect={(p) => onChange('estateLocation', p.lat != null ? { lat: p.lat, lng: p.lng, formattedAddress: p.address, placeId: p.placeId } : null)}/>
         </div>
-      </div>
+      </Field>
 
-      <div className="rounded-xl p-3.5 text-xs flex gap-2.5 items-start bg-slate-50 border border-slate-200 text-slate-500">
-        <span className="text-emerald-600 mt-0.5 flex-shrink-0">#</span>
-        A unique 6-character estate code will be auto-generated. Share it with residents so they can register.
+      <div className="ax-panel-soft rounded-xl px-3.5 py-3 flex gap-3 items-start text-[12.5px]">
+        <span className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(16,185,129,0.14)', color: '#10B981' }}><Hash size={14}/></span>
+        <span className="ax-muted leading-relaxed">
+          {isEstate
+            ? 'A unique 6-character estate code is generated for you. Share it with residents so they can join.'
+            : `A unique 6-character code is generated for you. Share it with your ${members} so they can join.`}
+        </span>
       </div>
 
       <div className="flex gap-3 pt-1">
-        <button onClick={onBack}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all bg-slate-100 border border-slate-200 text-slate-600 hover:bg-slate-200">
-          <ArrowLeft size={14}/> Back
-        </button>
-        <button onClick={onNext} disabled={!canNext}
-          className="flex-1 py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-40"
-          style={{ background: 'linear-gradient(135deg,#10B981,#059669)', color: 'white',
-            boxShadow: canNext ? '0 0 20px rgba(16,185,129,0.25)' : 'none' }}>
-          Continue <ArrowRight size={15}/>
-        </button>
+        <button type="button" onClick={onBack} className="ax-ghost"><ArrowLeft size={15}/> Back</button>
+        <button type="submit" disabled={!canNext} className="ax-btn flex-1">Continue <ArrowRight size={16}/></button>
       </div>
-    </div>
+    </form>
   );
 }
 
-const fmt = n => '₦' + n.toLocaleString('en-NG');
+function Radio({ on }) {
+  return (
+    <span className="rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all"
+      style={{ width: 18, height: 18, borderColor: on ? '#10B981' : '#98A2B3', background: on ? '#10B981' : 'transparent' }}>
+      {on && <Check size={10} color="#fff" strokeWidth={3}/>}
+    </span>
+  );
+}
 
 /* ── Step 2: Plan ── */
-function PlanStep({ selected, onSelect, onNext, onBack, loading, billingCycle, onCycleChange }) {
+function PlanStep({ selected, onSelect, onNext, onBack, loading, billingCycle, onCycleChange, error }) {
+  const trialOn = selected?.id === 'trial';
   return (
-    <div className="space-y-3">
-      <div className="mb-4">
-        <h2 className="text-2xl font-bold text-slate-900 mb-1 tracking-tight">Choose your plan</h2>
-        <p className="text-sm text-slate-500">Start free, upgrade when you're ready.</p>
-      </div>
+    <div className="space-y-3.5">
+      <Heading title="Choose your plan" sub="Start free for 14 days, upgrade when you're ready."/>
+      <ErrorBox error={error}/>
 
-      {/* Free trial card */}
-      <button onClick={() => onSelect(TRIAL_PLAN)}
-        className="w-full text-left rounded-xl p-4 transition-all"
-        style={{
-          border: selected?.id === 'trial' ? '2px solid #10B981' : '2px solid #D1FAE5',
-          background: selected?.id === 'trial' ? 'rgba(16,185,129,0.08)' : 'rgba(240,253,244,0.6)',
-        }}>
+      {/* Free trial */}
+      <button type="button" onClick={() => onSelect(TRIAL_PLAN)}
+        className={`ax-panel w-full text-left rounded-xl p-4 transition-all ${trialOn ? 'ax-panel-on' : ''}`}>
         <div className="flex items-start gap-3">
-          <div className="rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all"
-            style={{
-              width: 18, height: 18,
-              borderColor: selected?.id === 'trial' ? '#10B981' : '#34D399',
-              background: selected?.id === 'trial' ? '#10B981' : 'transparent',
-            }}>
-            {selected?.id === 'trial' && <Check size={10} color="#fff" strokeWidth={3}/>}
-          </div>
+          <Radio on={trialOn}/>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="font-bold text-emerald-900 text-sm">14-Day Free Trial</span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-600 text-white">Recommended</span>
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="ax-strong font-semibold text-[14px]">14-day free trial</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: '#059669' }}>Recommended</span>
             </div>
-            <p className="text-xs text-emerald-700 mb-2.5">Full Growth plan · No credit card required</p>
+            <p className="ax-muted text-[12.5px] mb-2.5">Full Growth plan · No credit card required</p>
             <div className="grid grid-cols-2 gap-x-2 gap-y-1">
               {TRIAL_PLAN.features.map(f => (
-                <div key={f} className="flex items-start gap-1.5 text-xs text-emerald-700">
-                  <Check size={9} className="text-emerald-500 flex-shrink-0 mt-0.5" strokeWidth={3}/>
-                  {f}
+                <div key={f} className="ax-muted flex items-start gap-1.5 text-[12px]">
+                  <Check size={11} className="flex-shrink-0 mt-0.5" style={{ color: '#10B981' }} strokeWidth={3}/>{f}
                 </div>
               ))}
             </div>
@@ -244,79 +259,49 @@ function PlanStep({ selected, onSelect, onNext, onBack, loading, billingCycle, o
         </div>
       </button>
 
-      {/* Divider */}
       <div className="flex items-center gap-3">
-        <div className="flex-1 h-px bg-slate-200"/>
-        <span className="text-xs text-slate-400 font-medium whitespace-nowrap">or choose a paid plan</span>
-        <div className="flex-1 h-px bg-slate-200"/>
+        <span className="ax-line flex-1 h-px"/>
+        <span className="ax-faint text-[11.5px] font-medium whitespace-nowrap">or choose a paid plan</span>
+        <span className="ax-line flex-1 h-px"/>
       </div>
 
-      {/* Billing cycle toggle */}
-      <div className="flex items-center p-1 rounded-xl bg-slate-100 border border-slate-200">
-        <button onClick={() => onCycleChange('monthly')}
-          className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all"
-          style={billingCycle === 'monthly'
-            ? { background: '#fff', color: '#0F172A', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }
-            : { color: '#64748B' }}>
-          Monthly
-        </button>
-        <button onClick={() => onCycleChange('annual')}
-          className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
-          style={billingCycle === 'annual'
-            ? { background: '#fff', color: '#0F172A', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }
-            : { color: '#64748B' }}>
-          Annual
-          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-600">Save 20%</span>
-        </button>
+      {/* Billing cycle */}
+      <div className="ax-seg flex items-center p-1 rounded-xl">
+        {[['monthly', 'Monthly'], ['annual', 'Annual']].map(([id, label]) => (
+          <button key={id} type="button" onClick={() => onCycleChange(id)}
+            className={`flex-1 py-1.5 rounded-lg text-[12.5px] font-semibold transition-all flex items-center justify-center gap-1.5 ${billingCycle === id ? 'ax-seg-on' : 'ax-seg-off'}`}>
+            {label}
+            {id === 'annual' && <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(16,185,129,0.15)', color: '#10B981' }}>Save 20%</span>}
+          </button>
+        ))}
       </div>
 
-      {/* Plan cards */}
+      {/* Plans */}
       <div className="space-y-2">
         {PLANS.map(plan => {
-          const isSelected = selected?.id === plan.id;
-          const displayPrice = billingCycle === 'annual' ? plan.annual : plan.monthly;
-          const periodLabel = billingCycle === 'annual' ? '/year' : '/month';
-          const monthlyEquiv = billingCycle === 'annual' ? Math.round(plan.annual / 12) : null;
-
+          const on = selected?.id === plan.id;
+          const price = billingCycle === 'annual' ? plan.annual : plan.monthly;
           return (
-            <button key={plan.id} onClick={() => onSelect({ ...plan, cycle: billingCycle })}
-              className="w-full text-left rounded-xl border p-3.5 transition-all"
-              style={{
-                borderColor: isSelected ? '#10B981' : '#E2E8F0',
-                background: isSelected ? 'rgba(16,185,129,0.05)' : '#fff',
-              }}>
+            <button key={plan.id} type="button" onClick={() => onSelect({ ...plan, cycle: billingCycle })}
+              className={`ax-panel w-full text-left rounded-xl p-3.5 transition-all ${on ? 'ax-panel-on' : ''}`}>
               <div className="flex items-start gap-2.5">
-                <div className="rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all"
-                  style={{
-                    width: 18, height: 18,
-                    borderColor: isSelected ? '#10B981' : '#CBD5E1',
-                    background: isSelected ? '#10B981' : 'transparent',
-                  }}>
-                  {isSelected && <Check size={10} color="#fff" strokeWidth={3}/>}
-                </div>
+                <Radio on={on}/>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2 mb-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-sm text-slate-900">{plan.label}</span>
-                      {plan.badge && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200">
-                          {plan.badge}
-                        </span>
-                      )}
+                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="ax-strong font-semibold text-[14px]">{plan.label}</span>
+                      {plan.badge && <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(16,185,129,0.14)', color: '#10B981' }}>{plan.badge}</span>}
                     </div>
-                    <div className="text-right flex-shrink-0">
-                      <div className="text-slate-900 font-bold text-sm leading-tight">{fmt(displayPrice)}</div>
-                      <div className="text-[10px] text-slate-400 leading-tight">{periodLabel}</div>
-                      {monthlyEquiv && (
-                        <div className="text-[10px] text-emerald-600 font-semibold leading-tight">{fmt(monthlyEquiv)}/mo</div>
-                      )}
+                    <div className="text-right flex-shrink-0 leading-tight">
+                      <div className="ax-strong font-semibold text-[14px]">{fmt(price)}</div>
+                      <div className="ax-faint text-[10.5px]">{billingCycle === 'annual' ? '/year' : '/month'}</div>
+                      {billingCycle === 'annual' && <div className="text-[10.5px] font-semibold" style={{ color: '#10B981' }}>{fmt(Math.round(plan.annual / 12))}/mo</div>}
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-x-2 gap-y-0.5">
                     {plan.features.map(f => (
-                      <div key={f} className="flex items-start gap-1.5 text-xs text-slate-500">
-                        <Check size={9} className="text-emerald-400 flex-shrink-0 mt-0.5" strokeWidth={3}/>
-                        {f}
+                      <div key={f} className="ax-muted flex items-start gap-1.5 text-[11.5px]">
+                        <Check size={10} className="flex-shrink-0 mt-0.5" style={{ color: '#10B981' }} strokeWidth={3}/>{f}
                       </div>
                     ))}
                   </div>
@@ -327,28 +312,15 @@ function PlanStep({ selected, onSelect, onNext, onBack, loading, billingCycle, o
         })}
       </div>
 
-      <div className="rounded-xl p-3 text-xs flex gap-2 items-start bg-slate-50 border border-slate-200 text-slate-500">
-        <CheckCircle size={13} className="flex-shrink-0 mt-0.5 text-emerald-500"/>
-        All plans include visitor management, QR passes, community chat, announcements, payments, guard app &amp; analytics.
-      </div>
+      <p className="ax-faint text-[11.5px] flex gap-1.5 items-start">
+        <CheckCircle size={13} className="flex-shrink-0 mt-px" style={{ color: '#10B981' }}/>
+        Every plan includes visitor management, QR passes, chat, announcements, payments, the guard app and analytics.
+      </p>
 
-      <div className="flex gap-3">
-        <button onClick={onBack}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-slate-100 border border-slate-200 text-slate-600 hover:bg-slate-200 transition-all">
-          <ArrowLeft size={14}/> Back
-        </button>
-        <button onClick={onNext} disabled={!selected || loading}
-          className="flex-1 py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-40"
-          style={{ background: 'linear-gradient(135deg,#10B981,#059669)', color: 'white',
-            boxShadow: selected ? '0 0 20px rgba(16,185,129,0.25)' : 'none' }}>
-          {loading
-            ? <><svg className="animate-spin" width={14} height={14} viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" strokeOpacity=".3"/>
-                <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round"/>
-              </svg> Creating estate…</>
-            : selected?.isTrial
-              ? <>Start Free Trial <ArrowRight size={15}/></>
-              : <>Continue <ArrowRight size={15}/></>}
+      <div className="flex gap-3 pt-1">
+        <button type="button" onClick={onBack} className="ax-ghost"><ArrowLeft size={15}/> Back</button>
+        <button type="button" onClick={onNext} disabled={!selected || loading} className="ax-btn flex-1">
+          {loading ? <><Spinner/> Creating…</> : selected?.isTrial ? <>Start free trial <ArrowRight size={16}/></> : <>Continue <ArrowRight size={16}/></>}
         </button>
       </div>
     </div>
@@ -356,58 +328,55 @@ function PlanStep({ selected, onSelect, onNext, onBack, loading, billingCycle, o
 }
 
 /* ── Step 3: Done ── */
-function DoneStep({ estateName, estateCode, billingLabel }) {
+const clearSignupDone = () => { try { sessionStorage.removeItem('ac:signupDone'); } catch { /* storage off */ } };
+
+function DoneStep({ estateName, estateCode, billingLabel, siteType }) {
   const navigate = useNavigate();
+  const type = siteType || 'estate';
+  const word = TERMS[type].site;
   return (
-    <div className="text-center space-y-6">
-      <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto bg-emerald-50 border border-emerald-200">
-        <CheckCircle size={36} className="text-emerald-600"/>
-      </div>
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900 mb-2 tracking-tight">You're in!</h2>
-        <p className="text-sm text-slate-500">
-          Your estate is live. Your 14-day trial has started.
-        </p>
+    <div className="space-y-6">
+      <div className="text-center">
+        <span className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#10B981,#059669)', boxShadow: '0 10px 30px -10px rgba(16,185,129,.6)' }}>
+          <CheckCircle size={30} color="#fff"/>
+        </span>
+        <div className="ax-title mt-5">You're in!</div>
+        <p className="ax-sub mt-1.5">Your {word.toLowerCase()} is live and your 14-day trial has started.</p>
       </div>
 
-      <div className="rounded-xl p-5 text-left space-y-3 bg-emerald-50 border border-emerald-200">
-        {[
-          ['Estate', estateName],
-          ['Billing', billingLabel],
-        ].map(([k, v]) => (
-          <div key={k} className="flex items-center justify-between">
-            <span className="text-sm text-slate-500">{k}</span>
-            <span className="text-slate-900 font-semibold text-sm">{v}</span>
+      <div className="ax-panel-soft rounded-xl p-4 space-y-3 text-[13.5px]">
+        {[[word, estateName], ['Billing', billingLabel]].map(([k, v]) => (
+          <div key={k} className="flex items-center justify-between gap-3">
+            <span className="ax-muted">{k}</span>
+            <span className="ax-strong font-semibold text-right">{v}</span>
           </div>
         ))}
         <div className="flex items-center justify-between">
-          <span className="text-sm text-slate-500">Estate Code</span>
-          <button onClick={() => { navigator.clipboard.writeText(estateCode); toast.success('Copied!'); }}
-            className="font-mono font-black tracking-widest text-lg text-emerald-600 hover:text-emerald-500 transition-colors"
-            title="Click to copy">
-            {estateCode}
+          <span className="ax-muted">{word} code</span>
+          <button type="button" onClick={() => { navigator.clipboard.writeText(estateCode); toast.success('Copied!'); }}
+            className="flex items-center gap-1.5 font-mono font-bold tracking-[0.2em] text-[17px]" style={{ color: '#10B981' }} title="Copy">
+            {estateCode} <Copy size={13}/>
           </button>
         </div>
-        <div className="pt-2 border-t border-emerald-200 text-xs text-slate-500">
-          Share the estate code with residents so they can register on the resident app.
-        </div>
+        <p className="ax-faint text-[12px] pt-2" style={{ borderTop: '1px solid rgba(127,127,127,0.18)' }}>
+          Share the code with your {TERMS[type].members.toLowerCase()} so they can join on AreaMates.
+        </p>
       </div>
 
       <div className="space-y-2.5">
-        <button onClick={() => navigate('/onboarding')}
-          className="w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
-          style={{ background: 'linear-gradient(135deg,#10B981,#059669)', color: 'white',
-            boxShadow: '0 0 24px rgba(16,185,129,0.3)' }}>
-          Set Up Estate <ArrowRight size={15}/>
-        </button>
-        <button onClick={() => navigate('/dashboard')}
-          className="w-full py-2.5 rounded-xl text-sm font-medium transition-all bg-slate-100 border border-slate-200 text-slate-500 hover:bg-slate-200">
-          Skip — Go to Dashboard
-        </button>
+        <button type="button" onClick={() => { clearSignupDone(); navigate('/onboarding'); }} className="ax-btn">Set up {word.toLowerCase()} <ArrowRight size={16}/></button>
+        <button type="button" onClick={() => { clearSignupDone(); navigate('/dashboard'); }} className="ax-ghost w-full">Skip — go to dashboard</button>
       </div>
     </div>
   );
 }
+
+const SHOWCASE = [
+  [<>Your estate awaits. <span style={{ color: '#34D399' }}>Let's get you started.</span></>, 'Create your admin account to manage residents, visitors, payments and more.'],
+  [<>One platform. <span style={{ color: '#34D399' }}>Every corner of your estate.</span></>, "Tell us what you manage — we'll generate a unique code for people to join."],
+  [<>Smart pricing <span style={{ color: '#34D399' }}>for every estate size.</span></>, 'Start free for 14 days. No credit card required.'],
+  [<>The gate is open. <span style={{ color: '#34D399' }}>You're live.</span></>, 'Welcome to AreaConnect. Set up your profile to get started.'],
+];
 
 /* ── Main Register page ── */
 export default function Register() {
@@ -423,7 +392,7 @@ export default function Register() {
     name: searchParams.get('name') || '', email: searchParams.get('email') || '',
     phone: searchParams.get('phone') || '', password: '', confirm: '',
   });
-  const [estate, setEstate]   = useState({ estateName: searchParams.get('estate') || '', estateAddress: searchParams.get('address') || '' });
+  const [estate, setEstate]   = useState({ estateName: searchParams.get('estate') || '', estateAddress: searchParams.get('address') || '', siteType: SITE_TYPES.includes(searchParams.get('type')) ? searchParams.get('type') : 'estate' });
   const [billingCycle, setBillingCycle] = useState('monthly');
 
   // Pre-select plan from ?plan= URL param; default to free trial
@@ -445,6 +414,8 @@ export default function Register() {
         name: account.name, email: account.email, phone: account.phone,
         password: account.password, role: 'estate_manager',
         estateName: estate.estateName, estateAddress: estate.estateAddress,
+        estateLocation: estate.estateLocation?.formattedAddress === estate.estateAddress ? estate.estateLocation : undefined,
+        siteType: estate.siteType || 'estate',
         planSlug: selectedPlan.slug,
         billingModel: selectedPlan.billingModel,
         cycle,
@@ -452,8 +423,11 @@ export default function Register() {
       if (searchParams.get('invite')) payload.inviteToken = searchParams.get('invite');
       if (selectedPlan.isTrial) payload.trialDays = 14;
 
+      // Keep this page (not the dashboard redirect) so the "You're in" step
+      // with the estate code shows — App.jsx checks this flag
+      try { sessionStorage.setItem('ac:signupDone', '1'); } catch { /* storage off */ }
       const user = await register(payload);
-      const estateCode = user?.estateId?.estateCode || user?.estateId || '—';
+      const estateCode = user?.estate?.estateCode || user?.estateId?.estateCode || '—';
       const billingLabel = selectedPlan.isTrial
         ? '14-Day Free Trial (Growth)'
         : `${selectedPlan.label} — ${billingCycle === 'annual'
@@ -466,50 +440,16 @@ export default function Register() {
       });
       setStep(3);
     } catch (err) {
+      clearSignupDone();
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const CAPTION_SUBS = [
-    'Create your admin account to manage residents, visitors, payments, and more.',
-    "Tell us about your estate — we'll generate a unique code for residents to join.",
-    'Start free for 14 days. No credit card required.',
-    'Welcome to AreaConnect. Set up your estate profile to get started.',
-  ];
-  const CAPTION_HEADS = [
-    ['Your estate awaits.', "Let's get you started."],
-    ['One platform.', 'Every corner of your estate.'],
-    ['Smart pricing', 'for every estate size.'],
-    ['The gate is open.', 'Your estate is live.'],
-  ];
-  const [head, green] = CAPTION_HEADS[step];
-  const caption = <>{head}<br/><span style={{ color: '#10B981' }}>{green}</span></>;
-  const sub = CAPTION_SUBS[step];
-
-  return (
-    <AuthLayout caption={caption} sub={sub}>
-      {/* Logo row */}
-      <div className="flex items-center gap-3 mb-7">
-        <div style={{
-          width: 42, height: 42, borderRadius: 12,
-          background: 'linear-gradient(135deg,#10B981,#059669)',
-          boxShadow: '0 0 22px rgba(16,185,129,0.3)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-        }}>
-          <Shield size={20} color="white"/>
-        </div>
-        <div>
-          <div className="text-lg font-bold text-slate-900 leading-tight">
-            Area<span style={{ color: '#10B981' }}>Connect</span>
-          </div>
-          <div className="text-xs font-semibold uppercase tracking-widest text-slate-400">Admin Portal</div>
-        </div>
-      </div>
-
+  const steps = (
+    <>
       {step < 3 && <StepIndicator current={step}/>}
-
       {step === 0 && (
         <AccountStep form={account} onChange={setAcct}
           onNext={() => { setError(''); setStep(1); }} error={error}/>
@@ -520,21 +460,49 @@ export default function Register() {
       )}
       {step === 2 && (
         <PlanStep selected={selectedPlan} onSelect={setSelectedPlan}
-          onNext={handleSubmit} onBack={() => setStep(1)} loading={loading}
+          onNext={handleSubmit} onBack={() => setStep(1)} loading={loading} error={error}
           billingCycle={billingCycle} onCycleChange={setBillingCycle}/>
       )}
       {step === 3 && (
-        <DoneStep estateName={done.estateName} estateCode={done.estateCode} billingLabel={done.billingLabel}/>
+        <DoneStep estateName={done.estateName} estateCode={done.estateCode} billingLabel={done.billingLabel} siteType={estate.siteType}/>
       )}
-
       {step === 0 && (
-        <p className="text-center text-xs mt-6 text-slate-300">
-          By registering you agree to our Terms of Service and Privacy Policy.
-        </p>
+        <p className="ax-faint text-center text-[11.5px] mt-5">By registering you agree to our Terms of Service and Privacy Policy.</p>
       )}
-      <p className="text-[11px] text-slate-400 text-center mt-4 tracking-wide">
-        Powered by <span className="font-semibold text-slate-500">AREA CONNECTOR TECHNOLOGIES</span> · RC&nbsp;9607864
-      </p>
-    </AuthLayout>
+    </>
+  );
+
+  const [headline, sub] = SHOWCASE[step];
+
+  return (
+    <>
+      {/* ── Mobile ── */}
+      <div className="lg:hidden">
+        <Ui.Provider value={{ input: 'mg-input', dark: true }}>
+          <MobileAuthShell>
+            {steps}
+            {step < 3 && (
+              <p style={{ textAlign: 'center', marginTop: 18, fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>
+                Already have an account?{' '}
+                <Link to="/login" style={{ color: '#10B981', fontWeight: 600 }}>Sign in</Link>
+              </p>
+            )}
+          </MobileAuthShell>
+        </Ui.Provider>
+      </div>
+
+      {/* ── Desktop ── */}
+      <div className="hidden lg:block">
+        <Ui.Provider value={{ input: 'dl-input', dark: false }}>
+          <DesktopAuthShell width={step === 2 ? 460 : 400} headline={headline} sub={sub}
+            topRight={<>Already have an account?&nbsp;<Link to="/login" className="font-semibold text-[#059669] hover:text-[#047857]">Sign in</Link></>}>
+            {step < 3 && (
+              <span className="w-12 h-12 rounded-xl bg-[#ECFDF3] border border-[#ABEFC6] flex items-center justify-center text-[#059669] mb-6"><Shield size={22} /></span>
+            )}
+            {steps}
+          </DesktopAuthShell>
+        </Ui.Provider>
+      </div>
+    </>
   );
 }

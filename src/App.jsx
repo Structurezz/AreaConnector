@@ -97,6 +97,8 @@ function RequireManager({ children, allowWhenBlocked = false }) {
   return <AppLayout>{children}</AppLayout>;
 }
 
+const justSignedUp = () => { try { return sessionStorage.getItem('ac:signupDone') === '1'; } catch { return false; } };
+
 function AppRoutes() {
   const { user, loading } = useAuth();
   if (loading) return <LoadingScreen />;
@@ -104,7 +106,8 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={user?.role === 'estate_manager' ? <Navigate to="/dashboard" replace /> : <Login />} />
-      <Route path="/register" element={user?.role === 'estate_manager' ? <Navigate to="/dashboard" replace /> : <Register />} />
+      {/* A manager who just signed up stays here to see the "You're in" step (estate code) */}
+      <Route path="/register" element={user?.role === 'estate_manager' && !justSignedUp() ? <Navigate to="/dashboard" replace /> : <Register />} />
       <Route path="/onboarding" element={
         !user ? <Navigate to="/login" replace /> :
         user.role !== 'estate_manager' ? <Navigate to="/dashboard" replace /> :

@@ -70,7 +70,8 @@ export const AuthProvider = ({ children }) => {
       setUser(u);
       if (e) setEstate(e);
     });
-    return u;
+    // The new estate (with its code) for the sign-up "You're in" step
+    return { ...u, estate: e };
   };
 
   const switchEstate = async (estateId) => {
