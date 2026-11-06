@@ -46,6 +46,10 @@ function useWords() {
     nUnits: (n) => `${n} ${n === 1 ? unit : units}`,
     nRes: (n) => `${n} ${n === 1 ? resident : residents}`,
     // Unit type shown to the manager: non-estates see their own word for 'apartment'
+    // Departments, wards and classes have names, not numbers
+    named: !E && ['school', 'industrial', 'hospital'].includes(site.type),
+    nameWord: !E && ['school', 'industrial', 'hospital'].includes(site.type) ? 'name' : 'number',
+    example: { school: 'JSS2 Gold', industrial: 'Production', hospital: 'Ward B', university: 'A101', hotel: '204' }[site.type] || '4B',
     type: (v) => (E ? v : unitTypeLabel(v, site.type, v === 'apartment' ? T.unit : v)),
     typeLabel: (t) => (E ? t.label : unitTypeLabel(t.v, site.type, t.v === 'apartment' ? T.unit : t.label)),
     typePlural: (t) => {
@@ -283,7 +287,7 @@ function UnitPanel({ unit, allResidents, onAddResident, onRemoveResident, onDele
 
   const add = async (id) => { setBusy(true); try { await onAddResident(id, u._id); setAddId(''); } finally { setBusy(false); } };
   const save = async () => {
-    if (!form.unitNumber?.trim()) return toast.error(`${W.Unit} number is required`);
+    if (!form.unitNumber?.trim()) return toast.error(`${W.Unit} ${W.nameWord} is required`);
     setBusy(true);
     try { await unitAPI.update(u._id, { unitNumber: form.unitNumber.trim(), block: form.block.trim(), type: form.type }); toast.success(`${W.Unit} updated`); setEditing(false); onSaved(u._id); }
     catch (err) { toast.error(err.response?.data?.message || 'Update failed'); }
@@ -340,7 +344,7 @@ function UnitPanel({ unit, allResidents, onAddResident, onRemoveResident, onDele
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-4 space-y-3">
               <p className="text-[12px] font-semibold text-emerald-800 flex items-center gap-1.5"><Pencil size={13} /> Edit {W.unit}</p>
               <div className="grid grid-cols-2 gap-2.5">
-                <label><span className="text-[11.5px] text-slate-500">{W.Unit} number</span><input className="input-field mt-1" value={form.unitNumber} onChange={(e) => setForm({ ...form, unitNumber: e.target.value })} /></label>
+                <label><span className="text-[11.5px] text-slate-500">{W.Unit} {W.nameWord}</span><input className="input-field mt-1" value={form.unitNumber} onChange={(e) => setForm({ ...form, unitNumber: e.target.value })} /></label>
                 <label><span className="text-[11.5px] text-slate-500">{blockWord(site.terms)}</span><input className="input-field mt-1" value={form.block} onChange={(e) => setForm({ ...form, block: e.target.value })} placeholder="Optional" /></label>
               </div>
               <div className="grid grid-cols-4 gap-1.5">
@@ -452,7 +456,7 @@ function AddUnitsPanel({ open, onClose, onDone, existing }) {
   const W = useWords();
   const { site } = W;
   const [mode, setMode] = useState('single');
-  const [f, setF] = useState({ unitNumber: '', block: '', type: 'apartment', prefix: '', from: 1, to: 10, pad: 0 });
+  const [f, setF] = useState({ unitNumber: '', block: '', type: 'apartment', prefix: '', from: 1, to: 10, pad: 0, names: '' });
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(null);
   useEffect(() => { if (open) { setProgress(null); } }, [open]);
@@ -462,14 +466,16 @@ function AddUnitsPanel({ open, onClose, onDone, existing }) {
     if (!Number.isFinite(a) || !Number.isFinite(b) || b < a || b - a > 199) return [];
     return Array.from({ length: b - a + 1 }, (_, i) => `${f.prefix}${String(a + i).padStart(Number(f.pad) || 0, '0')}`);
   }, [f.from, f.to, f.prefix, f.pad]);
-  const fresh = range.filter((n) => !taken.has(`${f.block.trim().toLowerCase()}|${n.toLowerCase()}`));
+  // Named units (departments, wards, classes): several at once = one name per line
+  const listed = useMemo(() => [...new Set((f.names || '').split('\n').map((n) => n.trim()).filter(Boolean))].slice(0, 200), [f.names]);
+  const fresh = (W.named ? listed : range).filter((n) => !taken.has(`${f.block.trim().toLowerCase()}|${n.toLowerCase()}`));
 
   const submit = async (e) => {
     e.preventDefault();
     setBusy(true);
     try {
       if (mode === 'single') {
-        if (!f.unitNumber.trim()) { toast.error(`Enter ${withAn(W.unit)} number`); return; }
+        if (!f.unitNumber.trim()) { toast.error(`Enter ${withAn(W.unit)} ${W.nameWord}`); return; }
         await unitAPI.create({ unitNumber: f.unitNumber.trim(), block: f.block.trim(), type: f.type });
         toast.success(`${W.Unit} ${f.unitNumber} created`);
       } else {
@@ -498,7 +504,7 @@ function AddUnitsPanel({ open, onClose, onDone, existing }) {
       </div>}>
       <form id="add-units-form" onSubmit={submit} className="space-y-5">
         <div className="grid grid-cols-2 gap-2">
-          {[['single', `One ${W.unit}`, W.E ? 'e.g. Flat 4B' : `e.g. ${W.Unit} 4B`, Home], ['range', `Many ${W.units}`, 'e.g. A101 – A120', ListPlus]].map(([v, l, h, I]) => (
+          {[['single', `One ${W.unit}`, W.E ? 'e.g. Flat 4B' : `e.g. ${W.named ? W.example : `${W.Unit} ${W.example}`}`, Home], ['range', W.named ? `Several ${W.units}` : `Many ${W.units}`, W.named ? 'One name per line' : 'e.g. A101 – A120', ListPlus]].map(([v, l, h, I]) => (
             <button key={v} type="button" onClick={() => setMode(v)}
               className={`text-left rounded-2xl border p-3 transition-all ${mode === v ? 'border-emerald-500 bg-emerald-50/50 ring-2 ring-emerald-500/10' : 'border-slate-200 hover:border-slate-300'}`}>
               <I size={16} className={mode === v ? 'text-emerald-600' : 'text-slate-400'} />
@@ -509,12 +515,17 @@ function AddUnitsPanel({ open, onClose, onDone, existing }) {
 
         <div className="grid grid-cols-2 gap-2.5">
           {mode === 'single'
-            ? <label><span className="text-[12px] font-medium text-slate-600">{W.Unit} number *</span><input className="input-field mt-1" value={f.unitNumber} onChange={(e) => setF({ ...f, unitNumber: e.target.value })} placeholder="e.g. 4B" autoFocus /></label>
+            ? <label><span className="text-[12px] font-medium text-slate-600">{W.Unit} {W.nameWord} *</span><input className="input-field mt-1" value={f.unitNumber} onChange={(e) => setF({ ...f, unitNumber: e.target.value })} placeholder={`e.g. ${W.example}`} autoFocus /></label>
+            : W.named
+            ? <label className="col-span-2"><span className="text-[12px] font-medium text-slate-600">{W.Unit} names * <span className="font-normal text-slate-400">— one per line</span></span>
+                <textarea rows={6} className="input-field mt-1 font-normal" value={f.names} onChange={(e) => setF({ ...f, names: e.target.value })}
+                  placeholder={{ industrial: 'Production\nWarehouse\nQuality control\nMaintenance', hospital: 'Ward A\nWard B\nICU\nMaternity', school: 'JSS1 Gold\nJSS1 Blue\nJSS2 Gold' }[site.type] || ''} autoFocus />
+              </label>
             : <label><span className="text-[12px] font-medium text-slate-600">Prefix</span><input className="input-field mt-1" value={f.prefix} onChange={(e) => setF({ ...f, prefix: e.target.value })} placeholder={W.E ? 'e.g. A or Flat ' : `e.g. A or ${W.Unit} `} /></label>}
           <label><span className="text-[12px] font-medium text-slate-600">{blockWord(site.terms)}</span><input className="input-field mt-1" value={f.block} onChange={(e) => setF({ ...f, block: e.target.value })} placeholder="Optional" /></label>
         </div>
 
-        {mode === 'range' && (
+        {mode === 'range' && !W.named && (
           <>
             <div className="grid grid-cols-3 gap-2.5">
               <label><span className="text-[12px] font-medium text-slate-600">From</span><input type="number" className="input-field mt-1" value={f.from} onChange={(e) => setF({ ...f, from: e.target.value })} /></label>
