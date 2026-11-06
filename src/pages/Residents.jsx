@@ -22,7 +22,7 @@ import InviteResidentModal, { unitOptionLabel } from '../components/residents/In
 import UnitPicker from '../components/residents/UnitPicker';
 import { MemberSectorFields, emptySector, sectorPayload, sectorError, useSectorConfig, StayChip, StayCard, StaffCard } from '../components/site/MemberFields';
 import { RoleCard, RoleChip } from '../components/site/RoleFields';
-import { MemberWizard } from '../components/residents/OnboardWizard';
+import { MemberWizard, StaffWizard } from '../components/residents/OnboardWizard';
 
 // "Dr Ade, Nurse Bisi" — a member's assigned staff (care team, adviser…)
 const assignedNames = (r) => (r.assignedTo || []).filter(a => a && typeof a === 'object').map(a => a.name).join(', ');
@@ -445,6 +445,11 @@ export default function ManagerResidents({ mode = 'residents' }) {
   // guests, employees); staff have their own page (/staff)
   const R = site.hasRoles && mode !== 'family';
   const memberDef = site.roleOf(site.defaultRole);
+  // Industrial sites: everyone is an employee — supervisors, safety officers
+  // and first aiders are on the same list (no separate Staff page)
+  const merged = R && site.type === 'industrial';
+  const [roleFilter, setRoleFilter] = useState('');
+  const [showStaffAdd, setShowStaffAdd] = useState(false);
   const listTitle = R ? memberDef.plural : T.members;
   // Bulk import: Role + ID columns on non-estate sites
   const bulkOpts = R ? { roles: site.roles, idLabel: memberDef.form?.id || T.idLabel } : undefined;
@@ -498,13 +503,15 @@ export default function ManagerResidents({ mode = 'residents' }) {
     setLoading(true);
     try {
       const [r, u] = await Promise.all([
-        residentAPI.getAll({ page: p, limit: lim, search: q || undefined, filter: nu && t !== 'family' ? 'no_unit' : undefined, type: t === 'family' ? 'family' : undefined, group: site.hasRoles && t !== 'family' ? 'members' : undefined }),
+        residentAPI.getAll({ page: p, limit: lim, search: q || undefined, filter: nu && t !== 'family' ? 'no_unit' : undefined, type: t === 'family' ? 'family' : undefined, group: site.hasRoles && t !== 'family' && site.type !== 'industrial' ? 'members' : undefined,
+          ...(site.type === 'industrial' && t !== 'family' && roleFilter && roleFilter !== 'oncall' && { role: roleFilter }),
+          ...(site.type === 'industrial' && t !== 'family' && roleFilter === 'oncall' && { onCall: 1 }) }),
         unitAPI.getAll(),
       ]);
       setResidents(r.data.data);
       const pg = r.data.pagination || { total: r.data.data.length, pages: 1 };
       setPagination(pg);
-      setTotalAll((site.hasRoles ? r.data.memberCount : undefined) ?? r.data.residentCount ?? (t !== 'family' && !q && !nu ? pg.total : totalAll));
+      setTotalAll((site.hasRoles && site.type !== 'industrial' ? r.data.memberCount : undefined) ?? r.data.residentCount ?? (t !== 'family' && !q && !nu ? pg.total : totalAll));
       setFamilyTotal(r.data.familyCount || 0);
       setNoUnitCount(r.data.noUnitCount || 0);
       setUnits(u.data.data);
@@ -521,6 +528,7 @@ export default function ManagerResidents({ mode = 'residents' }) {
 
   // Residents and Family members share this page component: reload when switching between them
   useEffect(() => { setPage(1); setSearch(''); setSelected(null); load(1, '', limit, noUnitOnly, mode); }, [mode, site.hasRoles]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (merged) { setPage(1); load(1, search, limit, noUnitOnly, mode); } }, [roleFilter]); // eslint-disable-line react-hooks/exhaustive-deps
   const toggleNoUnit = (on) => { setNoUnitOnly(on); setPage(1); load(1, search, limit, on); };
 
   // ── Bulk invite ──────────────────────────────────────────────────
@@ -572,8 +580,11 @@ export default function ManagerResidents({ mode = 'residents' }) {
     if (sErr) { toast.error(sErr); return; }
     setSaving(true);
     try {
-      await residentAPI.add({ ...form, ...sectorPayload(addSector, sectorCfg) });
-      toast.success(`${T.member} added!`);
+      const { data } = await residentAPI.add({ ...form, ...sectorPayload(addSector, sectorCfg) });
+      if (data?.tempPassword) {
+        // One-time password — shown once, they must change it when they sign in
+        toast.success(`${T.member} added. Their one-time password is ${data.tempPassword} — share it privately; they'll set their own when they sign in.`, { duration: 20000 });
+      } else toast.success(`${T.member} added!`);
       setShowAdd(false);
       setForm({ name: '', email: '', phone: '', unitId: '' });
       setAddSector(emptySector());
@@ -684,9 +695,10 @@ export default function ManagerResidents({ mode = 'residents' }) {
         ) : (
         <PageHeader
           title={listTitle}
-          subtitle={E ? 'Everyone who calls the estate home' : R ? `${memberDef.plural} at your ${T.site.toLowerCase()} — staff are on the Staff page` : `Everyone registered at your ${T.site.toLowerCase()}`}
+          subtitle={E ? 'Everyone who calls the estate home' : merged ? `Everyone at your ${T.site.toLowerCase()} — employees, supervisors, safety officers and first aiders` : R ? `${memberDef.plural} at your ${T.site.toLowerCase()} — staff are on the Staff page` : `Everyone registered at your ${T.site.toLowerCase()}`}
           actions={R ? <>
             <button onClick={() => setShowBulk(true)} className={HEADER_BTN_GHOST}><Upload size={14} /> Bulk import</button>
+            {merged && <button onClick={() => setShowStaffAdd(true)} className={HEADER_BTN_GHOST}><UserPlus size={14} /> Add supervisor / safety role</button>}
             <button onClick={() => setShowInvite(true)} className={HEADER_BTN_PRIMARY}><UserPlus size={15} /> Add {memberDef.label.toLowerCase()}</button>
           </> : <>
             <button onClick={() => setShowBulk(true)} className={HEADER_BTN_GHOST}><Upload size={14} /> Bulk invite</button>
@@ -703,6 +715,16 @@ export default function ManagerResidents({ mode = 'residents' }) {
         />
         )}
 
+        {merged && (
+          <div className="flex flex-wrap gap-1.5">
+            {[['', 'Everyone'], ...site.roles.map((r) => [r.key, r.plural]), ['oncall', 'On call now']].map(([k, l]) => (
+              <button key={k || 'all'} onClick={() => setRoleFilter(k)}
+                className={`h-8 px-3 rounded-full text-[12.5px] font-semibold border transition-all ${roleFilter === k ? (k === 'oncall' ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-slate-900 border-slate-900 text-white') : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'}`}>
+                {k === 'oncall' && <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 align-middle" />}{l}
+              </button>
+            ))}
+          </div>
+        )}
         {tab === 'family' && <FamilyRequestsBanner count={familyCount} onOpen={() => setShowRequests(true)} />}
         {tab === 'residents' && noUnitCount > 0 && (
           <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white px-4 py-3 flex flex-wrap items-center gap-3">
@@ -900,6 +922,8 @@ export default function ManagerResidents({ mode = 'residents' }) {
         />
       </div>
 
+      {merged && <StaffWizard open={showStaffAdd} onClose={() => setShowStaffAdd(false)} units={units} onSaved={() => load()} onUnitCreated={(u) => setUnits(list => [...list, u])} />}
+
       {/* ── Single Invite Modal ─────────────────────────────────── */}
       {R
         ? <MemberWizard open={showInvite} onClose={() => setShowInvite(false)} units={units} onSaved={() => load()} onUnitCreated={(u) => setUnits(list => [...list, u])} />
@@ -1089,7 +1113,7 @@ export default function ManagerResidents({ mode = 'residents' }) {
       {/* ── Direct Add Modal ────────────────────────────────────── */}
       <Modal open={showAdd} onClose={() => setShowAdd(false)} title={`Add ${T.member} Directly`}>
         <p className="text-xs mb-4" style={{ color: 'var(--text-dim)' }}>
-          Creates an account without sending an email. Default password: <code className="text-gold">Estate@123</code>
+          Creates an account without sending an email. A one-time password is shown after you add them — they'll choose their own at first sign-in.
         </p>
         <form onSubmit={handleAdd} className="space-y-4">
           {[

@@ -26,7 +26,7 @@ const NAV = [
       { to: '/dashboard',     icon: LayoutDashboard, label: 'Dashboard' },
       { to: '/visitors',      icon: UserCheck,       label: 'Visitors',        feature: 'visitorManagement' },
       { to: '/residents',     icon: Users,           label: (t, on, site) => (site.hasRoles ? site.roleOf(site.defaultRole).plural : t.members), feature: 'residentManagement' },
-      { to: '/staff',         icon: Stethoscope,     label: 'Staff & on-call', feature: 'residentManagement', site: (s) => s.hasRoles },
+      { to: '/staff',         icon: Stethoscope,     label: 'Staff & on-call', feature: 'residentManagement', site: (s) => s.hasRoles && s.type !== 'industrial' },
       { to: '/requests',      icon: Inbox,           label: 'Requests',        module: 'requests', site: (s) => !s.isEstate, badge: 'requests' },
       { to: '/family-members', icon: HeartHandshake, label: (t) => t.familyPlural, feature: 'residentManagement', badge: 'family', module: 'household' },
       { to: '/rooms',         icon: BedDouble,       label: 'Room board',      feature: 'residentManagement', module: 'stays' },
