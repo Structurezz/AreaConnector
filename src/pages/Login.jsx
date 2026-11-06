@@ -9,70 +9,61 @@ import toast from 'react-hot-toast';
 function MobileLogin({ form, setForm, showPw, setShowPw, loading, error, handleSubmit }) {
   return (
     <MobileAuthShell>
-        <h2 style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.03em', marginBottom: 2 }}>Welcome back</h2>
-        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 22 }}>Sign in to manage your estate</p>
+      <h1 className="ax-title">Welcome back</h1>
+      <p className="ax-sub mt-1.5">Sign in to manage your estate</p>
 
-        {/* Error */}
+      <form onSubmit={handleSubmit} className="mt-7 space-y-4">
         {error && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, marginBottom: 16,
-            background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#FCA5A5', fontSize: 13,
-          }}>
-            <AlertCircle size={14}/> {error}
+          <div className="ax-error flex items-start gap-2 px-3.5 py-3" role="alert">
+            <AlertCircle size={16} className="shrink-0 mt-0.5"/> <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
-          {/* Email */}
-          <div style={{ marginBottom: 14 }}>
-            <label style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', marginBottom: 8 }}>
-              Email Address
-            </label>
-            <input type="email" className="mg-input" placeholder="you@example.com"
-              value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
-              required autoComplete="email"/>
+        <label className="block">
+          <span className="ax-label">Email</span>
+          <input type="email" inputMode="email" className="mg-input" placeholder="you@estate.com"
+            value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
+            required autoComplete="email" autoCapitalize="none" autoCorrect="off" spellCheck={false}/>
+        </label>
+
+        <label className="block">
+          <span className="ax-label">Password</span>
+          <div className="relative">
+            <input type={showPw ? 'text' : 'password'} className="mg-input" placeholder="Enter your password"
+              value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
+              required autoComplete="current-password" style={{ paddingRight: 52 }}/>
+            <button type="button" onClick={() => setShowPw(!showPw)} aria-label={showPw ? 'Hide password' : 'Show password'}
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-lg flex items-center justify-center text-[#98A2B3] active:text-[#475467]">
+              {showPw ? <EyeOff size={18}/> : <Eye size={18}/>}
+            </button>
           </div>
+        </label>
 
-          {/* Password */}
-          <div style={{ marginBottom: 22 }}>
-            <label style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', marginBottom: 8 }}>
-              Password
-            </label>
-            <div style={{ position: 'relative' }}>
-              <input type={showPw ? 'text' : 'password'} className="mg-input" placeholder="••••••••"
-                value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
-                required autoComplete="current-password" style={{ paddingRight: 44 }}/>
-              <button type="button" onClick={() => setShowPw(!showPw)}
-                style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', padding: 0 }}>
-                {showPw ? <EyeOff size={16}/> : <Eye size={16}/>}
-              </button>
-            </div>
-          </div>
+        <button type="submit" disabled={loading} className="ax-btn !mt-6">
+          {loading ? (
+            <>
+              <svg className="animate-spin" width={17} height={17} viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" strokeOpacity=".3"/>
+                <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round"/>
+              </svg>
+              Signing in…
+            </>
+          ) : <>Sign in <ArrowRight size={18}/></>}
+        </button>
+      </form>
 
-          <button type="submit" disabled={loading} style={{
-            width: '100%', padding: '15px', borderRadius: 14, border: 'none',
-            background: loading ? 'rgba(16,185,129,0.4)' : 'linear-gradient(135deg,#10B981,#059669)',
-            color: '#fff', fontWeight: 700, fontSize: 15,
-            boxShadow: loading ? 'none' : '0 6px 24px rgba(16,185,129,0.35)',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          }}>
-            {loading ? (
-              <>
-                <svg className="animate-spin" width={16} height={16} viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" strokeOpacity=".3"/>
-                  <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round"/>
-                </svg>
-                Signing in…
-              </>
-            ) : 'Sign In'}
-          </button>
+      <p className="mt-6 text-center text-[14px] text-[#667085]">
+        New here?{' '}
+        <Link to="/register" className="ax-link">Start your free trial</Link>
+      </p>
 
-          <p style={{ textAlign: 'center', marginTop: 18, fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>
-            Don't have an account?{' '}
-            <Link to="/register" style={{ color: '#10B981', fontWeight: 600 }}>Create one</Link>
-          </p>
-        </form>
+      <div className="mt-8 rounded-xl border border-[#EAECF0] bg-[#F9FAFB] px-4 py-3.5 flex items-center gap-3">
+        <span className="w-9 h-9 rounded-lg bg-white border border-[#EAECF0] flex items-center justify-center text-[#475467] shrink-0"><Smartphone size={16}/></span>
+        <p className="text-[13px] leading-snug text-[#667085] min-w-0">
+          <span className="block font-medium text-[#101828]">Are you a resident?</span>
+          Sign in on <a href="https://area-mates.areaconnect.pro" className="ax-link">AreaMates</a> instead.
+        </p>
+      </div>
     </MobileAuthShell>
   );
 }

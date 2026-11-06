@@ -14,7 +14,7 @@ import { TERMS, SITE_TYPES } from '../utils/siteTypes';
 const TYPE_EXAMPLE = { school: 'Kings College', university: 'University of Lagos', hotel: 'Harbour View Hotel', industrial: 'Apapa Industrial Park', hospital: 'St. Mary’s Hospital' };
 
 // Same frame as the login page (components/auth/AuthShell). The steps render
-// on both the dark phone card and the light desktop panel, so they use the
+// on both the light phone page and the desktop panel, so they use the
 // theme-aware `ax-*` classes and pick their input style from this context.
 const Ui = createContext({ input: 'dl-input', dark: false });
 
@@ -478,13 +478,13 @@ export default function Register() {
     <>
       {/* ── Mobile ── */}
       <div className="lg:hidden">
-        <Ui.Provider value={{ input: 'mg-input', dark: true }}>
+        <Ui.Provider value={{ input: 'mg-input', dark: false }}>
           <MobileAuthShell>
             {steps}
             {step < 3 && (
-              <p style={{ textAlign: 'center', marginTop: 18, fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>
+              <p className="mt-6 text-center text-[14px] text-[#667085]">
                 Already have an account?{' '}
-                <Link to="/login" style={{ color: '#10B981', fontWeight: 600 }}>Sign in</Link>
+                <Link to="/login" className="ax-link">Sign in</Link>
               </p>
             )}
           </MobileAuthShell>

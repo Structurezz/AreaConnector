@@ -1,50 +1,33 @@
 import { useEffect, useState } from 'react';
-import { Shield, Lock, DoorOpen, Wallet, Bell, ShieldCheck, Megaphone, UserCheck } from 'lucide-react';
+import { Lock, DoorOpen, Wallet, Bell, ShieldCheck, Megaphone, UserCheck } from 'lucide-react';
 
 // Shared frame for the login and sign-up pages, so they always look the same:
-// phones get the dark animated hero + glass card, desktop gets the split screen
-// with the live product preview. Forms inside use the `ax-*` classes, which
-// adapt to the dark (mobile) or light (desktop) side.
+// phones get a clean light page, desktop gets the split screen with the live
+// product preview. Forms inside use the theme-aware `ax-*` classes.
 
+// Phone: "clean light" — white page, a thin brand strip + soft glow at the
+// top, big inputs (16px text so iOS doesn't zoom). Scoped to `.ax-m` so the
+// desktop panel (rendered alongside, hidden by CSS) is untouched.
 const MOBILE_CSS = `
-  @keyframes mgOrb1 {
-    0%,100% { transform: translate(0,0) scale(1); }
-    35% { transform: translate(30px,-42px) scale(1.09); }
-    68% { transform: translate(-20px,28px) scale(0.93); }
-  }
-  @keyframes mgOrb2 {
-    0%,100% { transform: translate(0,0) scale(1); }
-    40% { transform: translate(-34px,22px) scale(1.06); }
-    72% { transform: translate(24px,-26px) scale(0.95); }
-  }
-  @keyframes mgPulse {
-    0% { transform: scale(1); opacity: 0.55; }
-    100% { transform: scale(2.6); opacity: 0; }
-  }
-  @keyframes mgCardIn {
-    0% { opacity: 0; transform: translateY(36px); }
-    100% { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes mgHeroIn {
-    0% { opacity: 0; transform: scale(0.92) translateY(-10px); }
-    100% { opacity: 1; transform: scale(1) translateY(0); }
-  }
-  @keyframes mgScan {
-    0% { top: -2px; opacity: 0.07; }
-    100% { top: 101%; opacity: 0.01; }
-  }
-  @keyframes mgGlow {
-    0%,100% { opacity: 0.6; }
-    50% { opacity: 1; }
-  }
   .mg-input {
-    width: 100%; padding: 13px 16px; border-radius: 12px;
-    background: rgba(255,255,255,0.07); border: 1.5px solid rgba(255,255,255,0.11);
-    color: #fff; font-size: 14px; outline: none; box-sizing: border-box;
-    transition: border-color 0.2s;
+    width: 100%; height: 52px; padding: 0 16px; border-radius: 14px;
+    background: #fff; border: 1.5px solid #E4E7EC; color: #101828;
+    font-size: 16px; outline: none; box-sizing: border-box; -webkit-appearance: none; appearance: none;
+    transition: border-color .15s, box-shadow .15s;
   }
-  .mg-input:focus { border-color: rgba(16,185,129,0.5); }
-  .mg-input::placeholder { color: rgba(255,255,255,0.3); }
+  textarea.mg-input { height: auto; padding-top: 14px; padding-bottom: 14px; line-height: 1.45; }
+  .mg-input:focus { border-color: #10B981; box-shadow: 0 0 0 4px rgba(16,185,129,.16); }
+  .mg-input::placeholder { color: #98A2B3; }
+  .ax-m .ax-title { font-size: 27px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.15; color: #101828; }
+  .ax-m .ax-sub { font-size: 15px; line-height: 1.5; color: #475467; }
+  .ax-m .ax-label { font-size: 13.5px; font-weight: 600; color: #344054; margin-bottom: 7px; }
+  .ax-m .ax-btn { height: 52px; border-radius: 14px; font-size: 16px; background: #059669;
+    box-shadow: 0 10px 22px -10px rgba(5,150,105,.65), inset 0 -2px 0 rgba(0,0,0,.08); }
+  .ax-m .ax-btn:active:not(:disabled) { transform: scale(.99); }
+  .ax-m .ax-ghost { height: 52px; border-radius: 14px; font-size: 15px; }
+  .ax-m .ax-error { border-radius: 12px; font-size: 14px; }
+  .ax-m .ax-note { background: #ECFDF3; border: 1px solid #ABEFC6; color: #067647; border-radius: 12px; }
+  @keyframes mgRise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 `;
 
 const DESKTOP_CSS = `
@@ -104,85 +87,38 @@ const FORM_CSS = `
   .ax-dark  .ax-line { background: rgba(255,255,255,.1); }
 `;
 
-/* ── Phone: dark animated hero + glass form card ── */
+/* ── Phone: clean light page ── */
 export function MobileAuthShell({ children }) {
   return (
-    <div className="ax-dark" style={{ minHeight: '100vh', background: 'linear-gradient(160deg,#040C16 0%,#071A10 100%)', position: 'relative', overflow: 'hidden' }}>
-      <style>{MOBILE_CSS + FORM_CSS}</style>
+    <div className="ax-light ax-m min-h-[100dvh] flex flex-col bg-white relative"
+      style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}>
+      <style>{FORM_CSS + MOBILE_CSS}</style>
 
-      <div style={{
-        position: 'fixed', top: -100, right: -80, width: 380, height: 380,
-        borderRadius: '50%', pointerEvents: 'none',
-        background: 'radial-gradient(circle, rgba(16,185,129,0.22) 0%, transparent 65%)',
-        animation: 'mgOrb1 10s ease-in-out infinite',
-      }}/>
-      <div style={{
-        position: 'fixed', bottom: -120, left: -100, width: 340, height: 340,
-        borderRadius: '50%', pointerEvents: 'none',
-        background: 'radial-gradient(circle, rgba(5,150,105,0.16) 0%, transparent 65%)',
-        animation: 'mgOrb2 13s 2s ease-in-out infinite',
-      }}/>
-      <div style={{
-        position: 'fixed', left: 0, right: 0, height: 1, pointerEvents: 'none',
-        background: 'linear-gradient(to right, transparent, rgba(16,185,129,0.35), transparent)',
-        animation: 'mgScan 9s linear infinite',
-      }}/>
-
-      {/* ── Hero ── */}
-      <div style={{
-        textAlign: 'center', padding: '64px 24px 36px',
-        position: 'relative', zIndex: 1,
-        animation: 'mgHeroIn 0.8s cubic-bezier(0.22,1,0.36,1) both',
-      }}>
-        <div style={{ position: 'relative', display: 'inline-flex', marginBottom: 22 }}>
-          <div style={{ position: 'absolute', inset: -18, borderRadius: '50%', border: '1.5px solid rgba(16,185,129,0.45)', animation: 'mgPulse 2.6s ease-out infinite' }}/>
-          <div style={{ position: 'absolute', inset: -9, borderRadius: '50%', border: '1.5px solid rgba(16,185,129,0.3)', animation: 'mgPulse 2.6s 0.7s ease-out infinite' }}/>
-          <div style={{
-            width: 76, height: 76, borderRadius: 22,
-            background: 'linear-gradient(135deg,#10B981,#059669)',
-            boxShadow: '0 0 56px rgba(16,185,129,0.55), 0 12px 40px rgba(0,0,0,0.5)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            animation: 'mgGlow 3s ease-in-out infinite',
-          }}>
-            <Shield size={36} color="white"/>
-          </div>
-        </div>
-
-        <div style={{ fontSize: 32, fontWeight: 900, letterSpacing: '-0.045em', color: '#fff', marginBottom: 4 }}>
-          Area<span style={{ color: '#10B981' }}>Connect</span>
-        </div>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: 24 }}>
-          Admin Portal
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 7 }}>
-          {['Gate Control', 'Visitors', 'Payments', '24/7 Monitor'].map(f => (
-            <span key={f} style={{
-              fontSize: 11, fontWeight: 600, padding: '5px 13px', borderRadius: 99,
-              background: 'rgba(16,185,129,0.1)', color: '#6EE7B7',
-              border: '1px solid rgba(16,185,129,0.22)',
-            }}>{f}</span>
-          ))}
-        </div>
+      {/* Decorative: thin brand strip + soft glow, top only (clipped box so nothing scrolls sideways) */}
+      <div aria-hidden className="absolute inset-x-0 top-0 h-[240px] overflow-hidden pointer-events-none">
+        <div className="absolute inset-x-0 top-0 h-[3px]" style={{ background: 'linear-gradient(90deg,#6EE7B7,#10B981 45%,#059669 75%,#0EA5E9)' }}/>
+        <div className="absolute" style={{ top: -140, right: -90, width: 280, height: 280, borderRadius: '50%', background: 'radial-gradient(circle, rgba(16,185,129,.20) 0%, rgba(16,185,129,0) 70%)' }}/>
+        <div className="absolute" style={{ top: -110, left: -120, width: 240, height: 240, borderRadius: '50%', background: 'radial-gradient(circle, rgba(14,165,233,.10) 0%, rgba(14,165,233,0) 70%)' }}/>
       </div>
 
-      <div style={{ margin: '0 20px 0', height: 1, background: 'linear-gradient(to right, transparent, rgba(16,185,129,0.18), transparent)' }}/>
+      <header className="relative flex items-center gap-2.5 px-5 pt-5">
+        <img src="/icon-192.png" alt="" className="w-8 h-8 rounded-[9px]" style={{ boxShadow: '0 4px 12px -4px rgba(5,150,105,.45)' }}/>
+        <div className="leading-tight">
+          <div className="text-[16px] font-bold tracking-tight text-[#101828]">Area<span style={{ color: '#059669' }}>Connect</span></div>
+          <div className="text-[11px] font-medium text-[#667085]">Manager portal</div>
+        </div>
+      </header>
 
-      {/* ── Form card ── */}
-      <div style={{
-        margin: '0 12px', padding: '28px 24px 36px',
-        borderRadius: '28px 28px 0 0',
-        background: 'rgba(255,255,255,0.05)',
-        backdropFilter: 'blur(28px)',
-        WebkitBackdropFilter: 'blur(28px)',
-        border: '1px solid rgba(255,255,255,0.09)',
-        borderBottom: 'none',
-        animation: 'mgCardIn 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) both',
-        position: 'relative', zIndex: 1,
-      }}>
-        {children}
-        <p style={{ textAlign: 'center', marginTop: 20, fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.04em' }}>
-          Powered by <span style={{ fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>AREA CONNECTOR TECHNOLOGIES</span> · RC&nbsp;9607864
+      {/* Only the form block is vertically centred in the space below; the page grows and scrolls when it is taller */}
+      <div className="relative flex-1 flex flex-col w-full max-w-[440px] mx-auto px-5 pb-6">
+        <div className="flex-1 flex flex-col justify-center py-8">
+          <main style={{ animation: 'mgRise .5s cubic-bezier(.22,1,.36,1) both' }}>
+            {children}
+          </main>
+        </div>
+
+        <p className="mt-8 text-center text-[11px] text-[#98A2B3] tracking-[0.02em]">
+          Powered by <span className="font-semibold text-[#667085]">AREA CONNECTOR TECHNOLOGIES</span> · RC&nbsp;9607864
         </p>
       </div>
     </div>
