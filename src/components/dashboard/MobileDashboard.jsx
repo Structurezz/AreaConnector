@@ -1,3 +1,4 @@
+import { RollCallStrip } from '../site/RollCall';
 import { Link } from 'react-router-dom';
 import { format, formatDistanceToNowStrict } from 'date-fns';
 import {
@@ -200,6 +201,9 @@ export default function MobileDashboard({ user, stats, recentVisitors, openAlert
           </div>
         </section>
       )}
+
+      {/* Start an emergency roll-call (hospitals, schools, industry…) — below the hero */}
+      <RollCallStrip />
 
       {/* Live activity */}
       {(seeSecurity || seeNotices) && (

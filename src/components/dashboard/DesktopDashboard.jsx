@@ -1,3 +1,4 @@
+import { RollCallStrip } from '../site/RollCall';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -821,6 +822,9 @@ export default function DesktopDashboard({ stats, recentVisitors, openAlerts, an
         <OccupancyTile s={s} />
         <GuardsTile guards={x.guards} total={x.guardTotal} />
       </div>
+
+      {/* Start an emergency roll-call (hospitals, schools, industry…) — below the overview */}
+      <RollCallStrip />
 
       {/* ── Activity ── */}
       <div className="grid grid-cols-12 gap-5 items-start">

@@ -7,7 +7,6 @@ import Spinner, { PageLoader } from '../components/ui/Spinner';
 import DesktopDashboard from '../components/dashboard/DesktopDashboard';
 import MobileDashboard from '../components/dashboard/MobileDashboard';
 import useIsDesktop from '../hooks/useIsDesktop';
-import { RollCallStrip } from '../components/site/RollCall';
 import { CampaignModal } from '../components/campaigns/CampaignSlots';
 
 export default function ManagerDashboard() {
@@ -56,7 +55,6 @@ export default function ManagerDashboard() {
   if (isDesktop) return (
     <>
     <CampaignModal />
-    <RollCallStrip className="max-w-[1400px] mx-auto mb-5" />
     <DesktopDashboard
       user={user}
       stats={stats}
@@ -73,7 +71,6 @@ export default function ManagerDashboard() {
   return (
     <>
     <CampaignModal />
-    <RollCallStrip className="mb-4" />
     <MobileDashboard
       user={user}
       stats={stats}
