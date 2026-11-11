@@ -355,7 +355,7 @@ function FileDisputeForm({ onFiled, residents }) {
             <div style={{ fontWeight: 700, fontSize: 13, color: form.isDefendantEstate ? '#DC2626' : '#0F172A', marginBottom: 3 }}>
               {form.isDefendantEstate ? '✓ ' : ''}Filing against Estate Management
             </div>
-            <div style={{ fontSize: 12, color: '#64748B' }}>Dispute a decision, rule, or action taken by estate management</div>
+            <div style={{ fontSize: 12, color: '#64748B' }}>Dispute a decision, rule, or action taken by management</div>
           </button>
 
           {!form.isDefendantEstate && (
@@ -363,7 +363,7 @@ function FileDisputeForm({ onFiled, residents }) {
               <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Select Defendant (Resident)</label>
               <select className="input-field" value={form.defendantUserId}
                 onChange={e => set('defendantUserId', e.target.value)}>
-                <option value="">— Select a resident —</option>
+                <option value="">— Select a member —</option>
                 {residents.map(r => (
                   <option key={r._id} value={r._id}>{r.name}{r.unit ? ` — ${r.unit}` : ''}</option>
                 ))}
@@ -774,8 +774,8 @@ function NextStepsPanel({ roles, items, blocks, openId, setOpenId }) {
 
 const GUIDE_KEY = 'ac_court_guide_hidden';
 const GUIDE_STEPS = [
-  { icon: FileText,  title: 'File a case',        desc: 'Anyone can file a dispute against a resident or the estate.' },
-  { icon: Briefcase, title: 'Lawyers & jury',      desc: 'AI lawyers are assigned to both sides and 5 residents are summoned as jurors.' },
+  { icon: FileText,  title: 'File a case',        desc: 'Anyone can file a dispute against a member or management.' },
+  { icon: Briefcase, title: 'Lawyers & jury',      desc: 'AI lawyers are assigned to both sides and 5 members are summoned as jurors.' },
   { icon: Eye,       title: 'The hearing',         desc: 'Both sides argue and submit evidence. You can settle at any point.' },
   { icon: Gavel,     title: 'Verdict',             desc: 'The jury votes, then the judge (AI or you) delivers the verdict.' },
   { icon: Banknote,  title: 'Pay or appeal',       desc: 'Fines come from the wallet within 7 days, or either side can appeal.' },
@@ -1281,7 +1281,7 @@ function CaseDetail({ caseId, onBack, user, isManager }) {
                   <span style={{ padding: '8px 12px', borderRadius: 10, background: 'rgba(15,23,42,0.05)',
                                  fontSize: 11, fontWeight: 700, color: '#64748B',
                                  display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                    Current verdict by: {c.verdict.deliveredBy === 'manager' ? 'Estate Manager' : 'AI Judge Orizu'}
+                    Current verdict by: {c.verdict.deliveredBy === 'manager' ? 'The manager' : 'AI Judge Orizu'}
                   </span>
                 )}
               </div>
@@ -1658,7 +1658,7 @@ function CaseDetail({ caseId, onBack, user, isManager }) {
   const openStep = openAction === undefined ? (nextItems.find((i) => i.urgent)?.id ?? null) : openAction;
 
   const roles = [
-    isManager   && { label: 'Estate manager', icon: Gavel,     color: '#EC4899', hint: 'You can preside over this case or override the AI judge.' },
+    isManager   && { label: 'Manager', icon: Gavel,     color: '#EC4899', hint: 'You can preside over this case or override the AI judge.' },
     isPlaintiff && { label: 'Plaintiff',      icon: User,      color: '#059669', hint: 'You filed this case. Make your case, add evidence or settle.' },
     isDefendant && { label: 'Defendant',      icon: Shield,    color: '#DC2626', hint: 'This case was filed against you. Respond, add evidence or settle.' },
     isJuror     && { label: 'Juror',          icon: Users,     color: '#7C3AED', hint: 'You were summoned to the jury. Follow the hearing and cast your vote.' },
@@ -2105,7 +2105,7 @@ function CaseDetail({ caseId, onBack, user, isManager }) {
               <div>
                 <label style={{ fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Verdict &amp; Reasoning</label>
                 <textarea value={benchSummary} onChange={(e) => setBenchSummary(e.target.value)} rows={6}
-                  placeholder="Deliver your ruling. Cite the estate constitution or specific evidence where relevant…"
+                  placeholder="Deliver your ruling. Cite your rules or specific evidence where relevant…"
                   style={{ marginTop: 6, width: '100%', padding: 12, borderRadius: 10, border: '1px solid #E2E8F0',
                            fontSize: 13, lineHeight: 1.5, resize: 'vertical', fontFamily: 'inherit' }} />
               </div>
@@ -2274,7 +2274,7 @@ export default function Courtroom() {
                 <Scale size={22} color="#F59E0B" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-[22px] font-semibold text-white" style={{ letterSpacing: '-0.025em' }}>Estate Court</h1>
+                <h1 className="text-[22px] font-semibold text-white" style={{ letterSpacing: '-0.025em' }}>Community Court</h1>
                 <p className="text-[13px] text-slate-300">Settle disputes fairly: file a case, let the jury and the judge decide.
                   {guideHidden && <button onClick={() => hideGuide(false)} className="ml-2 text-amber-400 hover:text-amber-300 font-medium">How it works</button>}
                 </p>
@@ -2373,7 +2373,7 @@ export default function Courtroom() {
     <div className="space-y-5 pb-2">
       <header className="dash-rise flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-[12px] font-medium text-slate-400">Estate court · Judge Orizu presiding</div>
+          <div className="text-[12px] font-medium text-slate-400">Community court · Judge Orizu presiding</div>
           <h1 className="text-[22px] font-semibold text-slate-900 leading-tight" style={{ letterSpacing: '-0.03em' }}>Courtroom</h1>
         </div>
         {tab !== 'file' && (
@@ -2389,7 +2389,7 @@ export default function Courtroom() {
         <div className="dash-rise rounded-[22px] bg-white border border-slate-200/70 p-4">
           <button onClick={() => setTab('active')} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-500 mb-3"><ArrowLeft size={14} /> Back to cases</button>
           <div className="text-[17px] font-semibold text-slate-900" style={{ letterSpacing: '-0.02em' }}>File a dispute</div>
-          <p className="text-[13px] text-slate-500 mt-1 mb-4">Filing opens the case straight away. AI lawyers are assigned to both sides and a jury of residents is summoned.</p>
+          <p className="text-[13px] text-slate-500 mt-1 mb-4">Filing opens the case straight away. AI lawyers are assigned to both sides and a jury of members is summoned.</p>
           <FileDisputeForm onFiled={() => { setTab('mine'); loadCases('mine'); }} residents={residents} />
         </div>
       ) : (

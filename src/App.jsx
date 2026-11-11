@@ -64,7 +64,7 @@ function RequireManager({ children, allowWhenBlocked = false }) {
       <div className="min-h-screen flex items-center justify-center p-8">
         <div className="glass-card p-8 max-w-sm text-center">
           <p className="text-red-400 font-semibold mb-2">Access Denied</p>
-          <p className="text-white/50 text-sm">This portal is for Estate Managers only.</p>
+          <p className="text-white/50 text-sm">This portal is for site managers only.</p>
         </div>
       </div>
     );

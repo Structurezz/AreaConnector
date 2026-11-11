@@ -33,10 +33,10 @@ const audienceText = (T, E) => {
     },
     banners: {
       all: { bg: 'bg-red-50 border-red-200 text-red-600', text: E
-        ? <>This broadcast will immediately notify <strong>all residents</strong> in the estate. Use only for real emergencies.</>
+        ? <>This broadcast will immediately notify <strong>everyone</strong> on your site. Use only for real emergencies.</>
         : <>This broadcast will immediately notify <strong>all {lower(T.members)}</strong> at the {lower(T.site)}. Use only for real emergencies.</> },
       staff: { bg: 'bg-amber-50 border-amber-200 text-amber-700', text: E
-        ? <>Only <strong>estate manager and security staff</strong> will see this alert. Residents will not be notified.</>
+        ? <>Only <strong>managers and security staff</strong> will see this alert. Members will not be notified.</>
         : <>Only <strong>{mgr} and security staff</strong> will see this alert. No one else will be notified.</> },
       estate_manager: { bg: 'bg-orange-50 border-orange-200 text-orange-700', text: <>Only <strong>{mgrs}</strong> will see this alert.</> },
       security: { bg: 'bg-blue-50 border-blue-200 text-blue-700', text: <>Only the <strong>security team</strong> will see this alert.</> },

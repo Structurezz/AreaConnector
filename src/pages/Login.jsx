@@ -10,7 +10,7 @@ function MobileLogin({ form, setForm, showPw, setShowPw, loading, error, handleS
   return (
     <MobileAuthShell>
       <h1 className="ax-title">Welcome back</h1>
-      <p className="ax-sub mt-1.5">Sign in to manage your estate</p>
+      <p className="ax-sub mt-1.5">Sign in to manage your site</p>
 
       <form onSubmit={handleSubmit} className="mt-7 space-y-4">
         {error && (
@@ -21,7 +21,7 @@ function MobileLogin({ form, setForm, showPw, setShowPw, loading, error, handleS
 
         <label className="block">
           <span className="ax-label">Email</span>
-          <input type="email" inputMode="email" className="mg-input" placeholder="you@estate.com"
+          <input type="email" inputMode="email" className="mg-input" placeholder="you@example.com"
             value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
             required autoComplete="email" autoCapitalize="none" autoCorrect="off" spellCheck={false}/>
         </label>
@@ -60,7 +60,7 @@ function MobileLogin({ form, setForm, showPw, setShowPw, loading, error, handleS
       <div className="mt-8 rounded-xl border border-[#EAECF0] bg-[#F9FAFB] px-4 py-3.5 flex items-center gap-3">
         <span className="w-9 h-9 rounded-lg bg-white border border-[#EAECF0] flex items-center justify-center text-[#475467] shrink-0"><Smartphone size={16}/></span>
         <p className="text-[13px] leading-snug text-[#667085] min-w-0">
-          <span className="block font-medium text-[#101828]">Are you a resident?</span>
+          <span className="block font-medium text-[#101828]">A resident, student, guest or staff member?</span>
           Sign in on <a href="https://areamates.area-connector.com" className="ax-link">AreaMates</a> instead.
         </p>
       </div>
@@ -74,7 +74,7 @@ function DesktopLogin({ form, setForm, showPw, setShowPw, loading, error, handle
       topRight={<>New to AreaConnector?&nbsp;<Link to="/register" className="font-semibold text-[#059669] hover:text-[#047857]">Start free trial</Link></>}>
             <span className="w-12 h-12 rounded-xl bg-[#ECFDF3] border border-[#ABEFC6] flex items-center justify-center text-[#059669]"><Shield size={22} /></span>
             <h1 className="mt-6 text-[28px] font-semibold tracking-tight" style={{ color: '#101828' }}>Welcome back</h1>
-            <p className="mt-1.5 text-[14.5px] text-[#475467]">Sign in to manage your estate.</p>
+            <p className="mt-1.5 text-[14.5px] text-[#475467]">Sign in to manage your site.</p>
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
               {error && (
@@ -84,7 +84,7 @@ function DesktopLogin({ form, setForm, showPw, setShowPw, loading, error, handle
               )}
               <div>
                 <label className="block text-[13px] font-medium text-[#344054] mb-1.5">Email</label>
-                <input type="email" className="dl-input" placeholder="you@estate.com" autoFocus
+                <input type="email" className="dl-input" placeholder="you@example.com" autoFocus
                   value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required autoComplete="email" />
               </div>
               <div>
@@ -118,7 +118,7 @@ function DesktopLogin({ form, setForm, showPw, setShowPw, loading, error, handle
             <div className="mt-8 rounded-xl border border-[#EAECF0] bg-[#F9FAFB] px-4 py-3.5 flex items-center gap-3">
               <span className="w-9 h-9 rounded-lg bg-white border border-[#EAECF0] flex items-center justify-center text-[#475467]"><Smartphone size={16} /></span>
               <div className="text-[12.5px] leading-snug">
-                <p className="font-medium text-[#101828]">Are you a resident?</p>
+                <p className="font-medium text-[#101828]">A resident, student, guest or staff member?</p>
                 <p className="text-[#667085]">Sign in on <a href="https://areamates.area-connector.com" className="font-medium text-[#059669] hover:underline">AreaMates</a> instead.</p>
               </div>
             </div>

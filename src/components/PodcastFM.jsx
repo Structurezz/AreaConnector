@@ -95,7 +95,7 @@ export default function PodcastFM() {
           <Radio size={14}/>
         </div>
         <div className="text-sm font-extrabold" style={{ color: '#0F172A' }}>AreaConnector FM</div>
-        <span className="text-xs" style={{ color: '#94A3B8' }}>· cross-estate podcast</span>
+        <span className="text-xs" style={{ color: '#94A3B8' }}>· cross-site podcast</span>
       </div>
 
       {upcoming.length > 0 && (

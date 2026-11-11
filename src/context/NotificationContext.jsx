@@ -30,7 +30,7 @@ export const TYPE_CONFIG = {
   payment_received:    { Icon: Banknote,    label: 'Payment',       color: '#10B981', isAlert: false },
   payment_due:         { Icon: Clock,       label: 'Payment Due',   color: '#F59E0B', isAlert: false },
   payment_overdue:     { Icon: AlertCircle, label: 'Overdue',       color: '#EF4444', isAlert: false },
-  new_resident:        { Icon: UserPlus,    label: 'Resident',      color: '#6366F1', isAlert: false },
+  new_resident:        { Icon: UserPlus,    label: 'New member',      color: '#6366F1', isAlert: false },
   visitor_checkin:     { Icon: UserCheck,   label: 'Visitor In',    color: '#0EA5E9', isAlert: false },
   visitor_checkout:    { Icon: UserMinus,   label: 'Visitor Out',   color: '#F59E0B', isAlert: false },
   new_announcement:    { Icon: Megaphone,   label: 'Announcement',  color: '#8B5CF6', isAlert: false },

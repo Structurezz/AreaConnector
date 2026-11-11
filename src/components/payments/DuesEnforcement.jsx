@@ -36,7 +36,7 @@ function useWords() {
 
 const ACTION_LABEL = {
   notice: 'Notice sent', applied: 'Restrictions applied', lifted: 'Restrictions lifted by manager',
-  auto_lifted: 'Restored — bills paid', cancelled: 'Notice withdrawn', dispute: 'Resident disputed',
+  auto_lifted: 'Restored — bills paid', cancelled: 'Notice withdrawn', dispute: 'Member disputed',
 };
 
 function SettingsModal({ open, onClose, onSaved }) {

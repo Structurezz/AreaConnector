@@ -27,7 +27,7 @@ const useW = () => { const { terms: T, isEstate: E } = useSite(); return { T, E,
 // Everything here stays inside the Podcast section; the Lounge's DJ console is separate.
 const STYLES = [
   { key: 'podcast', Icon: Headphones,    label: 'Podcast show', desc: 'Host a show; it is recorded and saved to the archive.', color: '#10B981', dark: '#059669' },
-  { key: 'chat',    Icon: MessageSquare, label: 'Talk room',    desc: 'An open conversation with your residents.',             color: '#0EA5E9', dark: '#0369A1' },
+  { key: 'chat',    Icon: MessageSquare, label: 'Talk room',    desc: 'An open conversation with your community.',             color: '#0EA5E9', dark: '#0369A1' },
   { key: 'prayer',  Icon: Heart,         label: 'Prayer room',  desc: 'Lead a prayer or devotional session.',                  color: '#EC4899', dark: '#BE185D' },
 ];
 

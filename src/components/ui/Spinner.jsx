@@ -12,9 +12,9 @@ const BRAND = {
   "track": "#E2E8F0",
   "name": [
     "Area",
-    "Connect"
+    "Connector"
   ],
-  "tagline": "Estate manager",
+  "tagline": "Manager",
   "fallback": [
     "Getting things ready",
     "Loading your estate"

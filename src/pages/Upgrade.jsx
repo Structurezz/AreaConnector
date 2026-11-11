@@ -18,11 +18,11 @@ const fmtLim  = (n) => (n === -1 ? 'Unlimited' : n?.toLocaleString() ?? '—');
 
 // Map plan feature keys → human label + icon (matches admin FEATURE_GROUPS exactly)
 const FEATURE_META = {
-  maxResidents:        { label: 'Max residents',           icon: Users,        type: 'limit'  },
+  maxResidents:        { label: 'Max members',           icon: Users,        type: 'limit'  },
   maxUnits:            { label: 'Max units',               icon: Home,         type: 'limit'  },
   maxVisitorsPerMonth: { label: 'Visitors / month',        icon: Users,        type: 'limit'  },
   visitorManagement:   { label: 'Visitor management',      icon: Users                        },
-  residentManagement:  { label: 'Resident management',     icon: Users                        },
+  residentManagement:  { label: 'Member management',     icon: Users                        },
   unitManagement:      { label: 'Unit management',         icon: Home                         },
   announcements:       { label: 'Announcements',           icon: Megaphone                    },
   communityChat:       { label: 'Community chat',          icon: MessageSquare                },
@@ -31,7 +31,7 @@ const FEATURE_META = {
   paymentSystem:       { label: 'Payment system',          icon: CreditCard                   },
   securityPortal:      { label: 'Security portal',         icon: Shield                       },
   emergencyBroadcast:  { label: 'Emergency broadcast',     icon: Zap                          },
-  residentLounge:      { label: 'Resident lounge',         icon: Music                        },
+  residentLounge:      { label: 'Community lounge',         icon: Music                        },
   musicPlayer:         { label: 'Music player / radio',    icon: Music                        },
   fridayNightFunTimes: { label: 'Friday night FunTimes',   icon: Star                         },
   eventBoard:          { label: 'Event board',             icon: Megaphone                    },
@@ -73,8 +73,8 @@ function getBullets(features = {}) {
   if (features.securityPortal)       bullets.push('Security portal & guard app');
   if (features.emergencyBroadcast)   bullets.push('Emergency broadcast');
   if (features.paymentSystem)        bullets.push('Payment collection');
-  if (features.marketplace)          bullets.push('Resident marketplace');
-  if (features.residentLounge)       bullets.push('Resident lounge');
+  if (features.marketplace)          bullets.push('Marketplace');
+  if (features.residentLounge)       bullets.push('Community lounge');
   if (features.musicPlayer)          bullets.push('Music player / radio');
   if (features.eventBoard)           bullets.push('Event board');
   if (features.pollsAndVoting)       bullets.push('Polls & voting');

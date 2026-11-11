@@ -89,7 +89,7 @@ export const STICKER_PACKS = [
       { id: 'cant-breathe', emoji: '😂', label: "I can't breathe",    from: '#FED7AA', to: '#F97316', tilt: -5 },
       { id: 'gist-me',      emoji: '👀', label: 'Gist me!',           from: '#E9D5FF', to: '#C026D3', tilt: 3 },
       { id: 'light-is-back',emoji: '💡', label: 'Light don come!',    from: '#FEF9C3', to: '#F59E0B', tilt: -2 },
-      { id: 'good-morning', emoji: '☀️', label: 'Good morning estate', from: '#FDE68A', to: '#F97316', tilt: 2 },
+      { id: 'good-morning', emoji: '☀️', label: 'Good morning everyone', from: '#FDE68A', to: '#F97316', tilt: 2 },
       { id: 'happy-friday', emoji: '🎉', label: 'Happy Friday!',      from: '#FBCFE8', to: '#A855F7', tilt: -3 },
       { id: 'welcome',      emoji: '🏡', label: 'Welcome neighbour!', from: '#BBF7D0', to: '#059669', tilt: 3 },
       { id: 'thank-you',    emoji: '💚', label: 'Thank you!',         from: '#A7F3D0', to: '#0D9488', tilt: -2 },
@@ -103,7 +103,7 @@ export const STICKER_PACKS = [
     stickers: [
       { id: 'nkechi-hi',     nkechi: true, wave: true, label: 'Hello my dear!',       from: '#FEF3C7', to: '#F472B6', tilt: -3 },
       { id: 'nkechi-gist',   nkechi: true, label: 'Tell me everything!',  from: '#FCE7F3', to: '#C026D3', tilt: 3, badge: '👀' },
-      { id: 'nkechi-love',   nkechi: true, label: 'I love this estate',   from: '#FEE2E2', to: '#F43F5E', tilt: -2, badge: '💖' },
+      { id: 'nkechi-love',   nkechi: true, label: 'I love this place',   from: '#FEE2E2', to: '#F43F5E', tilt: -2, badge: '💖' },
       { id: 'nkechi-peace',  nkechi: true, label: 'Peace o, peace!',      from: '#DCFCE7', to: '#10B981', tilt: 2, badge: '🕊️' },
       { id: 'nkechi-shock',  nkechi: true, label: 'Ehn?! See life!',      from: '#FFEDD5', to: '#F97316', tilt: -4, badge: '😱' },
       { id: 'nkechi-party',  nkechi: true, wave: true, label: 'Oya, make we party!', from: '#EDE9FE', to: '#8B5CF6', tilt: 3, badge: '🎶' },

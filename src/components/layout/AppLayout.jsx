@@ -68,7 +68,7 @@ export default function AppLayout({ children }) {
                 <span className="text-white font-black text-[10px]">AC</span>
               </div>
               <span className="font-bold text-base" style={{ color: '#0F172A', letterSpacing: '-0.02em' }}>
-                Area<span style={{ color: '#10B981' }}>Connect</span>
+                Area<span style={{ color: '#10B981' }}>Connector</span>
               </span>
             </Link>
             <EstateSwitcher compact />

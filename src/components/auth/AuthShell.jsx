@@ -104,7 +104,7 @@ export function MobileAuthShell({ children }) {
       <header className="relative flex items-center gap-2.5 px-5 pt-5">
         <img src="/icon-192.png" alt="" className="w-8 h-8 rounded-[9px]" style={{ boxShadow: '0 4px 12px -4px rgba(5,150,105,.45)' }}/>
         <div className="leading-tight">
-          <div className="text-[16px] font-bold tracking-tight text-[#101828]">Area<span style={{ color: '#059669' }}>Connect</span></div>
+          <div className="text-[16px] font-bold tracking-tight text-[#101828]">Area<span style={{ color: '#059669' }}>Connector</span></div>
           <div className="text-[11px] font-medium text-[#667085]">Manager portal</div>
         </div>
       </header>
@@ -128,9 +128,9 @@ export function MobileAuthShell({ children }) {
 /* ── Desktop: split screen with a live product preview ── */
 const FEED = [
   { icon: UserCheck,  tone: '#10B981', title: 'Visitor checked in',     sub: 'Ada Obi → Flat 4B · Gate A' },
-  { icon: Wallet,     tone: '#2E90FA', title: 'Service charge paid',    sub: 'Flat 12 · ₦25,000 via Paystack' },
+  { icon: Wallet,     tone: '#2E90FA', title: 'Payment received',       sub: 'Unit 12 · ₦25,000 via Paystack' },
   { icon: ShieldCheck,tone: '#7A5AF8', title: 'Patrol started',         sub: 'Guard Musa · North perimeter' },
-  { icon: Megaphone,  tone: '#F79009', title: 'Announcement delivered', sub: 'Water maintenance · 86 residents' },
+  { icon: Megaphone,  tone: '#F79009', title: 'Announcement delivered', sub: 'Water maintenance · 86 members' },
   { icon: DoorOpen,   tone: '#10B981', title: 'Delivery cleared',       sub: 'Jumia rider → Flat 7 · Gate B' },
   { icon: Bell,       tone: '#F04438', title: 'Alert resolved',         sub: 'Noise complaint · Block C' },
 ];
@@ -163,13 +163,13 @@ function ProductPreview() {
       className="w-full max-w-[460px] rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-xl shadow-[0_30px_80px_-20px_rgba(0,0,0,.6)] overflow-hidden">
       <div className="flex items-center gap-1.5 px-4 h-9 border-b border-white/[0.07]">
         {['#F97066', '#FDB022', '#32D583'].map((c) => <span key={c} className="w-2.5 h-2.5 rounded-full" style={{ background: c, opacity: .8 }} />)}
-        <span className="ml-3 text-[11px] text-white/35">areamanager.area-connector.com</span>
+        <span className="ml-3 text-[11px] text-white/35">manager.area-connector.com</span>
       </div>
       <div className="p-5">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[11px] text-white/45">{greet}</p>
-            <p className="text-[15px] font-semibold text-white" style={{ color: '#fff' }}>Greenfield Estate</p>
+            <p className="text-[15px] font-semibold text-white" style={{ color: '#fff' }}>Greenfield</p>
           </div>
           <span className="flex items-center gap-1.5 text-[11px] text-emerald-300">
             <span className="relative flex w-2 h-2"><span className="absolute inset-0 rounded-full bg-emerald-400" style={{ animation: 'dlPing 1.6s ease-out infinite' }} /><span className="relative w-2 h-2 rounded-full bg-emerald-400" /></span>
@@ -226,24 +226,24 @@ export function DesktopAuthShell({ topRight, children, width = 380, headline, su
         <div className="relative flex items-center gap-3">
           <img src="/icon-192.png" alt="" className="w-10 h-10 rounded-xl" />
           <div className="leading-tight">
-            <div className="text-[17px] font-bold tracking-tight" style={{ color: '#fff' }}>Area<span style={{ color: '#34D399' }}>Connect</span></div>
-            <div className="text-[11px] text-white/45">Estate manager portal</div>
+            <div className="text-[17px] font-bold tracking-tight" style={{ color: '#fff' }}>Area<span style={{ color: '#34D399' }}>Connector</span></div>
+            <div className="text-[11px] text-white/45">Manager portal</div>
           </div>
         </div>
 
         <div className="relative flex-1 min-h-0 flex flex-col justify-center py-6" style={{ animation: 'dlRise .8s cubic-bezier(.22,1,.36,1) both' }}>
           <div className="text-[34px] leading-[1.12] font-semibold tracking-tight max-w-[480px]" style={{ color: '#fff' }}>
-            {headline || <>Your whole estate, <span style={{ color: '#34D399' }}>calm and in view.</span></>}
+            {headline || <>Your whole site, <span style={{ color: '#34D399' }}>calm and in view.</span></>}
           </div>
           <p className="mt-3 text-[14.5px] leading-relaxed text-white/60 max-w-[440px]">
-            {sub || 'Gate access, dues, guards and residents — in one dashboard that updates the moment something happens.'}
+            {sub || 'Gate access, payments, guards and members — for estates, campuses, hotels, workplaces and hospitals, in one dashboard that updates the moment something happens.'}
           </p>
           <div className="mt-7"><ProductPreview /></div>
         </div>
 
         <div className="relative flex items-center justify-between gap-6 text-[12px] text-white/45">
           <div className="flex gap-8">
-            {[['24/7', 'gate monitoring'], ['Paystack', 'secure dues'], ['3 apps', 'manager · residents · guards']].map(([a, b]) => (
+            {[['24/7', 'gate monitoring'], ['Paystack', 'secure payments'], ['3 apps', 'manager · members · guards']].map(([a, b]) => (
               <div key={a}><p className="text-[15px] font-semibold text-white/90">{a}</p><p>{b}</p></div>
             ))}
           </div>

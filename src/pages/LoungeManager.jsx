@@ -33,7 +33,7 @@ const inputStyle = {
 const ACTIVITY_TYPES = [
   { id: 'fitness',     emoji: '🏃', label: 'Fitness',      color: '#10B981', bg: '#F0FDF4', Icon: Dumbbell },
   { id: 'icebreaker',  emoji: '💬', label: 'Icebreaker',   color: '#6366F1', bg: '#EEF2FF', Icon: MessageCircle },
-  { id: 'news',        emoji: '📰', label: 'Estate News',  color: '#0EA5E9', bg: '#F0F9FF', Icon: Newspaper },
+  { id: 'news',        emoji: '📰', label: 'Community News',  color: '#0EA5E9', bg: '#F0F9FF', Icon: Newspaper },
   { id: 'tip',         emoji: '💡', label: 'Daily Tip',    color: '#F59E0B', bg: '#FFFBEB', Icon: Lightbulb },
   { id: 'networking',  emoji: '🤝', label: 'Networking',   color: '#8B5CF6', bg: '#F5F3FF', Icon: Handshake },
   { id: 'social',      emoji: '🎉', label: 'Fun & Social', color: '#EC4899', bg: '#FDF2F8', Icon: PartyPopper },
@@ -43,17 +43,17 @@ const ACTIVITY_TYPES = [
 const typeMap = Object.fromEntries(ACTIVITY_TYPES.map(t => [t.id, t]));
 
 const DEFAULT_ACTIVITIES = [
-  { id:'da_1', type:'fitness',     pinned:true,  visible:true, day:'Daily',   title:'Morning Walk Club',         desc:'7:00 AM at the estate gate. All fitness levels welcome — let\'s get those steps in together!' },
+  { id:'da_1', type:'fitness',     pinned:true,  visible:true, day:'Daily',   title:'Morning Walk Club',         desc:'7:00 AM on site gate. All fitness levels welcome — let\'s get those steps in together!' },
   { id:'da_2', type:'icebreaker',  pinned:true,  visible:true, day:'Daily',   title:'Icebreaker of the Day',     desc:'What\'s one skill you have that most of your neighbours probably don\'t know about?' },
   { id:'da_3', type:'challenge',   pinned:false, visible:true, day:'Daily',   title:'10,000 Steps Challenge',    desc:'Can you hit 10,000 steps today? Share your progress with the community!' },
   { id:'da_4', type:'networking',  pinned:false, visible:true, day:'Weekly',  title:'Neighbour Spotlight',       desc:'Say hello to a neighbour you haven\'t met yet this week.' },
-  { id:'da_5', type:'tip',         pinned:false, visible:true, day:'Daily',   title:'Estate Tip of the Day',     desc:'Keep shared corridors clear at all times for emergency access and neighbour courtesy.' },
+  { id:'da_5', type:'tip',         pinned:false, visible:true, day:'Daily',   title:'Tip of the Day',     desc:'Keep shared corridors clear at all times for emergency access and neighbour courtesy.' },
   { id:'da_6', type:'social',      pinned:false, visible:true, day:'Weekly',  title:'Friday Night FunTimes',     desc:'Community bonding every Friday evening at the Estate Clubhouse, 7 PM.' },
   { id:'da_7', type:'marketplace', pinned:false, visible:true, day:'Weekly',  title:'Marketplace Monday',        desc:'New week, new listings! Check out what your neighbours are offering.' },
-  { id:'da_8', type:'news',        pinned:false, visible:true, day:'Daily',   title:'Estate Update Board',       desc:'Check Announcements for this week\'s maintenance schedule and community updates.' },
+  { id:'da_8', type:'news',        pinned:false, visible:true, day:'Daily',   title:'Community Update Board',       desc:'Check Announcements for this week\'s maintenance schedule and community updates.' },
   { id:'da_9', type:'fitness',     pinned:false, visible:true, day:'Weekly',  title:'Weekend Yoga Session',      desc:'Outdoor yoga every Saturday at 8 AM by the estate pool area. Bring your own mat!' },
-  { id:'da_10',type:'networking',  pinned:false, visible:true, day:'Monthly', title:'Residents\' Mixer',         desc:'Monthly get-together for new and old residents to meet, mingle and build community bonds.' },
-  { id:'da_11',type:'challenge',   pinned:false, visible:true, day:'Weekly',  title:'Community Clean-Up Drive',  desc:'Join residents this weekend for a 30-minute shared-space tidy-up. Gloves provided!' },
+  { id:'da_10',type:'networking',  pinned:false, visible:true, day:'Monthly', title:'Community Mixer',         desc:'Monthly get-together for new and old members to meet, mingle and build community bonds.' },
+  { id:'da_11',type:'challenge',   pinned:false, visible:true, day:'Weekly',  title:'Community Clean-Up Drive',  desc:'Join everyone this weekend for a 30-minute shared-space tidy-up. Gloves provided!' },
   { id:'da_12',type:'social',      pinned:false, visible:true, day:'Daily',   title:'Good Morning Wall',         desc:'Drop a good morning in the community chat. Positivity is contagious!' },
 ];
 

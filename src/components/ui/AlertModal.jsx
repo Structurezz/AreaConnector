@@ -10,9 +10,9 @@ import { lower } from '../../utils/siteTypes';
 
 const ROLE_CFG = {
   security:       { label: 'Security Guard',  Icon: Shield,    bg: '#EFF6FF', color: '#1D4ED8', border: '#BFDBFE' },
-  resident:       { label: 'Resident',         Icon: UserRound, bg: '#FFF1F2', color: '#BE123C', border: '#FECDD3' },
-  estate_manager: { label: 'Estate Manager',   Icon: Briefcase, bg: '#FFF7ED', color: '#C2410C', border: '#FED7AA' },
-  super_admin:    { label: 'Estate Manager',   Icon: Briefcase, bg: '#FFF7ED', color: '#C2410C', border: '#FED7AA' },
+  resident:       { label: 'Member',         Icon: UserRound, bg: '#FFF1F2', color: '#BE123C', border: '#FECDD3' },
+  estate_manager: { label: 'Manager',   Icon: Briefcase, bg: '#FFF7ED', color: '#C2410C', border: '#FED7AA' },
+  super_admin:    { label: 'AreaConnector admin',   Icon: Briefcase, bg: '#FFF7ED', color: '#C2410C', border: '#FED7AA' },
 };
 
 export default function AlertModal() {

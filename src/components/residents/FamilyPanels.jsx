@@ -17,8 +17,8 @@ import { lower, withAn } from '../../utils/siteTypes';
 // Mirrors server utils/householdAccess
 export const FAMILY_PERMS = {
   visitors:    { label: 'Invite visitors', desc: 'Gate passes for the home',              Icon: UserCheck,     color: '#6366F1' },
-  payments:    { label: 'Estate bills',    desc: 'See and pay the household’s bills',     Icon: CreditCard,    color: '#10B981' },
-  chat:        { label: 'Community chat',  desc: 'Estate group chat and DMs',             Icon: MessageSquare, color: '#3B82F6' },
+  payments:    { label: 'Bills',    desc: 'See and pay the household’s bills',     Icon: CreditCard,    color: '#10B981' },
+  chat:        { label: 'Community chat',  desc: 'Group chat and DMs',             Icon: MessageSquare, color: '#3B82F6' },
   community:   { label: 'Lounge & events', desc: 'Lounge, podcasts, events, polls',       Icon: Music,         color: '#8B5CF6' },
   marketplace: { label: 'Marketplace',     desc: 'Buy and sell with neighbours',          Icon: ShoppingBag,   color: '#F59E0B' },
   neighbours:  { label: 'Call neighbours', desc: 'Call or buzz from the directory',       Icon: PhoneCall,     color: '#EC4899' },

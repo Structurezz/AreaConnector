@@ -121,7 +121,7 @@ export default function Sidebar({ mobile = false, onClose }) {
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-[15px] font-semibold truncate leading-tight" style={{ color: '#0F172A', letterSpacing: '-0.03em' }}>
-                Area<span style={{ color: '#10B981' }}>Connect</span>
+                Area<span style={{ color: '#10B981' }}>Connector</span>
               </div>
               <div className="text-[11px] truncate" style={{ color: '#94A3B8' }}>{site.terms.manager}</div>
             </div>

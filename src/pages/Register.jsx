@@ -18,36 +18,36 @@ const TYPE_EXAMPLE = { school: 'Kings College', university: 'University of Lagos
 // theme-aware `ax-*` classes and pick their input style from this context.
 const Ui = createContext({ input: 'dl-input', dark: false });
 
-const STEPS = ['Account', 'Estate', 'Plan', 'Done'];
+const STEPS = ['Account', 'Site', 'Plan', 'Done'];
 
 const PLANS = [
   {
     id: 'starter', slug: 'starter', label: 'Starter',
-    sub: 'For small estates',
+    sub: 'For small sites',
     monthly: 20000, annual: 192000,
     billingModel: 'flat',
-    features: ['Up to 50 residents', '1 security gate', 'Visitor & QR pass management', 'Payment schedules & wallet', 'Guard mobile app'],
+    features: ['Up to 50 members', '1 security gate', 'Visitor & QR pass management', 'Payment schedules & wallet', 'Guard mobile app'],
   },
   {
     id: 'growth', slug: 'growth', label: 'Growth',
     sub: 'For growing communities',
     monthly: 47000, annual: 451200,
     billingModel: 'flat', badge: 'Most popular',
-    features: ['Up to 200 residents', 'Unlimited gates', 'Community chat & marketplace', 'Events & polls', 'Priority email support'],
+    features: ['Up to 200 members', 'Unlimited gates', 'Community chat & marketplace', 'Events & polls', 'Priority email support'],
   },
   {
     id: 'premium', slug: 'premium', label: 'Premium',
-    sub: 'For large estates',
+    sub: 'For large sites',
     monthly: 80000, annual: 768000,
     billingModel: 'flat',
-    features: ['Up to 500 residents', 'Unlimited gates', 'Lounge social feed', 'AI insights & analytics', 'Dedicated support'],
+    features: ['Up to 500 members', 'Unlimited gates', 'Lounge social feed', 'AI insights & analytics', 'Dedicated support'],
   },
 ];
 
 const TRIAL_PLAN = {
   id: 'trial', slug: 'growth', label: '14-Day Free Trial',
   isTrial: true, billingModel: 'flat',
-  features: ['All Growth plan features', 'Up to 200 residents & unlimited gates', 'No credit card required', 'Cancel or upgrade any time'],
+  features: ['All Growth plan features', 'Up to 200 members & unlimited gates', 'No credit card required', 'Cancel or upgrade any time'],
 };
 
 const fmt = n => '₦' + n.toLocaleString('en-NG');
@@ -140,7 +140,7 @@ function AccountStep({ form, onChange, onNext, error }) {
           onChange={e => onChange('name', e.target.value)}/>
       </Field>
       <Field label="Email">
-        <input type="email" className={input} placeholder="you@estate.com" value={form.email} autoComplete="email"
+        <input type="email" className={input} placeholder="you@example.com" value={form.email} autoComplete="email"
           onChange={e => onChange('email', e.target.value)}/>
       </Field>
       <Field label="Phone (optional)">
@@ -372,9 +372,9 @@ function DoneStep({ estateName, estateCode, billingLabel, siteType }) {
 }
 
 const SHOWCASE = [
-  [<>Your estate awaits. <span style={{ color: '#34D399' }}>Let's get you started.</span></>, 'Create your admin account to manage residents, visitors, payments and more.'],
-  [<>One platform. <span style={{ color: '#34D399' }}>Every corner of your estate.</span></>, "Tell us what you manage — we'll generate a unique code for people to join."],
-  [<>Smart pricing <span style={{ color: '#34D399' }}>for every estate size.</span></>, 'Start free for 14 days. No credit card required.'],
+  [<>Your site awaits. <span style={{ color: '#34D399' }}>Let's get you started.</span></>, 'Create your admin account to manage members, visitors, payments and more.'],
+  [<>One platform. <span style={{ color: '#34D399' }}>Every corner of your site.</span></>, "Tell us what you manage — we'll generate a unique code for people to join."],
+  [<>Smart pricing <span style={{ color: '#34D399' }}>for every site size.</span></>, 'Start free for 14 days. No credit card required.'],
   [<>The gate is open. <span style={{ color: '#34D399' }}>You're live.</span></>, 'Welcome to AreaConnector. Set up your profile to get started.'],
 ];
 

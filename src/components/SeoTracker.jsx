@@ -13,21 +13,21 @@ import { useSite } from '../context/SiteContext';
 //   by vite.config.js when VITE_GA_MEASUREMENT_ID is set). IDs and tokens in
 //   the path are masked so no personal data reaches Google Analytics.
 
-const SITE_URL  = 'https://areamanager.area-connector.com';
-const APP_TITLE = 'AreaConnector — Estate Manager Portal';
+const SITE_URL  = 'https://manager.area-connector.com';
+const APP_TITLE = 'AreaConnector — Manager Portal';
 
 const PUBLIC_PAGES = {
   '/login': [
-    "Estate Manager Login | AreaConnector",
-    "Sign in to the AreaConnector estate manager portal to manage residents, collect service charges, approve visitors and run your estate from one dashboard.",
+    "Manager Login | AreaConnector",
+    "Sign in to AreaConnector to run your estate, campus, hotel, workplace or hospital: members, bills and fees, visitor passes and gate security from one dashboard.",
   ],
   '/register': [
-    "Register Your Estate on AreaConnector — Set Up in 10 Minutes",
-    "Create your estate on AreaConnector: invite residents, collect dues via Paystack, issue visitor QR passes and manage gate security. Built for Nigerian estates.",
+    "Set Up Your Site on AreaConnector — Estates, Campuses, Hotels & More",
+    "Create your estate, campus, hotel, workplace or hospital on AreaConnector: invite members, collect bills and fees via Paystack, issue visitor QR passes and manage gate security.",
   ],
 };
 
-const DEFAULT_DESCRIPTION = "Sign in to the AreaConnector estate manager portal to manage residents, collect service charges, approve visitors and run your estate from one dashboard.";
+const DEFAULT_DESCRIPTION = "Sign in to AreaConnector to run your estate, campus, hotel, workplace or hospital: members, bills and fees, visitor passes and gate security from one dashboard.";
 
 function setMeta(selector, attrs) {
   let el = document.head.querySelector(selector);

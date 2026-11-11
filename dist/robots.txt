@@ -4,4 +4,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://areamanager.area-connector.com/sitemap.xml
+Sitemap: https://manager.area-connector.com/sitemap.xml

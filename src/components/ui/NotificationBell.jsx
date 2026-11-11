@@ -194,7 +194,7 @@ export default function NotificationBell() {
                 </p>
                 <p className="mt-1 text-[12px] text-slate-400">
                   {site.isEstate
-                    ? (tab === 'alerts' ? 'The estate is calm. We’ll ring if anything happens.' : 'Alerts, visitors, payments and resident requests will show up here.')
+                    ? (tab === 'alerts' ? 'All is calm. We’ll ring if anything happens.' : 'Alerts, visitors, payments and resident requests will show up here.')
                     : (tab === 'alerts' ? `The ${lower(site.terms.site)} is calm. We’ll ring if anything happens.` : `Alerts, visitors, payments and ${lower(site.terms.member)} requests will show up here.`)}
                 </p>
               </div>

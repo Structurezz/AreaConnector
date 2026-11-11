@@ -18,7 +18,7 @@ const AREAS = [
   { key: 'finance',        label: 'Finance',           desc: 'Dues, payments, wallet, withdrawals, plan', Icon: Wallet,    color: '#10B981' },
   { key: 'communications', label: 'Communications',    desc: 'Announcements and community chat',          Icon: Megaphone, color: '#F59E0B' },
   { key: 'community',      label: 'Community',         desc: 'Lounge, events, polls, marketplace',        Icon: Music,     color: '#EC4899' },
-  { key: 'settings',       label: 'Settings & team',   desc: 'Estate settings and this Team page',        Icon: Settings2, color: '#64748B' },
+  { key: 'settings',       label: 'Settings & team',   desc: 'Site settings and this Team page',        Icon: Settings2, color: '#64748B' },
 ];
 const AREA = Object.fromEntries(AREAS.map(a => [a.key, a]));
 
