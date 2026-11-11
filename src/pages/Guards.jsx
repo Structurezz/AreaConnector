@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { guardAPI } from '../api';
+import { guardAPI, placeAPI, unitAPI } from '../api';
+import { useSite } from '../context/SiteContext';
 import Modal from '../components/ui/Modal';
 import {
   Shield, Search, UserX, UserCheck, MailPlus, Trash2, X, Phone, Mail, Calendar,
-  Radio, Users, ShieldOff, Smartphone, KeyRound, ChevronRight, Clock, ShieldCheck,
+  Radio, Users, ShieldOff, Smartphone, KeyRound, ChevronRight, Clock, ShieldCheck, Building2, Save,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -12,6 +13,64 @@ import Portal, { Z } from '../components/ui/Portal';
 import useCountUp from '../hooks/useCountUp';
 
 const ONLINE_MS = 15 * 60000;
+
+// Security posts come from the site (GET /api/site → guardPosts): every site
+// has gate security; universities also have hall porters tied to a hall.
+const DEFAULT_POSTS = [{ key: 'gate', label: 'Security guard', plural: 'Security guards', place: '' }];
+export const usePosts = () => {
+  const site = useSite();
+  const posts = site.guardPosts?.length ? site.guardPosts : DEFAULT_POSTS;
+  const postOf = (g) => posts.find((p) => p.key === (g?.guardPost || 'gate')) || posts[0];
+  return { posts, postOf, multi: posts.length > 1 };
+};
+
+// Halls / buildings a porter can be assigned to: mapped halls + unit blocks.
+function usePlaceOptions(enabled) {
+  const [opts, setOpts] = useState([]);
+  useEffect(() => {
+    if (!enabled) return;
+    Promise.allSettled([placeAPI.list(), unitAPI.getAll({ limit: 1000 })]).then(([pl, un]) => {
+      const names = new Set();
+      (pl.value?.data?.data || []).filter((x) => ['hall', 'building'].includes(x.kind)).forEach((x) => x.name && names.add(x.name));
+      (un.value?.data?.data || []).forEach((u) => u.block && names.add(u.block));
+      setOpts([...names].sort());
+    });
+  }, [enabled]);
+  return opts;
+}
+
+function PostBadge({ g, postOf, multi }) {
+  const p = postOf(g);
+  if (!multi && !g.guardPlace) return null;
+  const porter = !!p.place;
+  return (
+    <span className={`inline-flex items-center gap-1 text-[10.5px] font-semibold px-2 py-0.5 rounded-full border ${porter ? 'bg-indigo-50 text-indigo-700 border-indigo-100' : 'bg-teal-50 text-teal-700 border-teal-100'}`}>
+      {porter ? <Building2 size={10} /> : <Shield size={10} />}{p.label}{g.guardPlace ? ` · ${g.guardPlace}` : ''}
+    </span>
+  );
+}
+
+function PostPicker({ posts, value, onChange }) {
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {posts.map((p) => {
+        const on = value === p.key;
+        return (
+          <button key={p.key} type="button" onClick={() => onChange(p.key)}
+            className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-left transition-all ${on ? 'border-teal-500 bg-teal-50 ring-2 ring-teal-100' : 'border-slate-200 hover:border-slate-300 bg-white'}`}>
+            <span className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${p.place ? 'bg-indigo-100 text-indigo-600' : 'bg-teal-100 text-teal-700'}`}>
+              {p.place ? <Building2 size={14} /> : <Shield size={14} />}
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[12.5px] font-semibold text-slate-900">{p.label}</span>
+              <span className="block text-[11px] text-slate-500 truncate">{p.place ? `Looks after one ${p.place.toLowerCase()}` : 'Gates & entrances'}</span>
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 const isOnline = (g) => g.isActive && g.lastSeen && Date.now() - new Date(g.lastSeen).getTime() < ONLINE_MS;
 
 // On duty (teal) · offline (slate) · suspended (red)
@@ -91,8 +150,25 @@ function StatTile({ i, label, hint, value, Icon, color, active, live, onClick })
 
 /* ── Detail drawer ──────────────────────────────────────────────────── */
 
-function GuardDrawer({ guard, onToggle, onRemove, onClose }) {
+function GuardDrawer({ guard, onToggle, onRemove, onClose, onUpdated }) {
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const { posts, postOf, multi } = usePosts();
+  const [post, setPost] = useState('gate');
+  const [place, setPlace] = useState('');
+  const [savingPost, setSavingPost] = useState(false);
+  const placeOpts = usePlaceOptions(!!guard && posts.some((p) => p.place));
+  useEffect(() => { setPost(postOf(guard).key); setPlace(guard?.guardPlace || ''); }, [guard?._id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const postDef = posts.find((p) => p.key === post) || posts[0];
+  const postDirty = guard && (post !== postOf(guard).key || place !== (guard.guardPlace || ''));
+  const savePost = async () => {
+    setSavingPost(true);
+    try {
+      const { data } = await guardAPI.update(guard._id, { post, place: postDef.place ? place : '' });
+      toast.success('Post updated');
+      onUpdated?.(data.data);
+    } catch (err) { toast.error(err.response?.data?.message || 'Could not update the post'); }
+    finally { setSavingPost(false); }
+  };
 
   useEffect(() => { setConfirmRemove(false); }, [guard?._id]);
 
@@ -111,7 +187,7 @@ function GuardDrawer({ guard, onToggle, onRemove, onClose }) {
     g.phone && { icon: Phone, label: 'Phone', value: g.phone, href: `tel:${g.phone}`, color: '#0EA5E9' },
     g.email && { icon: Mail, label: 'Email', value: g.email, href: `mailto:${g.email}`, color: '#8B5CF6' },
     g.createdAt && { icon: Calendar, label: 'Onboarded', value: format(new Date(g.createdAt), 'd MMM yyyy'), color: '#10B981' },
-    { icon: Shield, label: 'Role', value: 'Security guard', color: '#0D9488' },
+    { icon: postOf(g).place ? Building2 : Shield, label: 'Post', value: `${postOf(g).label}${g.guardPlace ? ` · ${g.guardPlace}` : ''}`, color: '#0D9488' },
   ].filter(Boolean);
 
   return (
@@ -191,6 +267,26 @@ function GuardDrawer({ guard, onToggle, onRemove, onClose }) {
               })}
             </div>
 
+            {/* Post */}
+            {(multi || postDef.place) && (
+              <div className="rounded-2xl border border-slate-200 p-3.5 space-y-3">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Post</div>
+                {multi && <PostPicker posts={posts} value={post} onChange={setPost} />}
+                {postDef.place && (
+                  <div>
+                    <label className="text-xs font-semibold mb-1.5 block text-slate-600">{postDef.place} *</label>
+                    <input className="input-field" list="guard-place-opts" placeholder={`Which ${postDef.place.toLowerCase()}?`} value={place} onChange={(e) => setPlace(e.target.value)} />
+                    <datalist id="guard-place-opts">{placeOpts.map((o) => <option key={o} value={o} />)}</datalist>
+                  </div>
+                )}
+                {postDirty && (
+                  <button onClick={savePost} disabled={savingPost || (postDef.place && !place.trim())} className="btn-primary w-full gap-2 !text-[13px]">
+                    <Save size={14} /> {savingPost ? 'Saving…' : 'Save post'}
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* App */}
             <div className="rounded-2xl overflow-hidden border border-slate-200 flex">
               <div className="w-20 flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(160deg, #14B8A6, #0F766E)' }}>
@@ -199,7 +295,7 @@ function GuardDrawer({ guard, onToggle, onRemove, onClose }) {
               <div className="p-3.5">
                 <div className="text-[13px] font-semibold text-slate-900">AreaConnect Guard app</div>
                 <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-                  {g.name.split(' ')[0]} signs in with the credentials emailed to {g.email ? <span className="font-medium text-slate-700">{g.email}</span> : 'them'} to verify visitor codes at the gate.
+                  {g.name.split(' ')[0]} signs in with the credentials emailed to {g.email ? <span className="font-medium text-slate-700">{g.email}</span> : 'them'} to verify visitor codes {postOf(g).place && g.guardPlace ? `at ${g.guardPlace}` : 'at the gate'}.
                 </p>
               </div>
             </div>
@@ -238,6 +334,7 @@ function GuardDrawer({ guard, onToggle, onRemove, onClose }) {
 
 function GuardCard({ g, i, selected, onOpen, onToggle }) {
   const st = stateOf(g);
+  const { postOf, multi } = usePosts();
   return (
     <div onClick={() => onOpen(g)}
       className="dash-rise group cursor-pointer rounded-2xl bg-white border overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-card-md"
@@ -253,6 +350,7 @@ function GuardCard({ g, i, selected, onOpen, onToggle }) {
         </div>
       </div>
       <div className="px-4 py-3 space-y-1.5 border-t border-slate-100">
+        <PostBadge g={g} postOf={postOf} multi={multi} />
         <div className="text-[12px] text-slate-600 truncate flex items-center gap-2"><Mail size={12} className="text-slate-300 flex-shrink-0" />{g.email || '—'}</div>
         <div className="text-[12px] text-slate-600 truncate flex items-center gap-2"><Phone size={12} className="text-slate-300 flex-shrink-0" />{g.phone || 'No phone'}</div>
       </div>
@@ -291,7 +389,13 @@ export default function Guards() {
   const [search, setSearch]       = useState('');
   const [filter, setFilter]       = useState('all');
   const [showInvite, setShowInvite] = useState(false);
-  const [form, setForm]           = useState({ name: '', email: '', phone: '' });
+  const [form, setForm]           = useState({ name: '', email: '', phone: '', post: 'gate', place: '' });
+  const { posts, postOf, multi } = usePosts();
+  const [postFilter, setPostFilter] = useState('all');
+  const placeOpts = usePlaceOptions(showInvite && posts.some((p) => p.place));
+  const formPost = posts.find((p) => p.key === form.post) || posts[0];
+  const team = multi ? `Security & ${posts.filter((p) => p.place).map((p) => p.plural.toLowerCase()).join(' & ')}` : 'Security team';
+  const noun = multi ? 'guard or porter' : 'guard';
   const [saving, setSaving]       = useState(false);
   const [selected, setSelected]   = useState(null);
   const [, setTick]               = useState(0);
@@ -319,10 +423,10 @@ export default function Guards() {
     e.preventDefault();
     setSaving(true);
     try {
-      const { data } = await guardAPI.invite(form);
+      const { data } = await guardAPI.invite({ ...form, post: formPost.key, place: formPost.place ? form.place : '' });
       toast.success(data.message || 'Guard account created and credentials sent!');
       setShowInvite(false);
-      setForm({ name: '', email: '', phone: '' });
+      setForm({ name: '', email: '', phone: '', post: posts[0].key, place: '' });
       load();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to create guard account');
@@ -371,12 +475,13 @@ export default function Guards() {
     const q = search.trim().toLowerCase();
     return guards
       .filter((g) => filter === 'all' || stateOf(g).key === filter)
-      .filter((g) => !q || [g.name, g.email, g.phone].some((v) => (v || '').toLowerCase().includes(q)))
+      .filter((g) => postFilter === 'all' || postOf(g).key === postFilter)
+      .filter((g) => !q || [g.name, g.email, g.phone, g.guardPlace].some((v) => (v || '').toLowerCase().includes(q)))
       .sort((a, b) => {
         const rank = { online: 0, offline: 1, suspended: 2 };
         return rank[stateOf(a).key] - rank[stateOf(b).key] || new Date(b.lastSeen || 0) - new Date(a.lastSeen || 0);
       });
-  }, [guards, filter, search]);
+  }, [guards, filter, search, postFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pick = (k) => setFilter((f) => (f === k ? 'all' : k));
 
@@ -386,11 +491,11 @@ export default function Guards() {
       {/* Header */}
       <div className="dash-rise flex items-end justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-[22px] font-semibold text-slate-900" style={{ letterSpacing: '-0.025em' }}>Security team</h1>
-          <p className="text-[13px] text-slate-500 mt-0.5">The guards who verify visitors and keep the gate secure.</p>
+          <h1 className="text-[22px] font-semibold text-slate-900" style={{ letterSpacing: '-0.025em' }}>{team}</h1>
+          <p className="text-[13px] text-slate-500 mt-0.5">{multi ? 'Gate security and the porters who look after each hall — all on the Guard app.' : 'The guards who verify visitors and keep the gate secure.'}</p>
         </div>
         <button onClick={() => setShowInvite(true)} className="btn-primary gap-2 !text-[13px] !px-3.5 !py-2">
-          <MailPlus size={14} /> Add guard
+          <MailPlus size={14} /> Add {noun}
         </button>
       </div>
 
@@ -430,6 +535,12 @@ export default function Guards() {
             <button onClick={() => setSearch('')} aria-label="Clear search" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><X size={15} /></button>
           )}
         </div>
+        {multi && (
+          <select className="rounded-xl bg-white border border-slate-200 px-3 py-2.5 text-sm outline-none" value={postFilter} onChange={(e) => setPostFilter(e.target.value)} aria-label="Filter by post">
+            <option value="all">All posts</option>
+            {posts.map((p) => <option key={p.key} value={p.key}>{p.plural} ({guards.filter((g) => postOf(g).key === p.key).length})</option>)}
+          </select>
+        )}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           {FILTERS.map(([key, label, color]) => {
             const on = filter === key;
@@ -483,7 +594,7 @@ export default function Guards() {
       )}
 
       {/* ── Invite Modal ──────────────────────────────────────────── */}
-      <Modal open={showInvite} onClose={() => setShowInvite(false)} title="Add security guard">
+      <Modal open={showInvite} onClose={() => setShowInvite(false)} title={multi ? `Add ${formPost.label.toLowerCase()}` : 'Add security guard'}>
         <div className="mb-4 rounded-xl p-3 border border-teal-100 flex gap-3" style={{ background: 'linear-gradient(135deg, #F0FDFA, #FFFFFF)' }}>
           <span className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, #14B8A6, #0F766E)' }}>
             <Shield size={15} className="text-white" />
@@ -493,6 +604,20 @@ export default function Guards() {
           </p>
         </div>
         <form onSubmit={handleInvite} className="space-y-4">
+          {multi && (
+            <div>
+              <label className="text-xs font-semibold mb-1.5 block text-slate-600">Post *</label>
+              <PostPicker posts={posts} value={formPost.key} onChange={(v) => setForm({ ...form, post: v })} />
+            </div>
+          )}
+          {formPost.place && (
+            <div>
+              <label className="text-xs font-semibold mb-1.5 block text-slate-600">{formPost.place} they look after *</label>
+              <input className="input-field" list="invite-place-opts" placeholder={`e.g. ${placeOpts[0] || 'Moremi Hall'}`} value={form.place}
+                onChange={(e) => setForm({ ...form, place: e.target.value })} required />
+              <datalist id="invite-place-opts">{placeOpts.map((o) => <option key={o} value={o} />)}</datalist>
+            </div>
+          )}
           <div>
             <label className="text-xs font-semibold mb-1.5 block text-slate-600">Full name *</label>
             <input className="input-field" placeholder="e.g. Musa Abdullahi" value={form.name}
@@ -511,13 +636,14 @@ export default function Guards() {
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={() => setShowInvite(false)} className="btn-outline flex-1">Cancel</button>
             <button type="submit" disabled={saving} className="btn-primary flex-1 gap-2">
-              <MailPlus size={14} /> {saving ? 'Creating…' : 'Add guard'}
+              <MailPlus size={14} /> {saving ? 'Creating…' : `Add ${multi ? formPost.label.toLowerCase() : 'guard'}`}
             </button>
           </div>
         </form>
       </Modal>
 
-      <GuardDrawer guard={selected} onToggle={handleToggle} onRemove={handleRemove} onClose={() => setSelected(null)} />
+      <GuardDrawer guard={selected} onToggle={handleToggle} onRemove={handleRemove} onClose={() => setSelected(null)}
+        onUpdated={(u) => { setSelected((s) => ({ ...s, ...u })); setGuards((gs) => gs.map((x) => (x._id === u._id ? { ...x, ...u } : x))); }} />
     </div>
   );
 }

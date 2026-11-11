@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { guardAPI } from '../api';
+import { usePosts } from './Guards';
 import Spinner, { PageLoader } from '../components/ui/Spinner';
 import {
   Shield, ChevronLeft, UserX, UserCheck, Trash2,
@@ -15,6 +16,7 @@ export default function GuardDetail() {
   const navigate = useNavigate();
 
   const [guard, setGuard] = useState(state?.guard || null);
+  const { postOf } = usePosts();
   const [loading, setLoading] = useState(!state?.guard);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [acting, setActing] = useState(false);
@@ -106,7 +108,7 @@ export default function GuardDetail() {
       {/* Info rows */}
       <div className="glass-card overflow-hidden mb-4">
         {[
-          { label: 'Role',      value: 'Security Guard',                              icon: Shield   },
+          { label: 'Post',      value: `${postOf(guard).label}${guard.guardPlace ? ` · ${guard.guardPlace}` : ''}`, icon: Shield   },
           { label: 'Email',     value: guard.email,                                   icon: Mail     },
           guard.phone && { label: 'Phone', value: guard.phone,                        icon: Phone    },
           guard.createdAt && { label: 'Onboarded', value: format(new Date(guard.createdAt), 'MMMM d, yyyy'), icon: Calendar },

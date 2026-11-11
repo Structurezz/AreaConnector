@@ -101,7 +101,7 @@ export const ROLES = {
   university: [
     R('student', 'Student', 'Students'),
     R('lecturer', 'Lecturer', 'Lecturers', { staff: true, assignable: true, specialty: true }),
-    R('warden', 'Hall warden / porter', 'Hall wardens & porters', { staff: true, responds: ALL_ALERTS, scoped: true, assignable: true, rollcall: true }),
+    R('warden', 'Hall warden', 'Hall wardens', { staff: true, responds: ALL_ALERTS, scoped: true, assignable: true, rollcall: true }),
     R('clinic', 'Clinic staff', 'Clinic staff', { staff: true, responds: ['medical'], onCall: true }),
     R('staff', 'University staff', 'University staff', { staff: true, rollcall: true }),
   ],

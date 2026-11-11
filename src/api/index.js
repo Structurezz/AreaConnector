@@ -235,6 +235,7 @@ export const guardAPI = {
   getAll: (params) => api.get('/guards', { params }),
   getOne: (id) => api.get(`/guards/${id}`),
   invite: (data) => api.post('/guards/invite', data),
+  update: (id, data) => api.patch(`/guards/${id}`, data),
   suspend: (id) => api.patch(`/guards/${id}/suspend`),
   activate: (id) => api.patch(`/guards/${id}/activate`),
   remove: (id) => api.delete(`/guards/${id}`),
