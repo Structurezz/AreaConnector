@@ -36,7 +36,7 @@ function EpisodePlayer({ episode, onClose }) {
     <Portal>
     <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'linear-gradient(180deg, #0F172A, #022C22)', display: 'flex', flexDirection: 'column', color: '#fff' }}>
       <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', color: '#A7F3D0', textTransform: 'uppercase' }}>AreaConnect FM</div>
+        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', color: '#A7F3D0', textTransform: 'uppercase' }}>AreaConnector FM</div>
         <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 10, padding: 8, color: '#fff', cursor: 'pointer' }}><X size={16}/></button>
       </div>
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
@@ -94,7 +94,7 @@ export default function PodcastFM() {
         <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: `${GREEN}18`, color: GREEN_DARK }}>
           <Radio size={14}/>
         </div>
-        <div className="text-sm font-extrabold" style={{ color: '#0F172A' }}>AreaConnect FM</div>
+        <div className="text-sm font-extrabold" style={{ color: '#0F172A' }}>AreaConnector FM</div>
         <span className="text-xs" style={{ color: '#94A3B8' }}>· cross-estate podcast</span>
       </div>
 

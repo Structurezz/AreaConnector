@@ -91,7 +91,7 @@ export default function SiteFeaturesSection({ Section }) {
   return (
     <Section id="site" icon={Layers} color="#14B8A6" delay={100}
       title="Site type & features"
-      desc={`AreaConnect runs estates, schools, universities, hotels, industrial sites and hospitals. The type sets the words your team and ${site.terms.members.toLowerCase()} see and which features start switched on.`}>
+      desc={`AreaConnector runs estates, schools, universities, hotels, industrial sites and hospitals. The type sets the words your team and ${site.terms.members.toLowerCase()} see and which features start switched on.`}>
       <div className="space-y-5">
         <SiteTypePicker value={pendingType || site.type} disabled={busy === 'type'}
           onChange={(k) => setPendingType(k === site.type ? null : k)} />

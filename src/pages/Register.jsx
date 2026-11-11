@@ -375,7 +375,7 @@ const SHOWCASE = [
   [<>Your estate awaits. <span style={{ color: '#34D399' }}>Let's get you started.</span></>, 'Create your admin account to manage residents, visitors, payments and more.'],
   [<>One platform. <span style={{ color: '#34D399' }}>Every corner of your estate.</span></>, "Tell us what you manage — we'll generate a unique code for people to join."],
   [<>Smart pricing <span style={{ color: '#34D399' }}>for every estate size.</span></>, 'Start free for 14 days. No credit card required.'],
-  [<>The gate is open. <span style={{ color: '#34D399' }}>You're live.</span></>, 'Welcome to AreaConnect. Set up your profile to get started.'],
+  [<>The gate is open. <span style={{ color: '#34D399' }}>You're live.</span></>, 'Welcome to AreaConnector. Set up your profile to get started.'],
 ];
 
 /* ── Main Register page ── */

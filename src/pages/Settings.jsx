@@ -312,7 +312,7 @@ export default function ManagerSettings() {
       <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
         <div>
           <h1 className="text-[22px] font-semibold text-slate-900" style={{ letterSpacing: '-0.02em' }}>Settings</h1>
-          <p className="text-[13px] text-slate-500 mt-0.5">Manage your profile, {siteWord} details and how AreaConnect behaves for your {T.members.toLowerCase()}.</p>
+          <p className="text-[13px] text-slate-500 mt-0.5">Manage your profile, {siteWord} details and how AreaConnector behaves for your {T.members.toLowerCase()}.</p>
         </div>
       </div>
 

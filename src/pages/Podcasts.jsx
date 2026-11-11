@@ -36,7 +36,7 @@ function AudioPlayer({ item, kind, onClose }) {
   const url     = kind === 'ep' ? item.audioUrl : item.voiceAudioUrl;
   const color   = kind === 'ep' ? GREEN      : TEAL;
   const colorD  = kind === 'ep' ? GREEN_DARK : TEAL_DARK;
-  const label   = kind === 'ep' ? 'AreaConnect FM Episode' : 'Lounge Mixtape';
+  const label   = kind === 'ep' ? 'AreaConnector FM Episode' : 'Lounge Mixtape';
 
   useEffect(() => {
     const a = audioRef.current;
@@ -231,7 +231,7 @@ export default function Podcasts() {
                 <Radio size={18}/>
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.14em', opacity: 0.85, textTransform: 'uppercase' }}>AreaConnect FM · Live</div>
+                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.14em', opacity: 0.85, textTransform: 'uppercase' }}>AreaConnector FM · Live</div>
                 <div style={{ fontSize: 14, fontWeight: 800 }}>{liveFM.title}</div>
                 <div style={{ fontSize: 11, opacity: 0.85 }}>Tap the floating pill to tune in</div>
               </div>
@@ -245,7 +245,7 @@ export default function Podcasts() {
         <div style={{ marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
             <Calendar size={13} color={GREEN_DARK}/>
-            <h2 style={{ fontSize: 14, fontWeight: 800, color: '#0F172A', margin: 0 }}>Coming up on AreaConnect FM</h2>
+            <h2 style={{ fontSize: 14, fontWeight: 800, color: '#0F172A', margin: 0 }}>Coming up on AreaConnector FM</h2>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {upcoming.slice(0, 5).map(s => (
@@ -271,7 +271,7 @@ export default function Podcasts() {
         <div style={{ marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
             <Radio size={13} color={GREEN_DARK}/>
-            <h2 style={{ fontSize: 14, fontWeight: 800, color: '#0F172A', margin: 0 }}>AreaConnect FM archive</h2>
+            <h2 style={{ fontSize: 14, fontWeight: 800, color: '#0F172A', margin: 0 }}>AreaConnector FM archive</h2>
             <span style={{ fontSize: 11, color: '#94A3B8' }}>· {episodes.length}</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

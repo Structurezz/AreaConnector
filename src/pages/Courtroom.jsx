@@ -139,7 +139,7 @@ function CourtroomBanner({ stats }) {
             </div>
             <div>
               <div style={{ color: '#F59E0B', fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-                AreaConnect Court of Justice
+                AreaConnector Court of Justice
               </div>
               <div style={{ color: '#F1F5F9', fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
                 The Honourable Court
@@ -1711,7 +1711,7 @@ function CaseDetail({ caseId, onBack, user, isManager }) {
             <Avatar initials={JUDGE.initials} color={JUDGE.color} size={28} />
             <div>
               <div style={{ color: '#F1F5F9', fontSize: 11, fontWeight: 700 }}>{JUDGE.name}</div>
-              <div style={{ color: '#64748B', fontSize: 10 }}>AI · AreaConnect Court</div>
+              <div style={{ color: '#64748B', fontSize: 10 }}>AI · AreaConnector Court</div>
             </div>
           </div>
         </div>

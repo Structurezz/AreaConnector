@@ -293,7 +293,7 @@ function GuardDrawer({ guard, onToggle, onRemove, onClose, onUpdated }) {
                 <Smartphone size={26} className="text-white" />
               </div>
               <div className="p-3.5">
-                <div className="text-[13px] font-semibold text-slate-900">AreaConnect Guard app</div>
+                <div className="text-[13px] font-semibold text-slate-900">AreaConnector Guard app</div>
                 <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
                   {g.name.split(' ')[0]} signs in with the credentials emailed to {g.email ? <span className="font-medium text-slate-700">{g.email}</span> : 'them'} to verify visitor codes {postOf(g).place && g.guardPlace ? `at ${g.guardPlace}` : 'at the gate'}.
                 </p>
@@ -579,7 +579,7 @@ export default function Guards() {
             {guards.length === 0 ? 'No guards onboarded yet' : search ? `No guards match “${search}”` : 'No guards in this view'}
           </p>
           <p className="text-sm text-slate-400 max-w-sm">
-            {guards.length === 0 ? 'Add your gate security officers so they can verify visitors with the AreaConnect Guard app.' : 'Try another filter or search.'}
+            {guards.length === 0 ? 'Add your gate security officers so they can verify visitors with the AreaConnector Guard app.' : 'Try another filter or search.'}
           </p>
           {guards.length === 0 && (
             <button onClick={() => setShowInvite(true)} className="btn-primary gap-2 mt-2"><MailPlus size={14} /> Add your first guard</button>
@@ -600,7 +600,7 @@ export default function Guards() {
             <Shield size={15} className="text-white" />
           </span>
           <p className="text-xs text-slate-600 leading-relaxed">
-            We’ll create a security account and email the login details. They can sign in to the <strong className="text-slate-900">AreaConnect Guard</strong> app and start verifying visitors right away.
+            We’ll create a security account and email the login details. They can sign in to the <strong className="text-slate-900">AreaConnector Guard</strong> app and start verifying visitors right away.
           </p>
         </div>
         <form onSubmit={handleInvite} className="space-y-4">

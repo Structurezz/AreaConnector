@@ -114,7 +114,7 @@ function Spotlight({ activeDJ, liveFM, next, latest, onPlay, onStart }) {
   }
 
   const item = liveFM || latest?.item;
-  const colors = coverFor(item?.title || next?.title || 'AreaConnect');
+  const colors = coverFor(item?.title || next?.title || 'AreaConnector');
   const image = item?.coverImage || item?.hostPhoto;
 
   return (
@@ -128,7 +128,7 @@ function Spotlight({ activeDJ, liveFM, next, latest, onPlay, onStart }) {
           <>
             <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-red-500">
               <span className="relative flex w-2 h-2"><span className="absolute inset-0 rounded-full bg-red-400 animate-ping" /><span className="relative w-2 h-2 rounded-full bg-red-500" /></span>
-              AreaConnect FM · Live
+              AreaConnector FM · Live
             </div>
             <h2 className="mt-2 text-[22px] font-semibold text-slate-900 truncate" style={{ letterSpacing: '-0.025em' }}>{liveFM.title}</h2>
             <p className="mt-1 text-[13px] text-slate-500">Tune in with the floating player at the bottom of the screen.</p>
@@ -136,7 +136,7 @@ function Spotlight({ activeDJ, liveFM, next, latest, onPlay, onStart }) {
           </>
         ) : next ? (
           <>
-            <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 flex items-center gap-1.5"><Calendar size={12} /> Next on AreaConnect FM</div>
+            <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 flex items-center gap-1.5"><Calendar size={12} /> Next on AreaConnector FM</div>
             <h2 className="mt-2 text-[22px] font-semibold text-slate-900 truncate" style={{ letterSpacing: '-0.025em' }}>{next.title}</h2>
             <p className="mt-1 text-[13px] text-slate-500">
               {next.scheduledAt ? new Date(next.scheduledAt).toLocaleString('en-NG', { weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Any time'}
@@ -154,7 +154,7 @@ function Spotlight({ activeDJ, liveFM, next, latest, onPlay, onStart }) {
             <div className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5" style={{ color: colors[0] }}><Sparkles size={12} /> Latest from your {W.site}</div>
             <h2 className="mt-2 text-[22px] font-semibold text-slate-900 truncate" style={{ letterSpacing: '-0.025em' }}>{item.title}</h2>
             <p className="mt-1 text-[13px] text-slate-500 truncate">
-              {item.hostName || 'AreaConnect FM'} · {fmtMin(latest.kind === 'ep' ? item.durationSec : item.totalDurationSec)}
+              {item.hostName || 'AreaConnector FM'} · {fmtMin(latest.kind === 'ep' ? item.durationSec : item.totalDurationSec)}
               {latest.kind === 'mix' && ` · ${item.setlist?.length || 0} tracks`}
             </p>
             <button onClick={() => onPlay(latest.kind, item)}
@@ -221,7 +221,7 @@ export default function PodcastsDesktop({ upcoming, episodes, mixtapes, activeDJ
                 <span className="relative flex w-1.5 h-1.5"><span className="absolute inset-0 rounded-full bg-red-400 animate-ping" /><span className="relative w-1.5 h-1.5 rounded-full bg-red-500" /></span>
                 On air
               </span>
-            ) : <span className="inline-flex items-center gap-1.5"><Radio size={12} className="text-emerald-600" /> AreaConnect FM</span>}
+            ) : <span className="inline-flex items-center gap-1.5"><Radio size={12} className="text-emerald-600" /> AreaConnector FM</span>}
           </div>
           <h1 className="mt-1 text-[22px] font-semibold text-slate-900" style={{ letterSpacing: '-0.025em' }}>Podcast</h1>
           <p className="text-[13px] text-slate-500 mt-0.5">Live rooms, mixtapes and FM shows from your {W.site}.</p>
@@ -316,7 +316,7 @@ export default function PodcastsDesktop({ upcoming, episodes, mixtapes, activeDJ
 
           {tab !== 'mix' && (
             <section className="dash-rise" style={{ animationDelay: '400ms' }}>
-              <SectionHead Icon={ListMusic} color="#10B981" title="AreaConnect FM episodes" count={epShown.length} />
+              <SectionHead Icon={ListMusic} color="#10B981" title="AreaConnector FM episodes" count={epShown.length} />
               {!epShown.length ? (
                 <div className="rounded-2xl bg-white border border-dashed border-slate-300 py-10 text-center text-[13px] text-slate-400">
                   {query ? 'No episodes match your search.' : 'No FM episodes published yet.'}
@@ -343,7 +343,7 @@ export default function PodcastsDesktop({ upcoming, episodes, mixtapes, activeDJ
                             {ep.episodeNumber ? <span className="text-slate-400 font-medium mr-1">#{ep.episodeNumber}</span> : null}{ep.title}
                           </span>
                           <span className="block text-[11px] text-slate-400 truncate">
-                            {ep.seriesName || ep.hostName || 'AreaConnect FM'}
+                            {ep.seriesName || ep.hostName || 'AreaConnector FM'}
                             {ep.guestNames?.length > 0 && <> · with {ep.guestNames.slice(0, 2).join(', ')}{ep.guestNames.length > 2 ? '…' : ''}</>}
                           </span>
                         </span>

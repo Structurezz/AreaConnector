@@ -364,7 +364,7 @@ function FinanceCard({ pay, wallet, loading }) {
         <p className="mt-1 text-[28px] font-semibold text-slate-900 tabular-nums leading-none" style={{ letterSpacing: '-0.03em' }}>
           {loading ? <span className="skeleton inline-block w-32 h-7 rounded" /> : naira(wallet?.balance)}
         </p>
-        <p className="mt-1.5 text-[11.5px] text-slate-400">Paid online through AreaConnect · {naira(wallet?.collectedOffline)} recorded offline</p>
+        <p className="mt-1.5 text-[11.5px] text-slate-400">Paid online through AreaConnector · {naira(wallet?.collectedOffline)} recorded offline</p>
         <div className="mt-4 grid grid-cols-2 gap-2.5">
           {[
             ['This month', naira(pay?.thisMonth), '#10B981'],

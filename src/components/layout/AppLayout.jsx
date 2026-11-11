@@ -102,7 +102,7 @@ export default function AppLayout({ children }) {
         <LiveLocations />
       </div>
 
-      {/* Floating "AreaConnect FM is LIVE" pill */}
+      {/* Floating "AreaConnector FM is LIVE" pill */}
       <PodcastLivePill />
 
       {/* Live notification modal (DJ / Announcement / Podcast) */}

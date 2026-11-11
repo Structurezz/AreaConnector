@@ -152,7 +152,7 @@ export default function Sidebar({ mobile = false, onClose }) {
           </span>
           {isComp && (
             <span
-              title="This plan is a free gift from AreaConnect — all its features are unlocked."
+              title="This plan is a free gift from AreaConnector — all its features are unlocked."
               className="text-[10px] flex items-center gap-0.5 font-bold px-1.5 py-0.5 rounded-full"
               style={{ background: '#FEF3C7', color: '#B45309', border: '1px solid #FDE68A', letterSpacing: '0.04em' }}>
               <Gift size={9} /> GIFT

@@ -29,7 +29,7 @@ import Portal, { Z, useScrollLock } from '../components/ui/Portal';
 
 const ACCENT      = '#10B981';
 const ACCENT_DARK = '#059669';
-const BRAND_URL   = 'areaconnect.pro';
+const BRAND_URL   = 'area-connector.com';
 
 const truncate = (s, maxLen) => {
   if (!s) return '';
@@ -110,7 +110,7 @@ const generatePassCanvas = async (v, estate, siteWord = 'Estate') => {
   ctx.fillStyle = 'rgba(255,255,255,0.05)';
   ctx.beginPath(); ctx.arc(40, 220, 80, 0, Math.PI * 2); ctx.fill();
 
-  // Top-right AreaConnect app logo
+  // Top-right AreaConnector app logo
   drawShieldLogo(ctx, W - 100, 32, 64, 'AC');
 
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
@@ -175,7 +175,7 @@ const generatePassCanvas = async (v, estate, siteWord = 'Estate') => {
   ctx.fillStyle = fgrad;
   ctx.fillRect(0, 740, W, 80);
 
-  // AreaConnect brand mark
+  // AreaConnector brand mark
   drawShieldLogo(ctx, 32, 758, 44, 'AC', { bgGrad: ['#10B981', '#059669'] });
 
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';

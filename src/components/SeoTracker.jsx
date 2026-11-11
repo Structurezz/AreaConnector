@@ -13,21 +13,21 @@ import { useSite } from '../context/SiteContext';
 //   by vite.config.js when VITE_GA_MEASUREMENT_ID is set). IDs and tokens in
 //   the path are masked so no personal data reaches Google Analytics.
 
-const SITE_URL  = 'https://area-connector.areaconnect.pro';
-const APP_TITLE = 'AreaConnect — Estate Manager Portal';
+const SITE_URL  = 'https://areamanager.area-connector.com';
+const APP_TITLE = 'AreaConnector — Estate Manager Portal';
 
 const PUBLIC_PAGES = {
   '/login': [
-    "Estate Manager Login | AreaConnect",
-    "Sign in to the AreaConnect estate manager portal to manage residents, collect service charges, approve visitors and run your estate from one dashboard.",
+    "Estate Manager Login | AreaConnector",
+    "Sign in to the AreaConnector estate manager portal to manage residents, collect service charges, approve visitors and run your estate from one dashboard.",
   ],
   '/register': [
-    "Register Your Estate on AreaConnect — Set Up in 10 Minutes",
-    "Create your estate on AreaConnect: invite residents, collect dues via Paystack, issue visitor QR passes and manage gate security. Built for Nigerian estates.",
+    "Register Your Estate on AreaConnector — Set Up in 10 Minutes",
+    "Create your estate on AreaConnector: invite residents, collect dues via Paystack, issue visitor QR passes and manage gate security. Built for Nigerian estates.",
   ],
 };
 
-const DEFAULT_DESCRIPTION = "Sign in to the AreaConnect estate manager portal to manage residents, collect service charges, approve visitors and run your estate from one dashboard.";
+const DEFAULT_DESCRIPTION = "Sign in to the AreaConnector estate manager portal to manage residents, collect service charges, approve visitors and run your estate from one dashboard.";
 
 function setMeta(selector, attrs) {
   let el = document.head.querySelector(selector);
@@ -52,7 +52,7 @@ export default function SeoTracker() {
 
   useEffect(() => {
     const page = PUBLIC_PAGES[pathname];
-    const title = page ? page[0] : (isEstate ? APP_TITLE : 'AreaConnect — Manager Portal');
+    const title = page ? page[0] : (isEstate ? APP_TITLE : 'AreaConnector — Manager Portal');
 
     document.title = title;
     setMeta('meta[name="robots"]', {

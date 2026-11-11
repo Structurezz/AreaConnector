@@ -30,7 +30,7 @@ const VARIANTS = {
   },
   live_podcast: {
     Icon: Radio,
-    label: 'AreaConnect FM is LIVE',
+    label: 'AreaConnector FM is LIVE',
     accent: '#8B5CF6',
     accentDark: '#6D28D9',
     gradient: 'linear-gradient(135deg, #4C1D95 0%, #6D28D9 55%, #8B5CF6 100%)',

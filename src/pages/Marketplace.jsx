@@ -433,7 +433,7 @@ export default function Marketplace() {
                     <p className="text-sm text-red-800 mt-3 rounded-xl bg-red-50 p-3"><b>{o.dispute?.reason}</b>{o.dispute?.note ? ` — “${o.dispute.note}”` : ''}</p>
                   )}
                   {o.dispute?.resolution && o.status !== 'disputed' && <p className="text-xs text-slate-500 mt-2">Decision: {o.dispute.resolution}{o.dispute.resolvedBy?.name ? ` — ${o.dispute.resolvedBy.name}` : ''}</p>}
-                  {o.refund?.status === 'failed' && <p className="text-xs text-red-600 mt-2">Refund failed at Paystack — AreaConnect support will retry it.</p>}
+                  {o.refund?.status === 'failed' && <p className="text-xs text-red-600 mt-2">Refund failed at Paystack — AreaConnector support will retry it.</p>}
                   {['paid', 'delivered', 'disputed'].includes(o.status) && (
                     <div className="grid grid-cols-2 gap-2 mt-3 sm:flex sm:flex-wrap">
                       <Btn tone="red" onClick={() => settleDispute(o, 'refund')}><RotateCcw size={15} /> Refund buyer</Btn>

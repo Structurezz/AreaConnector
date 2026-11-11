@@ -580,7 +580,7 @@ export default function Upgrade() {
                   {st('Multiple estates, custom branding, dedicated support, API access, SLA guarantee, and unlimited residents.')}
                 </p>
               </div>
-              <a href="mailto:hello@areaconnect.ng"
+              <a href="mailto:hello@area-connector.com"
                 className="flex-shrink-0 inline-flex items-center gap-2 text-sm font-semibold px-5 py-2.5 rounded-xl transition-all whitespace-nowrap"
                 style={{ border: '1px solid #E2E8F0', color: '#0F172A', background: '#FFFFFF' }}>
                 <Phone size={14} /> Contact sales

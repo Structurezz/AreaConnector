@@ -130,7 +130,7 @@ export default function GuardDetail() {
         style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.15)' }}>
         <Shield size={15} style={{ color: '#60A5FA', flexShrink: 0, marginTop: 1 }} />
         <p className="text-xs leading-relaxed" style={{ color: '#93C5FD' }}>
-          This guard should log in to the <strong>AreaConnect Guard</strong> app using the credentials sent to their email address.
+          This guard should log in to the <strong>AreaConnector Guard</strong> app using the credentials sent to their email address.
         </p>
       </div>
 

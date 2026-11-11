@@ -93,9 +93,9 @@ export default function PostCard({ post, me, onLikeLocal, onOpenComments, onDele
   };
 
   const share = async () => {
-    const text = `${author.name} on AreaConnect: ${post.content || 'shared a photo'}`;
+    const text = `${author.name} on AreaConnector: ${post.content || 'shared a photo'}`;
     try {
-      if (navigator.share) await navigator.share({ title: 'AreaConnect Lounge', text, url: `${location.origin}/lounge` });
+      if (navigator.share) await navigator.share({ title: 'AreaConnector Lounge', text, url: `${location.origin}/lounge` });
       else { await navigator.clipboard.writeText(`${text}\n${location.origin}/lounge`); toast.success('Copied to clipboard'); }
     } catch { /* cancelled */ }
   };

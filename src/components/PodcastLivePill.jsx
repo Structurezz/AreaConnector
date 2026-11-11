@@ -51,7 +51,7 @@ export default function PodcastLivePill() {
           <span style={{ position: 'relative', width: 8, height: 8, borderRadius: '50%', background: '#fff' }} />
         </span>
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          AreaConnect FM · {show.title}
+          AreaConnector FM · {show.title}
         </span>
       </button>
 

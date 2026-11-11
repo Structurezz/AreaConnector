@@ -61,7 +61,7 @@ function MobileLogin({ form, setForm, showPw, setShowPw, loading, error, handleS
         <span className="w-9 h-9 rounded-lg bg-white border border-[#EAECF0] flex items-center justify-center text-[#475467] shrink-0"><Smartphone size={16}/></span>
         <p className="text-[13px] leading-snug text-[#667085] min-w-0">
           <span className="block font-medium text-[#101828]">Are you a resident?</span>
-          Sign in on <a href="https://area-mates.areaconnect.pro" className="ax-link">AreaMates</a> instead.
+          Sign in on <a href="https://areamates.area-connector.com" className="ax-link">AreaMates</a> instead.
         </p>
       </div>
     </MobileAuthShell>
@@ -71,7 +71,7 @@ function MobileLogin({ form, setForm, showPw, setShowPw, loading, error, handleS
 function DesktopLogin({ form, setForm, showPw, setShowPw, loading, error, handleSubmit }) {
   return (
     <DesktopAuthShell
-      topRight={<>New to AreaConnect?&nbsp;<Link to="/register" className="font-semibold text-[#059669] hover:text-[#047857]">Start free trial</Link></>}>
+      topRight={<>New to AreaConnector?&nbsp;<Link to="/register" className="font-semibold text-[#059669] hover:text-[#047857]">Start free trial</Link></>}>
             <span className="w-12 h-12 rounded-xl bg-[#ECFDF3] border border-[#ABEFC6] flex items-center justify-center text-[#059669]"><Shield size={22} /></span>
             <h1 className="mt-6 text-[28px] font-semibold tracking-tight" style={{ color: '#101828' }}>Welcome back</h1>
             <p className="mt-1.5 text-[14.5px] text-[#475467]">Sign in to manage your estate.</p>
@@ -119,7 +119,7 @@ function DesktopLogin({ form, setForm, showPw, setShowPw, loading, error, handle
               <span className="w-9 h-9 rounded-lg bg-white border border-[#EAECF0] flex items-center justify-center text-[#475467]"><Smartphone size={16} /></span>
               <div className="text-[12.5px] leading-snug">
                 <p className="font-medium text-[#101828]">Are you a resident?</p>
-                <p className="text-[#667085]">Sign in on <a href="https://area-mates.areaconnect.pro" className="font-medium text-[#059669] hover:underline">AreaMates</a> instead.</p>
+                <p className="text-[#667085]">Sign in on <a href="https://areamates.area-connector.com" className="font-medium text-[#059669] hover:underline">AreaMates</a> instead.</p>
               </div>
             </div>
     </DesktopAuthShell>

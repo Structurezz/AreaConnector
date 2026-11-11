@@ -34,7 +34,7 @@ function resizeToDataUrl(file, size = 320) {
 
 /**
  * ProfileCard — self-contained "My Profile" section with avatar upload,
- * name, phone and DM visibility toggle. Themed for the AreaConnect (green) admin.
+ * name, phone and DM visibility toggle. Themed for the AreaConnector (green) admin.
  */
 export default function ProfileCard() {
   const { user, fetchMe } = useAuth();

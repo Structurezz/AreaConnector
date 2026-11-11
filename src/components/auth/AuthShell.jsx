@@ -163,7 +163,7 @@ function ProductPreview() {
       className="w-full max-w-[460px] rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-xl shadow-[0_30px_80px_-20px_rgba(0,0,0,.6)] overflow-hidden">
       <div className="flex items-center gap-1.5 px-4 h-9 border-b border-white/[0.07]">
         {['#F97066', '#FDB022', '#32D583'].map((c) => <span key={c} className="w-2.5 h-2.5 rounded-full" style={{ background: c, opacity: .8 }} />)}
-        <span className="ml-3 text-[11px] text-white/35">area-connector.areaconnect.pro</span>
+        <span className="ml-3 text-[11px] text-white/35">areamanager.area-connector.com</span>
       </div>
       <div className="p-5">
         <div className="flex items-center justify-between">
